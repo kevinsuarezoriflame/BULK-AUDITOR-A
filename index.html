@@ -338,6 +338,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 </div>
 <div class="v18HiddenInput" aria-hidden="true"><textarea id="operatorData" tabindex="-1"></textarea></div>
 <textarea id="masterData" hidden aria-hidden="true"></textarea>
+<div id="v26CatalogAdminStatus" class="v26SyncStatus" role="status" aria-live="polite">📍 Publicación de ubicaciones: esperando stock WMS.</div>
 <div class="row">
 <button class="primary" onclick="compareData()">🔄 Actualizar stock WMS</button>
 
@@ -2507,7 +2508,7 @@ compareData=async function(){
  v18CaptureSquares();
  v18ArchivePendingBeforeWmsChange();
  const lines=v18RefreshOperatorInput();
- if(!lines&&!v18Squares.size&&!String($('operatorData').value).trim()){savePaste();return perchadoAlert('Stock WMS guardado y ubicaciones compartidas. Todavía no hay conteos aprobados para comparar.');}
+ if(!lines&&!v18Squares.size&&!String($('operatorData').value).trim()){savePaste();return perchadoAlert('Stock WMS guardado. Comprueba el indicador de ubicaciones en Firebase. Todavía no hay conteos para comparar.');}
  if(lines||String($('operatorData').value).trim()){
   v18Loading=true;
   try{await v18OriginalCompare();}finally{v18Loading=false;}
@@ -3244,5 +3245,150 @@ renderOperatorDraftV8=function(){const result=v25OldRenderDraft();v25LocationHin
 // Tras sincronización no forzar al operario a elegir solo ubicaciones que existen en WMS.
 v25LocationHint();
 </script>
+<style id="perchado-v26-location-sync-style">
+.v26SyncStatus{font-size:12px;line-height:1.55;margin:10px 0 12px;padding:9px 12px;border-radius:10px;background:#eaf9f6;border:1px solid #a5dbd0;color:#165b50}
+.v26SyncStatus[data-state="error"]{background:#fff7ec;border-color:#e8c58e;color:#795322}
+.v26SyncStatus[data-state="ok"]{background:#e7f7ee;border-color:#9bd7b4;color:#226345}
+.v26OpCatalogStatus{font-size:12px;line-height:1.35;margin:6px 0;color:#467a70}
+.v26OpCatalogStatus[data-state="error"]{color:#995e23}
+</style>
+<script id="perchado-v26-location-sync">
+/* V26: el catálogo WMS es local en Administración y se comparte en un documento
+   Firestore exclusivo de ubicaciones; se escucha mediante la colección corrections
+   ya autorizada. Los operarios no reciben cantidades del WMS. */
+const V26_PENDING_CATALOG='perchado_v26_catalog_pending';
+let v26CatalogBusy=false,v26CatalogLastError='',v26CatalogRetryTimer=null,v26CatalogLastRemote=0;
+function v26CatalogStatus(message,state='idle'){
+ const node=document.getElementById('v26CatalogAdminStatus');
+ if(node){node.textContent=message;node.dataset.state=state;}
+}
+function v26CatalogExtract(){
+ const rows=parseLines(document.getElementById('systemData')?.value||'','SISTEMA');
+ return [...new Set(rows.filter(r=>r.locValid).map(r=>r.locNorm))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+function v26LoadPending(){
+ try{const raw=JSON.parse(localStorage.getItem(V26_PENDING_CATALOG)||'null');
+  return raw&&Array.isArray(raw.locations)&&raw.locations.length?raw:null;
+ }catch{return null;}
+}
+function v26SavePending(item){try{localStorage.setItem(V26_PENDING_CATALOG,JSON.stringify(item));}catch(e){console.warn('PERCHADO: no se pudo guardar catálogo pendiente',e);}}
+function v26ClearPending(){try{localStorage.removeItem(V26_PENDING_CATALOG);}catch{}}
+function v26OperatorLocationStatus(){
+ let el=document.getElementById('v26OpCatalogStatus');
+ const parent=document.getElementById('opLocation')?.closest('.v18LocationWrap');
+ if(!el&&parent){el=document.createElement('div');el.id='v26OpCatalogStatus';el.className='v26OpCatalogStatus';el.setAttribute('role','status');parent.insertAdjacentElement('afterend',el);}
+ if(!el)return;
+ const remote=wfV8.corrections?.[V18_CATALOG_ID];
+ const available=v18AvailableLocations().length;
+ const cloudReady=cloudV9?.getCurrentUid?.();
+ if(Array.isArray(remote?.locations)&&!remote.archived){
+  el.textContent=`📍 ${available} ubicaciones disponibles sincronizadas · busca 30-04, 030-04 o escribe una nueva.`;
+  el.dataset.state='ok';
+ }else if(cloudEnabledV9){
+  el.textContent=cloudV9?.lastError?`⚠ No se recibió el catálogo: ${cloudV9.lastError}`:
+   cloudReady?'⚠ Sin ubicaciones compartidas todavía. Administración debe actualizar el stock WMS. Puedes digitar una ubicación manualmente.':'⌛ Conectando con ubicaciones compartidas de Firebase…';
+  el.dataset.state='error';
+ }else{
+  el.textContent='Sin conexión Firebase. Puedes digitar una ubicación manualmente.';el.dataset.state='error';
+ }
+}
+function v26RenderCatalogAdmin(){
+ const pending=v26LoadPending();
+ const remote=wfV8.corrections?.[V18_CATALOG_ID];
+ if(pending){
+  v26CatalogStatus(v26CatalogBusy?'☁ Publicando ubicaciones en Firebase…':
+   v26CatalogLastError?'⚠ No se compartieron las ubicaciones: '+v26CatalogLastError+' · Se reintentará al conectar.':
+   `⌛ ${pending.locations.length} ubicaciones pendientes de compartir con los operarios.`,v26CatalogLastError?'error':'idle');
+ }else if(remote&&!remote.archived&&Array.isArray(remote.locations)){
+  v26CatalogStatus(`✓ ${remote.locations.length} ubicaciones publicadas para Operarios en Firebase.`, 'ok');
+ }else if((document.getElementById('systemData')?.value||'').trim()){
+  v26CatalogStatus('📍 Hay stock WMS local. Pulsa «Actualizar stock WMS» para compartir sus ubicaciones con Operarios.');
+ }else{
+  v26CatalogStatus('📍 Pega el stock WMS y pulsa «Actualizar stock WMS» para compartir las ubicaciones.');
+ }
+}
+async function v26TryPublishCatalog(){
+ if(v26CatalogBusy||!adminAccessV9)return;
+ const pending=v26LoadPending();if(!pending)return;
+ if(!cloudEnabledV9){
+  // Modo local: sin falsear la existencia de un catálogo en la nube.
+  v26CatalogStatus('⚠ Firebase no está configurado; las ubicaciones siguen solo en este navegador.','error');return;
+ }
+ if(!cloudV9?.ready||!cloudV9?.getCurrentUid?.()){
+  v26CatalogStatus(`⌛ ${pending.locations.length} ubicaciones listas; esperando autenticación Firebase…`);return;
+ }
+ v26CatalogBusy=true;v26CatalogLastError='';v26RenderCatalogAdmin();
+ try{
+  const doc={id:V18_CATALOG_ID,kind:'v18_location_catalog',locations:pending.locations,
+   count:pending.locations.length,updatedAt:pending.updatedAt,source:'wms',formatVersion:26};
+  // La escritura al servidor debe completarse: guardar en localStorage NO es sincronizar.
+  await cloudV9.persist('corrections',doc);
+  const still=v26LoadPending();
+  if(still?.updatedAt===pending.updatedAt)v26ClearPending();
+  wfV8.corrections[V18_CATALOG_ID]=doc;
+  try{localStorage.setItem('perchado_v18_catalog',JSON.stringify(doc));}catch{}
+  v26CatalogLastRemote=doc.locations.length;
+  v26CatalogStatus(`✓ ${doc.locations.length} ubicaciones compartidas en Firebase para Operarios.`,'ok');
+  renderUserSelectorsV8();v26OperatorLocationStatus();
+ }catch(e){
+  v26CatalogLastError=String(e?.code||e?.message||e);
+  v26CatalogStatus(`⚠ No se pudieron compartir ubicaciones: ${v26CatalogLastError}. Reintentará al conectar.`,'error');
+  console.error('PERCHADO: error publicando catálogo WMS',e);
+ }finally{v26CatalogBusy=false;}
+ if(v26LoadPending()&&!v26CatalogLastError)v26ScheduleRetry();
+}
+function v26ScheduleRetry(){
+ if(v26CatalogRetryTimer)return;
+ v26CatalogRetryTimer=setTimeout(()=>{v26CatalogRetryTimer=null;void v26TryPublishCatalog();},600);
+}
+// Sustituye la publicación anterior, que guardaba localmente antes de confirmar Firebase
+// y ocultaba el error en la consola.
+v18PublishCatalog=function(){
+ if(!adminAccessV9)return;
+ const locations=v26CatalogExtract();
+ if(!locations.length){v26CatalogStatus('⚠ No hay ubicaciones válidas en el stock WMS pegado. Revisa sus columnas.','error');return;}
+ const updatedAt=new Date().toISOString();
+ const pending={locations,updatedAt};
+ v26SavePending(pending);v26CatalogLastError='';v26RenderCatalogAdmin();
+ void v26TryPublishCatalog();
+};
+// La V18 ya llama a v18PublishCatalog() cuando guarda/actualiza el WMS.
+// Reintenta una publicación pendiente después del login a Administración.
+const v26PrevAdminLogin=loginAdministratorV9;
+loginAdministratorV9=async function(...args){
+ const result=await v26PrevAdminLogin(...args);
+ if(adminAccessV9){v26RenderCatalogAdmin();if(v26LoadPending())v26ScheduleRetry();}
+ return result;
+};
+// Las escuchas en tiempo real del operador actualizan el catálogo y las sugerencias.
+const v26PrevCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const result=v26PrevCloudData(group,docs);
+ if(group==='corrections'){
+  const cat=wfV8.corrections?.[V18_CATALOG_ID];
+  v26CatalogLastRemote=cat&&!cat.archived&&Array.isArray(cat.locations)?cat.locations.length:0;
+  renderUserSelectorsV8();v26OperatorLocationStatus();v26RenderCatalogAdmin();
+ }
+ return result;
+};
+// La escucha vuelve a funcionar si Firebase autentica tarde o se reconecta.
+const v26PrevFirebaseReady=window.perchadoFirebaseReadyV9;
+window.perchadoFirebaseReadyV9=function(api){
+ const result=v26PrevFirebaseReady(api);
+ const oldStatus=api.onStatus;
+ api.onStatus=function(){
+  oldStatus?.();
+  v26OperatorLocationStatus();
+  if(adminAccessV9&&v26LoadPending()&&!v26CatalogBusy&&api.getCurrentUid?.()&&api.connected)v26ScheduleRetry();
+ };
+ return result;
+};
+// Un reinicio global no debe resucitar un catálogo pendiente anterior.
+const v26OldClearLocal=v24ClearLocal;
+v24ClearLocal=function(stamp){v26ClearPending();v26CatalogLastError='';v26CatalogLastRemote=0;return v26OldClearLocal(stamp);};
+// Sin cambios en controles móviles, permisos Firebase o movimientos WMS.
+v26RenderCatalogAdmin();v26OperatorLocationStatus();
+</script>
+
 </body>
 </html>
