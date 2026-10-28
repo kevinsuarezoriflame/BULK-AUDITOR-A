@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V14 · Control de inventario</title>
+<title>PERCHADO V31 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -301,7 +301,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V30</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V31</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div class="perchadoStickyNav" id="perchadoStickyNavV15">
@@ -3586,6 +3586,103 @@ v29SessionActions=function(s){
 };
 // Refrescar una sola vez al cargar la nueva versión. No modificar Firebase ni datos locales.
 if(adminAccessV9){renderLiveMonitoringV9();renderAdminV8();if(hasCompared)renderLocations();}
+</script>
+
+<style id="perchado-v31-action-icon-and-row-highlight">
+/* V31: sólo cambia la presentación de acciones por código. No altera eventos ni datos. */
+#issuesLocations .locTable tbody tr:not(.v12ActionRow) > td,
+#squaredLocations .locTable tbody tr:not(.v12ActionRow) > td,
+#settledLocations .locTable tbody tr:not(.v12ActionRow) > td {
+  transition: background-color .14s ease, color .14s ease;
+}
+#issuesLocations .locTable tbody tr:not(.v12ActionRow):hover > td,
+#issuesLocations .locTable tbody tr:not(.v12ActionRow):focus-within > td,
+#squaredLocations .locTable tbody tr:not(.v12ActionRow):hover > td,
+#squaredLocations .locTable tbody tr:not(.v12ActionRow):focus-within > td,
+#settledLocations .locTable tbody tr:not(.v12ActionRow):hover > td,
+#settledLocations .locTable tbody tr:not(.v12ActionRow):focus-within > td {
+  background-color:#e8f8f4 !important;
+}
+#issuesLocations .locTable tbody tr:not(.v12ActionRow):hover > td:first-child b,
+#squaredLocations .locTable tbody tr:not(.v12ActionRow):hover > td:first-child b,
+#settledLocations .locTable tbody tr:not(.v12ActionRow):hover > td:first-child b {
+  color:#087e70;
+}
+#issuesLocations .locTable .v31ActionIcon,
+#squaredLocations .locTable .v31ActionIcon,
+#settledLocations .locTable .v31ActionIcon,
+.locDetails .locTools .v31ActionIcon{
+  display:inline-flex !important; align-items:center !important;justify-content:center !important;
+  flex:0 0 36px; min-width:36px!important;max-width:36px!important;
+  width:36px!important;height:36px!important;min-height:36px!important;
+  padding:0!important;margin:0!important;border-radius:10px!important;
+  font-size:17px!important;font-weight:600!important;line-height:1!important;
+  vertical-align:middle;white-space:nowrap!important;box-shadow:none!important;
+}
+#issuesLocations .locTable .v31ActionIcon:hover,
+#squaredLocations .locTable .v31ActionIcon:hover,
+#settledLocations .locTable .v31ActionIcon:hover,
+.locDetails .locTools .v31ActionIcon:hover{filter:brightness(.97);transform:translateY(-1px)}
+.v31ActionIcon:focus-visible{outline:2px solid #079d88!important;outline-offset:2px!important}
+#issuesLocations .v19Actions,
+#issuesLocations .v12ActionBtns,
+#settledLocations .v19Actions,
+#settledLocations .v12ActionBtns {display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;vertical-align:middle}
+#issuesLocations .v30InlineRemoveGroup{gap:5px;margin-left:5px}
+.v30Line:hover,.v30Line:focus-within{background:#e8f8f4}
+@media(max-width:620px){
+  #issuesLocations .locTable .v31ActionIcon,
+  #squaredLocations .locTable .v31ActionIcon,
+  #settledLocations .locTable .v31ActionIcon,
+  .locDetails .locTools .v31ActionIcon{width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important}
+}
+</style>
+<script id="perchado-v31-compact-actions">
+'use strict';
+// La acción onclick original se conserva intacta; solamente se abrevia la etiqueta visible.
+function v31IconForAction(label,title){
+ const t=String(label||'').replace(/\s+/g,' ').trim();
+ const hint=String(title||'').toLowerCase();
+ const l=t.toLowerCase();
+ if(/🗑|eliminar|retirar/.test(l)) return ['🗑️',title||'Eliminar este registro'];
+ if(/reabrir conteo/.test(l)) return ['🔓','Reabrir conteo de ubicación'];
+ if(/confirmar conteo completo/.test(l)) return ['✅','Confirmar conteo completo de ubicación'];
+ if(/verificar conteos|aprobar reconteo/.test(l)) return ['🔍','Verificar conteos y reconteos'];
+ if(/procesos_cw/.test(l)) return ['📦','Enviar faltante a Procesos_CW'];
+ if(/registrar sobrante/.test(l)) return ['➕','Registrar sobrante físico'];
+ if(/resolver sobrante/.test(l)) return ['↔️','Resolver sobrante confirmado'];
+ if(/compensar/.test(l)) return ['🔄','Compensar sobrante con ubicación de origen'];
+ if(/reconteo|reenviar/.test(l)||(/^📨$/.test(t)))return ['📨',title||'Enviar a reconteo'];
+ if(/ver código|investigar|diagnóstico|^🔎$|^🔍$/.test(l)||/diagnóstico/.test(hint))return ['🔎',title||'Ver diagnóstico del código'];
+ // Los botones de decisiones infrecuentes conservan su texto para evitar confusiones.
+ return null;
+}
+function v31CompactActions(){
+ const scope=['#issuesLocations .locTable button', '#squaredLocations .locTable button',
+   '#settledLocations .locTable button',
+   '#issuesLocations .locTools button','#squaredLocations .locTools button','#settledLocations .locTools button'];
+ document.querySelectorAll(scope.join(',')).forEach(btn=>{
+   if(btn.classList.contains('v31ActionIcon'))return;
+   const original=btn.textContent.trim().replace(/\s+/g,' ');
+   const title=btn.getAttribute('title')||'';
+   const match=v31IconForAction(original,title);
+   if(!match)return;
+   const [icon,description]=match;
+   btn.setAttribute('title',description);
+   btn.setAttribute('aria-label',description);
+   btn.dataset.v31Action=description;
+   btn.textContent=icon;
+   btn.classList.add('v31ActionIcon');
+ });
+}
+// La interfaz se vuelve a dibujar con Firebase; reaplicar la presentación después de cada redibujado.
+const v31RenderLocationsOriginal=renderLocations;
+renderLocations=function(){
+ const res=v31RenderLocationsOriginal.apply(this,arguments);
+ v31CompactActions();
+ return res;
+};
+if(typeof adminAccessV9!=='undefined' && adminAccessV9) v31CompactActions();
 </script>
 </body>
 </html>
