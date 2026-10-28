@@ -116,7 +116,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 }
 </style><style>#initialResetV10[hidden],#loginFieldsV10[hidden],#loginActionsV10[hidden],#adminCreateFieldsV10[hidden],#adminCreateButtonV10[hidden],#adminListV9[hidden]{display:none!important}</style></head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="v9Fields" hidden="" id="initialResetV10"><div style="font-size:13px;color:#425c69;line-height:1.55">Por seguridad, reemplaza la clave temporal antes de acceder al panel.</div><label>Nueva contraseña<input autocomplete="new-password" id="newInitialPasswordV10" placeholder="Mínimo 10 caracteres" type="password"/></label><label>Confirmar contraseña<input autocomplete="new-password" id="confirmInitialPasswordV10" onkeydown="if(event.key==='Enter')finishInitialResetV10()" placeholder="Repetir contraseña" type="password"/></label><div class="wfActions"><button class="primary" id="saveInitialPasswordV10" onclick="finishInitialResetV10()">Guardar y entrar</button><button class="secondary" onclick="cancelAdminLoginV9()">Cancelar</button></div></div><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V10</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V11</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div class="tabs">
@@ -214,7 +214,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 <h3 class="wfSectionTitle">📥 Bandeja de conteos recibidos</h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar por código, operario, ubicación o estado"/></div><div id="wfSessions"></div>
 <h3 class="wfSectionTitle">🔎 Bandeja de reconteos</h3><div id="wfTasksAdmin"></div>
 <div class="wfPane" style="margin-top:16px"><h3>✅ Integrar conteos aprobados al análisis</h3><p>Genera la data del operador a partir del conteo de aprobación más reciente de cada ubicación. Incluye las correcciones autorizadas y deja las evidencias originales sin cambios. Después se realiza el cruce existente contra sistema.</p><div class="wfActions"><button class="primary" onclick="applyApprovedToComparisonV8()">↔ Integrar aprobados y comparar</button><button class="secondary" onclick="exportWorkflowV8()">Descargar evidencias</button><button class="secondary" onclick="backupWorkflowV8()">Exportar respaldo JSON</button><button class="secondary" onclick="document.getElementById('wfImportFile').click()">Importar respaldo JSON</button><input accept=".json,application/json" hidden="" id="wfImportFile" onchange="importWorkflowV8(event)" type="file"/></div></div>
-<div class="wfPane" id="adminAccountsV9" style="margin-top:16px"><h3>🔐 Cuentas de Administración</h3><div class="wfFields" id="adminCreateFieldsV10"><label id="adminCreateFieldsLabelV10">Nuevo usuario administrador<input autocomplete="off" id="newAdminV9" placeholder="Ej. supervisor.bodega"/></label><label>Contraseña inicial<input autocomplete="new-password" id="newAdminPasswordV9" placeholder="Mínimo 10 caracteres" type="password"/></label></div><div class="wfActions"><button class="primary" id="adminCreateButtonV10" onclick="createAdministratorV9()">＋ Crear administrador</button><button class="secondary" onclick="logoutAdministratorV9()">Cerrar sesión</button></div><div id="adminListV9"></div></div></section>
+<div class="wfPane" id="adminAccountsV9" style="margin-top:16px"><h3>🔐 Cuentas de Administración</h3><div class="wfFields" id="adminCreateFieldsV10"><label id="adminCreateFieldsLabelV10">Nuevo usuario administrador<input autocomplete="off" id="newAdminV9" placeholder="Ej. supervisor.bodega"/></label><label>Contraseña inicial<input autocomplete="new-password" id="newAdminPasswordV9" placeholder="Mínimo 8 caracteres" type="password"/></label></div><div class="wfActions"><button class="primary" id="adminCreateButtonV10" onclick="createAdministratorV9()">＋ Crear administrador</button><button class="secondary" onclick="logoutAdministratorV9()">Cerrar sesión</button></div><div id="adminListV9"></div></div></section>
 </div>
 </main>
 <div class="drawerOverlay" hidden="" id="drawerOverlay" onclick="closeDrawer()"></div>
@@ -755,14 +755,17 @@ wfLoad();renderWorkflowV8();/* Perchado V9 inicia después de instalar seguridad
 </script>
 <script>/* PERCHADO V9 - acceso, captura móvil, novedades y supervisión */
 'use strict';
-const ADMIN_LOCAL_KEY_V9='perchado_v9_admin_accounts';
+// ACCESO WEB: no depende de cuentas de Firebase Authentication.
+// Esta clave de demostración reside en el cliente. NO constituye seguridad de servidor.
+const ADMIN_LOCAL_KEY_V9='perchado_v11_web_admin_accounts';
 const FIRST_ADMIN_V10='kevin';
-let waitingForInitialResetV10=false;
-let adminAccessV9=false, adminIdentityV9='', cloudV9=null, cloudEnabledV9=!!(window.PERCHADO_FIREBASE_CONFIG?.apiKey&&!String(window.PERCHADO_FIREBASE_CONFIG.apiKey).includes('REEMPLAZA'));
+const WEB_FIRST_ADMIN_V11=Object.freeze({username:'kevin',password:'1234'});
+let adminAccessV9=false, adminIdentityV9='', cloudV9=null,
+ cloudEnabledV9=!!(window.PERCHADO_FIREBASE_CONFIG?.apiKey&&!String(window.PERCHADO_FIREBASE_CONFIG.apiKey).includes('REEMPLAZA'));
 let cloudAdminsV9=[];
 let manualTransfersV9=[];
 window.perchadoV9Moves=manualTransfersV9;
-let cloudIngestV9=false, lastLiveV9=[], sendingV9=false;
+let cloudIngestV9=false,lastLiveV9=[],sendingV9=false;
 const q9=id=>document.getElementById(id);
 const enc9=s=>escapeHtml(String(s??''));
 const wfStoreBaseV9=wfStore;
@@ -792,77 +795,83 @@ const oldImportWorkflowV9=importWorkflowV8;
 
 function localAdminAccountsV9(){try{return JSON.parse(localStorage.getItem(ADMIN_LOCAL_KEY_V9)||'[]')||[];}catch{return [];}}
 function adminUsernameV9(raw){return String(raw||'').trim().toLowerCase().replace(/\s+/g,'.');}
-function passwordBytesV9(value){return new TextEncoder().encode(value);}
 async function passwordHashV9(password,salt){
- if(!crypto?.subtle)throw Error('Usa HTTPS o localhost para configurar contraseñas.');
- const key=await crypto.subtle.importKey('raw',passwordBytesV9(password),'PBKDF2',false,['deriveBits']);
+ if(!globalThis.crypto?.subtle)throw Error('Abre esta web mediante HTTPS para utilizar contraseñas.');
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);
  const digest=await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt),iterations:210000,hash:'SHA-256'},key,256);
  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-async function localCreateAdminV9(name,password){
- const username=adminUsernameV9(name),accounts=localAdminAccountsV9();
- if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(username))throw Error('El usuario debe tener 3 a 35 caracteres, sin espacios ni tildes.');
- if(password.length<10 && !(username===FIRST_ADMIN_V10 && accounts.length===0 && password==='1234'))throw Error('La contraseña debe tener al menos 10 caracteres.');
- if(!accounts.length && (username!==FIRST_ADMIN_V10 || password!=='1234'))throw Error('El primer administrador de prueba debe ingresar como Kevin.');
- if(accounts.some(a=>a.username===username))throw Error('Ya existe este administrador.');
+async function prepareNewAdminV11(name,password){
+ const username=adminUsernameV9(name);
+ if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(username))throw Error('El usuario debe contener entre 3 y 35 caracteres válidos.');
+ if(username==='kevin')throw Error('Kevin ya es el administrador principal.');
+ if(password.length<8)throw Error('La contraseña del nuevo administrador debe tener al menos 8 caracteres.');
  const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
- accounts.push({username,salt,hash:await passwordHashV9(password,salt),createdAt:wfToday()});
- localStorage.setItem(ADMIN_LOCAL_KEY_V9,JSON.stringify(accounts));return username;
+ return {id:username,username,salt,hash:await passwordHashV9(password,salt),active:true,createdAt:new Date().toISOString(),createdBy:'kevin'};
+}
+async function localCreateAdminV9(name,password){
+ const item=await prepareNewAdminV11(name,password),accounts=localAdminAccountsV9();
+ if(accounts.some(a=>a.username===item.username))throw Error('Ya existe ese administrador.');
+ accounts.push(item);localStorage.setItem(ADMIN_LOCAL_KEY_V9,JSON.stringify(accounts));return item.username;
 }
 function gateMessageV9(msg){q9('gateMessageV9').textContent=msg||'';}
 function showAdminGateV9(){
- const setup=!cloudEnabledV9&&!localAdminAccountsV9().length;
- waitingForInitialResetV10=false;
- q9('initialResetV10').hidden=true; q9('loginFieldsV10').hidden=false; q9('loginActionsV10').hidden=false;
- q9('gateTitleV9').textContent=setup?'Ingreso inicial de Kevin':'Ingreso de Administración';
- q9('loginButtonV9').textContent='Ingresar';
+ q9('gateTitleV9').textContent='Ingreso de Administración';
+ q9('loginFieldsV10').hidden=false;q9('loginActionsV10').hidden=false;
  q9('adminGateV9').hidden=false;gateMessageV9('');q9('loginPasswordV9').value='';
  q9('loginUserV9').value=q9('loginUserV9').value||'Kevin';q9('loginUserV9').focus();
 }
 async function loginAdministratorV9(){
  const name=adminUsernameV9(q9('loginUserV9').value),pass=q9('loginPasswordV9').value;
  try{
-   q9('loginButtonV9').disabled=true;gateMessageV9('Validando acceso...');
-   if(!name||!pass)throw Error('Ingresa usuario y contraseña.');
-   if(cloudEnabledV9){
-     if(!cloudV9?.ready)throw Error('Firebase todavía no está disponible.');
-     const authResultV10=await cloudV9.loginAdmin(name,pass);
-     if(authResultV10?.mustChange){showInitialResetV10();return;}
-   }else{
-     const accounts=localAdminAccountsV9();
-     if(!accounts.length) await localCreateAdminV9(name,pass);
-     else {
-       const item=accounts.find(x=>x.username===name);
-       if(!item||await passwordHashV9(pass,item.salt)!==item.hash)throw Error('Usuario o contraseña incorrectos.');
-     }
-   }
-   adminAccessV9=true;adminIdentityV9=name;q9('adminGateV9').hidden=true;
-   profileBaseV9('admin');renderAdminAccountsV9();renderLiveMonitoringV9();updateCloudStatusV9();
- }catch(e){gateMessageV9(e.message||'No se pudo iniciar sesión.');}
+  q9('loginButtonV9').disabled=true;gateMessageV9('Validando acceso...');
+  if(!name||!pass)throw Error('Ingresa usuario y contraseña.');
+  if(name===WEB_FIRST_ADMIN_V11.username){
+   if(pass!==WEB_FIRST_ADMIN_V11.password)throw Error('Usuario o contraseña incorrectos.');
+  }else{
+   const item=cloudEnabledV9
+    ? await cloudV9?.getWebAdmin(name)
+    : localAdminAccountsV9().find(a=>a.username===name);
+   if(!item||item.active!==true||!item.hash||!item.salt
+      ||await passwordHashV9(pass,item.salt)!==item.hash)throw Error('Usuario o contraseña incorrectos.');
+  }
+  if(cloudEnabledV9&&cloudV9?.ready){
+   await cloudV9.enterAdminView();
+  }
+  adminAccessV9=true;adminIdentityV9=name;q9('adminGateV9').hidden=true;
+  profileBaseV9('admin');renderAdminAccountsV9();renderLiveMonitoringV9();updateCloudStatusV9();
+ }catch(e){gateMessageV9(e?.message||'No se pudo iniciar sesión.');}
  finally{q9('loginButtonV9').disabled=false;}
 }
 async function createAdministratorV9(){
  if(!adminAccessV9||adminIdentityV9!==FIRST_ADMIN_V10)return;
  const name=q9('newAdminV9').value,password=q9('newAdminPasswordV9').value;
  try{
-  if(cloudEnabledV9)await cloudV9.createAdmin(adminUsernameV9(name),password);
-  else await localCreateAdminV9(name,password);
+  if(cloudEnabledV9){
+   if(!cloudWritableV9())return;
+   await cloudV9.createWebAdmin(await prepareNewAdminV11(name,password));
+  }else await localCreateAdminV9(name,password);
   q9('newAdminV9').value='';q9('newAdminPasswordV9').value='';renderAdminAccountsV9();toast('Administrador creado');
- }catch(e){alert('No se pudo crear el administrador: '+(e.message||e));}
+ }catch(e){alert('No se pudo crear el administrador: '+(e?.message||e));}
 }
 function renderAdminAccountsV9(){
  const owner=adminIdentityV9===FIRST_ADMIN_V10;
- q9('adminCreateFieldsV10').hidden=!owner; q9('adminCreateButtonV10').hidden=!owner; q9('adminListV9').hidden=!owner;
- const html=cloudEnabledV9?cloudAdminsV9.map(a=>`<div class="wfEntry"><div>🔐 ${enc9(a.username||'Administrador')} <span class="wfTag ${a.active?'':'alert'}">${a.active?'Activo':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick='toggleAdministratorV9(${JSON.stringify(a.id)},${a.active?'false':'true'})' ${a.username===adminIdentityV9?'disabled':''}>${a.active?'Deshabilitar':'Habilitar'}</button></div>`).join(''):
- localAdminAccountsV9().map(a=>`<div class="wfEntry">🔐 ${enc9(a.username)} <span class="wfTag">Administrador local</span></div>`).join('');
- q9('adminListV9').innerHTML=html||'<div class="wfEmpty">Sin usuarios administrativos registrados.</div>';
+ q9('adminCreateFieldsV10').hidden=!owner;q9('adminCreateButtonV10').hidden=!owner;q9('adminListV9').hidden=!owner;
+ const accounts=cloudEnabledV9?cloudAdminsV9:localAdminAccountsV9();
+ const html=accounts.map(a=>`<div class="wfEntry"><div>🔐 ${enc9(a.username||'Administrador')} <span class="wfTag ${a.active?'':'alert'}">${a.active?'Activo':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick='toggleAdministratorV9(${JSON.stringify(a.id||a.username)},${a.active?'false':'true'})'>${a.active?'Deshabilitar':'Habilitar'}</button></div>`).join('');
+ q9('adminListV9').innerHTML=`<div class="wfEntry">🔐 Kevin <span class="wfTag">Administrador principal</span></div>`+(html||'<div class="wfEmpty">No hay otros administradores registrados.</div>');
 }
 async function toggleAdministratorV9(id,active){
- if(!adminAccessV9||adminIdentityV9!==FIRST_ADMIN_V10||!cloudEnabledV9||!cloudV9?.ready)return;
+ if(!adminAccessV9||adminIdentityV9!==FIRST_ADMIN_V10||id==='kevin')return;
  if(!confirm(`${active?'Habilitar':'Deshabilitar'} este administrador?`))return;
- try{await cloudV9.setAdminActive(id,active);}catch(e){alert('No se pudo cambiar el acceso: '+e.message);}
+ try{
+  if(cloudEnabledV9){if(!cloudWritableV9())return;await cloudV9.setWebAdminActive(id,active);}
+  else{
+   const accounts=localAdminAccountsV9(),a=accounts.find(x=>x.username===id);
+   if(a){a.active=active;localStorage.setItem(ADMIN_LOCAL_KEY_V9,JSON.stringify(accounts));renderAdminAccountsV9();}
+  }
+ }catch(e){alert('No se pudo cambiar el acceso: '+(e?.message||e));}
 }
-
 async function logoutAdministratorV9(){
  adminAccessV9=false;adminIdentityV9='';cloudAdminsV9=[];
  if(cloudEnabledV9){wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};lastLiveV9=[];}
@@ -870,34 +879,9 @@ async function logoutAdministratorV9(){
  if(cloudEnabledV9&&cloudV9){try{await cloudV9.enterOperator();}catch(e){q9('opSyncV9').textContent='Firebase no disponible: '+e.message;}}
 }
 async function cancelAdminLoginV9(){
- q9('adminGateV9').hidden=true;waitingForInitialResetV10=false;
+ q9('adminGateV9').hidden=true;
  if(cloudEnabledV9&&cloudV9?.ready){try{await cloudV9.enterOperator();}catch(e){console.warn('Acceso operario',e);}}
  profileBaseV9('operator');updateCloudStatusV9();
-}
-function showInitialResetV10(){
- waitingForInitialResetV10=true;
- q9('gateTitleV9').textContent='Cambia tu contraseña inicial';
- q9('loginFieldsV10').hidden=true;q9('loginActionsV10').hidden=true;
- q9('initialResetV10').hidden=false;
- gateMessageV9('La clave inicial de 4 dígitos es temporal. Establece una contraseña privada y segura para continuar.');
- q9('newInitialPasswordV10').value='';q9('confirmInitialPasswordV10').value='';
- q9('newInitialPasswordV10').focus();
-}
-async function finishInitialResetV10(){
- if(!waitingForInitialResetV10)return;
- const pass=q9('newInitialPasswordV10').value,repeat=q9('confirmInitialPasswordV10').value;
- if(pass.length<10)return gateMessageV9('Utiliza al menos 10 caracteres.');
- if(pass!==repeat)return gateMessageV9('Las contraseñas no coinciden.');
- try{
-   q9('saveInitialPasswordV10').disabled=true;gateMessageV9('Actualizando acceso...');
-   if(!cloudEnabledV9||!cloudV9?.ready)throw Error('Se necesita Firebase para actualizar el acceso.');
-   await cloudV9.finishInitialPassword(pass);
-   waitingForInitialResetV10=false;adminAccessV9=true;adminIdentityV9='kevin';
-   q9('newInitialPasswordV10').value='';q9('confirmInitialPasswordV10').value='';
-   q9('adminGateV9').hidden=true;profileBaseV9('admin');renderAdminAccountsV9();renderLiveMonitoringV9();updateCloudStatusV9();
-   toast('Contraseña inicial reemplazada');
- }catch(e){gateMessageV9(e.message||'No se pudo actualizar la contraseña.');}
- finally{q9('saveInitialPasswordV10').disabled=false;}
 }
 
 setProfileV8=function(mode){
@@ -977,7 +961,7 @@ wfStore=function(eventName,detail){
 
 function setCloudDataV9(group,docs){
  cloudIngestV9=true;
- if(group==='admins'){cloudAdminsV9=docs;renderAdminAccountsV9();}
+ if(group==='webAdmins'){cloudAdminsV9=docs;renderAdminAccountsV9();}
  if(group==='operators')wfV8.users=docs;
  if(group==='sessions')wfV8.sessions=docs.sort((a,b)=>(a.submittedAt||'').localeCompare(b.submittedAt||''));
  if(group==='tasks')wfV8.tasks=docs.sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));
@@ -994,7 +978,7 @@ window.perchadoFirebaseReadyV9=function(api){
  cloudV9=api;cloudEnabledV9=true;updateCloudStatusV9();
  api.onData=(group,records)=>setCloudDataV9(group,records);
  api.onStatus=()=>updateCloudStatusV9();
- api.enterOperator().then(()=>updateCloudStatusV9()).catch(e=>{
+ (adminAccessV9?api.enterAdminView():api.enterOperator()).then(()=>updateCloudStatusV9()).catch(e=>{
   q9('opSyncV9').textContent='⚠ Firebase: '+(e.message||'Error de conexión');
  });
 };
@@ -1157,11 +1141,10 @@ try{const draft=JSON.parse(localStorage.getItem('perchado_v9_draft')||'null');if
 if(cloudEnabledV9){wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};}
 // Inicio sin acceso administrativo hasta autenticación
 profileBaseV9('operator');renderLiveMonitoringV9();renderNoveltiesV9();updateCloudStatusV9();
-</script><script type="module">/* PERCHADO V9: Firebase Auth y Firestore, aislado de otras aplicaciones. */
-import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import {getAuth,signInAnonymously,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,updatePassword} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+</script><script type="module">/* Firebase: autenticación anónima para sincronización; usuarios administrativos en la web. */
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {getFirestore,collection,doc,getDoc,setDoc,deleteDoc,updateDoc,onSnapshot,query,where} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-
 const cfg=window.PERCHADO_FIREBASE_CONFIG;
 if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app);
@@ -1169,73 +1152,44 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const coll=group=>collection(db,...space,group);
  const ref=(group,id)=>doc(db,...space,group,String(id));
  let unsub=[],generation=0,seen=new Set(),errored=new Map(),listening=[];
+ async function ensureAnonymous(){
+  if(!auth.currentUser)await signInAnonymously(auth);
+  if(!auth.currentUser?.isAnonymous)throw Error('Se requiere la conexión anónima de Firebase para sincronizar.');
+  return auth.currentUser;
+ }
  const api={ready:true,connected:false,admin:false,lastError:'',onData:null,onStatus:null,
     async enterOperator(){
-      clearSubscriptions();
-      if(auth.currentUser&&!auth.currentUser.isAnonymous)await signOut(auth);
-      if(!auth.currentUser)await signInAnonymously(auth);
-      api.admin=false;subscribe(false);return auth.currentUser;
+      clearSubscriptions();await ensureAnonymous();api.admin=false;subscribe(false);return auth.currentUser;
     },
-    async loginAdmin(username,password){
-      clearSubscriptions();
-      if(auth.currentUser)await signOut(auth);
-      const uname=validateUsername(username);
-      const email=uname+'@perchado.example';
-      // Firebase exige al menos seis caracteres. El PIN inicial de Kevin se
-      // transforma solo en este primer acceso y se invalida tras cambiarlo.
-      const initialPin=(uname==='kevin' && /^\d{4}$/.test(password));
-      const effectivePassword=initialPin?`PERCHADO-inicial-${uname}-${password}-2026`:password;
-      const result=await signInWithEmailAndPassword(auth,email,effectivePassword);
-      try{
-        const role=await getDoc(ref('admins',result.user.uid));
-        if(!role.exists()||role.data().active!==true||role.data().username!==validateUsername(username))throw Error('Cuenta no habilitada como Administrador.');
-        const needsChange=role.data().mustChangePassword===true || initialPin;
-        if(needsChange){api.admin=false;return {user:result.user,mustChange:true};}
-        api.admin=true;subscribe(true);return {user:result.user,mustChange:false};
-      }catch(e){await signOut(auth);throw e;}
+    async enterAdminView(){
+      clearSubscriptions();await ensureAnonymous();api.admin=true;subscribe(true);return auth.currentUser;
     },
-    async finishInitialPassword(password){
-      if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('No hay sesión administrativa.');
-      if(password.length<10)throw Error('Ingresa al menos 10 caracteres.');
-      const roleRef=ref('admins',auth.currentUser.uid);
-      const current=await getDoc(roleRef);
-      if(!current.exists()||current.data().username!=='kevin'||current.data().active!==true)
-        throw Error('El acceso inicial no pertenece al administrador principal.');
-      await updatePassword(auth.currentUser,password);
-      await updateDoc(roleRef,{mustChangePassword:false,changedAt:new Date().toISOString()});
-      api.admin=true;subscribe(true);
+    async getWebAdmin(username){
+      await ensureAnonymous();const normalized=validateUsername(username);
+      const x=await getDoc(ref('webAdmins',normalized));return x.exists()?x.data():null;
     },
-    async createAdmin(username,password){
-      if(!api.admin||!auth.currentUser)throw Error('Inicia sesión de Administración.');
-      const role=await getDoc(ref('admins',auth.currentUser.uid));
-      if(role.data()?.username!=='kevin')throw Error('Solo Kevin puede crear administradores.');
-      if(password.length<10)throw Error('La contraseña requiere al menos 10 caracteres.');
-      const normalized=validateUsername(username),email=normalized+'@perchado.example';
-      const secondary=initializeApp(cfg,'perchado-admin-create-'+Date.now());
-      const secondaryAuth=getAuth(secondary);
-      let user;
-      try{
-        const created=await createUserWithEmailAndPassword(secondaryAuth,email,password);user=created.user;
-        await setDoc(ref('admins',user.uid),{username:normalized,active:true,createdAt:new Date().toISOString(),createdBy:auth.currentUser.uid});
-      }finally{try{await signOut(secondaryAuth);}catch{}await deleteApp(secondary);}
-      return user?.uid;
+    async createWebAdmin(item){
+      if(!api.admin)throw Error('Inicia en Administración.');
+      const name=validateUsername(item?.username);
+      if(name==='kevin')throw Error('El administrador principal ya existe.');
+      const refDoc=ref('webAdmins',name);
+      if((await getDoc(refDoc)).exists())throw Error('Ese administrador ya existe.');
+      await setDoc(refDoc,{username:name,active:true,salt:item.salt,hash:item.hash,createdBy:'kevin',createdAt:item.createdAt});
     },
-    async setAdminActive(uid,active){
-      if(!api.admin||!auth.currentUser)throw Error('Sin permiso administrativo.');
-      const role=await getDoc(ref('admins',auth.currentUser.uid));
-      if(role.data()?.username!=='kevin')throw Error('Solo Kevin puede habilitar cuentas.');
-      if(uid===auth.currentUser.uid)throw Error('No puedes deshabilitar tu propia cuenta.');
-      await updateDoc(ref('admins',uid),{active:!!active,changedBy:auth.currentUser.uid,changedAt:new Date().toISOString()});
+    async setWebAdminActive(name,active){
+      if(!api.admin)throw Error('Inicia en Administración.');
+      const normalized=validateUsername(name);
+      if(normalized==='kevin')throw Error('El usuario principal no puede deshabilitarse.');
+      await updateDoc(ref('webAdmins',normalized),{active:!!active,changedAt:new Date().toISOString()});
     },
     async persist(group,item){
       if(!['operators','sessions','tasks','corrections'].includes(group)||!item?.id)throw Error('Documento inválido.');
-      if(!auth.currentUser)throw Error('No hay sesión activa en Firebase Authentication.');
-      const clean=JSON.parse(JSON.stringify(item));
+      await ensureAnonymous();const clean=JSON.parse(JSON.stringify(item));
       if(group==='sessions'){
         if(api.admin){await updateDoc(ref(group,clean.id),{status:clean.status,reviewedAt:clean.reviewedAt||null});return;}
         if(clean.status!=='pending')throw Error('Los conteos solo pueden aprobarse desde Administración.');
         clean.deviceUid=auth.currentUser.uid;
-        if(clean.entries.length>250)throw Error('Máximo 250 líneas por conteo. Divide el trabajo en dos sesiones.');
+        if(clean.entries.length>250)throw Error('Máximo 250 líneas por conteo.');
       }
       if(group==='tasks'&&!api.admin){
         if(clean.status!=='answered')throw Error('Solo puedes enviar tu reconteo pendiente.');
@@ -1245,8 +1199,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
       await setDoc(ref(group,clean.id),clean);
     },
     async saveLive(data){
-      if(!auth.currentUser||!auth.currentUser.isAnonymous)return;
-      const id=auth.currentUser.uid;
+      await ensureAnonymous();const id=auth.currentUser.uid;
       if(!data.entries?.length){await deleteDoc(ref('liveCounts',id));return;}
       await setDoc(ref('liveCounts',id),{...data,id,deviceUid:id,entries:data.entries.slice(-250)});
     },
@@ -1263,7 +1216,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  }
  function subscribe(admin){
     const stamp=generation;
-    listening=admin?['admins','operators','sessions','tasks','corrections','liveCounts']:['operators','sessions','tasks'];
+    listening=admin?['webAdmins','operators','sessions','tasks','corrections','liveCounts']:['operators','sessions','tasks'];
     const currentUid=auth.currentUser.uid;
     for(const group of listening){
       const requested=(group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
@@ -1272,8 +1225,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         if(stamp!==generation)return;
         seen.add(group);
         if(snapshot.metadata.fromCache)errored.set(group,group+': esperando servidor');else errored.delete(group);
-        notify();
-        api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
+        notify();api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
       },e=>{
         if(stamp!==generation)return;
         errored.set(group,`${group}: ${e.code||e.message}`);notify();console.error('PERCHADO/Firestore',group,e);
