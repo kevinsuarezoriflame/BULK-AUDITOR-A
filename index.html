@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PERCHADO V9 · Auditoría en vivo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#eef8f6;--card:#ffffff;--mint:#19c9a7;--mint2:#0e8f77;--line:#cbe9e3;--text:#082033;
+  --soft:#f6fffd;--red:#ef4444;--redbg:#fff0f0;--yellow:#f59e0b;--yellowbg:#fff8e6;--green:#059669;--greenbg:#e9fff7;--blue:#2563eb;--bluebg:#eff6ff;
+}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#e9f7f4,#f9fffe);font-family:Segoe UI,Arial,sans-serif;color:var(--text)}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(242,250,248,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:900;font-size:18px;display:flex;gap:10px;align-items:center}.dot{width:18px;height:18px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 6px #c9f4eb}.pill{padding:9px 16px;border:1px solid #8edfd0;border-radius:999px;color:#007c68;background:#eafffa;font-weight:800}
+.wrap{max-width:1240px;margin:22px auto;padding:0 16px}.card{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 30px rgba(10,90,75,.08);overflow:hidden}.tabs{display:flex;gap:8px;padding:14px 16px 0;background:#f8fffd}.tab{border:1px solid var(--line);border-bottom:none;background:#fbfffe;padding:12px 18px;border-radius:12px 12px 0 0;font-weight:800;cursor:pointer}.tab.active{color:#007e68;background:white}.section{display:none;padding:18px}.section.active{display:block}.title{font-weight:900;font-size:18px;margin:0 0 8px}.hint{font-size:13px;color:#486274;line-height:1.45;margin-bottom:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.box{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fbfffe}.box h3{margin:0 0 8px;font-size:15px;color:#007e68}textarea{width:100%;min-height:330px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px;font-family:Consolas,monospace;font-size:13px;outline:none;background:white}textarea:focus,input:focus,select:focus{border-color:#55d8c0;box-shadow:0 0 0 4px #dff8f3}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}button{border:none;border-radius:12px;padding:12px 16px;font-weight:900;cursor:pointer}.primary{background:linear-gradient(135deg,#18c9a6,#0b947b);color:white}.secondary{background:#f4fffc;color:#007c68;border:1px solid #9ce5d8}.danger{background:var(--redbg);color:#a20d0d;border:1px solid #ffb4b4}.warn{background:var(--yellowbg);color:#8a5700;border:1px solid #ffd580}.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:12px 0}.kpi{border:1px solid var(--line);background:white;border-radius:16px;padding:14px}.kpi .n{font-size:24px;font-weight:950}.kpi .l{font-size:12px;color:#516b7b;font-weight:800}.alerts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}.alert{border-radius:14px;padding:12px;font-weight:800;border:1px solid}.a-ok{background:var(--greenbg);color:#047857;border-color:#9debd0}.a-red{background:var(--redbg);color:#991b1b;border-color:#fecaca}.a-yellow{background:var(--yellowbg);color:#92400e;border-color:#fde68a}.a-blue{background:var(--bluebg);color:#1d4ed8;border-color:#bfdbfe}.tableWrap{border:1px solid var(--line);border-radius:16px;overflow:auto;max-height:620px;background:white}table{border-collapse:collapse;width:100%;font-size:12px;min-width:1120px}th{position:sticky;top:0;background:#e5f7f3;color:#003c35;text-align:left;padding:10px;border-bottom:1px solid var(--line);z-index:2}td{padding:9px 10px;border-bottom:1px solid #e9f2ef;vertical-align:top}.status{font-weight:900;border-radius:999px;padding:5px 9px;display:inline-block}.ok{background:var(--greenbg);color:#047857}.diff{background:var(--yellowbg);color:#92400e}.extra{background:var(--redbg);color:#991b1b}.missing{background:var(--bluebg);color:#1d4ed8}.bad{background:#f3e8ff;color:#6b21a8}.muted{color:#64748b}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0}.filters{display:flex;gap:8px;flex-wrap:wrap}input,select{border:1px solid var(--line);border-radius:12px;padding:10px;background:white}.small{font-size:12px;color:#587083}.mini{padding:8px 10px;font-size:12px}.footerNote{font-size:12px;color:#607486;margin-top:10px}
+.scopePanel{border:1px solid #9ce5d8;background:#f4fffc;border-radius:16px;padding:12px;margin:12px 0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.scopeText{font-size:13px;color:#35566a;line-height:1.45}.scopeBadge{display:inline-block;background:#eafffa;border:1px solid #8edfd0;color:#007c68;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}
+@media(max-width:900px){.grid,.alerts{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.topbar{padding:12px 16px}.wrap{margin:12px auto}.section{padding:12px}}
+
+/* V5: navegación de ubicaciones y ajuste */
+.sectionHeader{margin:24px 0 12px}.sectionHeader h3,.panelTitle h3{margin:0 0 5px;color:#075f52;font-size:17px}.sectionHeader p{margin:0}.locationCards{display:grid;gap:10px;margin:12px 0 28px}
+.locCard{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;scroll-margin-top:95px;box-shadow:0 5px 18px rgba(10,90,75,.045)}
+.locToggle{padding:15px 17px;width:100%;background:transparent;border-radius:0;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}
+.locToggle:hover{background:#f4fffc}.locName{display:flex;align-items:center;gap:11px;flex-wrap:wrap}.locName b{font-size:16px}.chevron{font-size:22px;color:#059669}.fullLoc{font-size:12px}.locCounter{display:flex;align-items:center;gap:12px;white-space:nowrap}
+.locBody{border-top:1px solid #def0ec;padding:14px 16px 16px}.locMeta{color:#35566a;font-size:13px;margin-bottom:10px}.locActions{margin-bottom:10px}
+.responsiveRows{overflow:auto;max-width:100%}.locationTable{min-width:820px}.locationTable th{position:static}.textBtn{padding:5px 8px;margin:2px;background:#eafffa;color:#067763;border:1px solid #8edfd0;font-size:12px;border-radius:8px}
+.textBtn:hover{background:#caefe6}.negative{color:#c12c39;font-weight:900}.positive{color:#a76d09;font-weight:900}.compactTable{max-height:370px}.compactTable table{min-width:680px}.compactTable th{position:sticky}
+.reconciliation{border-top:1px solid var(--line);padding:6px 0 8px}.panelTitle{margin:24px 0 10px}.panelTitle p{margin:0}.status{font-size:11px;white-space:nowrap}.small{line-height:1.4}
+@media(max-width:650px){.locToggle{align-items:flex-start;flex-direction:column}.locCounter{justify-content:space-between;width:100%}.fullLoc{display:none}.sectionHeader{margin-top:20px}.tab{padding:10px 9px;font-size:12px}.kpis{gap:8px}.kpi{padding:11px}.kpi .n{font-size:20px}}
+
+/* V6 — Panel de auditoría por estado y mapa de cobertura */
+.tabs{flex-wrap:wrap;gap:5px;padding:11px 12px 0}.tab{font-size:13px;padding:11px 12px}
+.mainSectionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:8px 0 18px}.mainSectionHead h2{margin:0 0 5px;font-size:21px;color:#064f47}.mainSectionHead p{margin:0;font-size:13px;color:#526c7b;max-width:740px;line-height:1.55}
+.sectionStats{font-size:12px;color:#4b6775;font-weight:800}.locCard{scroll-margin-top:110px}.locCard[data-kind="cuadrada"]{border-color:#a0e4cc}.locCard[data-kind="conciliada"]{border-color:#9cc5f1}.locCard[data-kind="novedad"]{border-color:#f3c88d}
+.locToggle{cursor:pointer}.locToggle:focus-visible,.textBtn:focus-visible,button:focus-visible{outline:3px solid #357dda;outline-offset:2px}
+.locName{min-width:0}.locDetails{padding:0 16px 15px;border-top:1px solid #deebe8}.locTools{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 0}.miniNote{color:#526a78;font-size:12px;line-height:1.5}
+.locTable{border-collapse:collapse;min-width:850px;width:100%}.locTable th{position:static}.locTable td,.locTable th{padding:11px 9px}.locTable tbody tr:hover{background:#f8fffd}.locTable tbody tr:first-child td{border-top:none}
+.badge{display:inline-flex;gap:4px;align-items:center;padding:5px 9px;border-radius:100px;font-size:11px;font-weight:850;white-space:nowrap}.badge.square{background:#dcfce7;color:#166534}.badge.issue{background:#fff3df;color:#995500}.badge.settled{background:#dbeafe;color:#1e40af}.badge.wait{background:#f1f5f9;color:#475569}
+.emptyState{padding:27px 20px;background:#fbfffe;border:1px dashed #b2dcd1;border-radius:14px;text-align:center;color:#426171;margin:12px 0}.tableLabel{margin:16px 0 9px;font-size:15px;color:#075f52}
+.actionRow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.mutedBtn{background:#f1f7f6;border:1px solid #cadbd9;color:#496871}.hintLine{border-left:3px solid #39b99f;padding:8px 10px;background:#f1fffa;font-size:12px;color:#3d5d6c;margin-top:10px}
+.inputTop{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:7px}.inputTop h3{margin:0}.inputTop button{padding:7px 10px;font-size:12px}.mapUpload textarea{min-height:94px}.mapUpload{margin-top:15px}.mapToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.mapToolbar input{min-width:215px;flex:1}.mapToolbar select{min-width:145px}.mapSummary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px}.mapSummary .kpi{padding:12px}.mapSummary .n{font-size:22px}
+.mapLegend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 17px;font-size:12px;color:#536879}.legendDot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px}.mapModules{display:grid;gap:14px}.mapModule{background:#fff;border:1px solid #d2eae5;border-radius:14px;padding:13px}.mapModule h3{font-size:13px;margin:0 0 9px;color:#3b596a}.mapTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(107px,1fr));gap:7px}.mapTile{display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left;border:1px solid;border-radius:9px;padding:9px 8px;font-size:11px;font-weight:800;min-height:41px}.mapTile small{font-size:10px;font-weight:850;white-space:nowrap}.mapTile.square{color:#155e39;border-color:#91d8ac;background:#e9fff2}.mapTile.issue{color:#93530b;border-color:#efcf91;background:#fff5df}.mapTile.settled{color:#174ea6;border-color:#aacbf1;background:#eaf3ff}.mapTile.wait{color:#566474;border-color:#d1dbe5;background:#f4f6f9}
+.drawerOverlay[hidden],.drawer[hidden]{display:none!important}.drawerOverlay{position:fixed;inset:0;z-index:45;background:rgba(7,29,39,.50)}.drawer{position:fixed;z-index:46;right:0;top:0;bottom:0;width:min(720px,100vw);background:white;box-shadow:-15px 0 45px rgba(0,30,35,.24);display:flex;flex-direction:column}.drawerHeader{padding:17px 22px;border-bottom:1px solid var(--line);display:flex;gap:15px;justify-content:space-between;align-items:center;background:#f5fffc}.drawerHeader h2{font-size:20px;color:#064f47;margin:0 0 2px}.drawerHeader p{font-size:12px;color:#526875;margin:0}.drawerContent{padding:18px 21px 30px;overflow:auto;overscroll-behavior:contain;flex:1}.drawerContent h3{margin:17px 0 8px;font-size:15px;color:#075f52}.drawerContent h3:first-child{margin-top:0}.drawerClose{background:white;color:#0a7465;border:1px solid #b4ddd4;font-size:13px}.drawerItem{border:1px solid #d6e9e5;border-radius:13px;padding:13px;margin:9px 0;background:#fff}.drawerItem.active{border-color:#75caba;box-shadow:0 0 0 3px #d7f9f1}.drawerItem.untested{background:#f8fafc}.drawerItemHead{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;align-items:center;margin-bottom:7px}.drawerItemData{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.dataMetric{background:#f3faf8;padding:8px;border-radius:8px}.dataMetric span{display:block;font-size:10px;color:#637985;margin-bottom:3px}.dataMetric strong{font-size:17px}.drawerAction{padding:9px 10px;font-size:12px;margin-top:6px}.safetyNote{padding:12px 13px;border:1px solid #b1d9d2;border-radius:10px;background:#f1fffb;font-size:12px;color:#416174;line-height:1.6}.warningNote{background:#fff9ea;border-color:#f2cf97}.drawerDivider{margin:18px 0;border-top:1px solid #dfebe8}
+@media(max-width:900px){.mapSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.tabs{flex-wrap:nowrap;overflow-x:auto;padding:10px 10px 0}.tab{white-space:nowrap}.grid{grid-template-columns:1fr}.drawerContent{padding:14px}.drawerHeader{padding:13px 14px}.mapTiles{grid-template-columns:repeat(auto-fill,minmax(98px,1fr))}}
+
+/* V7 — editor de movimiento, panel sin notas auxiliares */
+.adjustBox{border:1px solid #98d9cc;border-radius:14px;padding:13px;margin:15px 0;background:#f7fffc}
+.adjustBox h3{margin:0 0 12px!important}.adjustFields{display:grid;grid-template-columns:1fr 1fr 115px;gap:9px}
+.adjustFields label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#436071}
+.adjustFields select,.adjustFields input{width:100%;min-width:0;border-radius:9px;padding:10px 8px;font-size:12px;background:white}
+.movementBar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:#effaf7;padding:13px;border-radius:12px;font-size:13px;font-weight:800;margin:10px 0 18px}
+.movementSection{margin:22px 0}.movementSection h3{margin:0;color:#076e61;font-size:16px}.movementSection .mainSectionHead{margin-bottom:10px}
+.moveTable{min-width:500px}.moveTable th,.moveTable td{padding:10px 14px}.moveTable th:nth-child(4),.moveTable td:nth-child(4){text-align:right}
+@media(max-width:650px){.adjustFields{grid-template-columns:1fr 1fr}.adjustFields label:last-child{grid-column:span 2}}
+
+/* V8 — flujo supervisado, dos vistas y captura sin impresiones */
+.profileSwitcher{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.profileSwitcher button{font-size:12px;padding:8px 12px;border:1px solid #9ce5d8;background:#fff;color:#086b5c}.profileSwitcher button.on{background:#067b69;color:white}.topbar{gap:12px}.topbar .pill{font-size:12px}.section[hidden],.tab[hidden]{display:none!important}
+.workflowGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.wfPane{background:#fbfffe;border:1px solid var(--line);border-radius:15px;padding:16px}.wfPane h3{margin:0 0 10px;font-size:16px;color:#075f52}.wfPane h4{margin:12px 0 8px}.wfPane p{font-size:13px;color:#496778;line-height:1.5}.wfFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wfFields label,.wfLabel{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:12px;color:#476476}.wfFields input,.wfFields select,.wfFields textarea{width:100%}.wfFields textarea{min-height:72px;font-family:inherit}.wfWide{grid-column:1/-1}.wfActions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.wfNotice{padding:10px 13px;background:#eef8ff;border:1px solid #cce5fe;border-radius:10px;font-size:12px;line-height:1.5;color:#235077;margin:12px 0}.wfWarn{background:#fff7e8;border-color:#f4d9a0;color:#88550c}.wfOk{background:#e9fff5;border-color:#8fe5c1;color:#046c53}.wfRows{display:grid;gap:8px;margin:10px 0}.wfEntry,.wfSession,.wfTask{border:1px solid #d3e9e4;background:#fff;border-radius:12px;padding:11px 13px;font-size:13px}.wfEntry{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.wfEntry .wfDetail{font-size:12px;color:#547384}.wfSession{margin:10px 0}.wfSessionHead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}.wfSessionHead strong{font-size:14px;color:#075f52}.wfStatus{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:850;background:#f1f5f9;color:#475569}.wfStatus.pending{background:#fef3c7;color:#92400e}.wfStatus.approved{background:#d1fae5;color:#047857}.wfStatus.review{background:#dbeafe;color:#1d4ed8}.wfStatus.rejected{background:#fee2e2;color:#991b1b}.wfTag{display:inline-block;border-radius:7px;background:#f2f8fb;padding:3px 7px;font-size:11px;color:#567181;margin:3px}.wfTag.alert{background:#fff2d9;color:#945900}.wfMini{font-size:11px;color:#5a7180;line-height:1.5}.wfTable{width:100%;min-width:640px;font-size:12px}.wfTable td,.wfTable th{padding:8px}.wfTable th{position:static}.wfActionSmall{font-size:11px;padding:7px 9px;margin:2px}.wfCountCards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.wfCountCards .kpi{padding:11px}.wfCountCards .n{font-size:21px}.wfSwitchNote{font-size:11px;color:#6f8791}.wfEmpty{padding:15px;border:1px dashed #b8ddd7;color:#627e89;border-radius:10px;font-size:13px}.wfMonospace{font-family:Consolas,monospace}.wfSectionTitle{margin:16px 0 10px;color:#075f52}.wfFilter{width:100%;margin-bottom:10px}
+@media(max-width:800px){.workflowGrid{grid-template-columns:1fr}.wfCountCards{grid-template-columns:repeat(2,minmax(0,1fr))}.topbar{align-items:flex-start;flex-wrap:wrap}.profileSwitcher{width:100%}}@media(max-width:470px){.wfFields{grid-template-columns:1fr}.wfWide{grid-column:auto}}
+
+</style>
+<script>/* Configuración pública de Firebase para PERCHADO, no contiene credenciales privadas. */
+window.PERCHADO_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyBLpaAk2ZpbPEohda10mibAuHm4mjgL8hY',
+  authDomain: 'oriflame-picking.firebaseapp.com',
+  projectId: 'oriflame-picking',
+  storageBucket: 'oriflame-picking.firebasestorage.app',
+  messagingSenderId: '939685796463',
+  appId: '1:939685796463:web:629bd10e1d929913404b9a'
+};
+</script><style>
+/* V9: interfaz compacta y mobile-first */
+#operatorPortal .workflowGrid{grid-template-columns:minmax(0,1.04fr) minmax(0,1fr)}
+#operatorPortal .wfPane{padding:18px} #opSyncV9{margin-bottom:9px;color:#087665;font-weight:750;font-size:12px}
+#operatorPortal .wfFields input,#operatorPortal .wfFields select{min-height:48px;font-size:16px}
+#operatorPortal .wfActions button{min-height:46px} #opCode,#opQty{font-variant-numeric:tabular-nums}
+#operatorPortal .wfRows .wfEntry{padding:10px 12px} #opDraftRows .wfEntry{word-break:break-word}
+#adminGateV9[hidden]{display:none!important}.v9Gate{position:fixed;inset:0;background:rgba(7,35,44,.76);z-index:70;display:grid;place-items:center;padding:14px}
+.v9GateCard{background:white;border-radius:22px;width:min(440px,100%);padding:28px;box-shadow:0 20px 90px rgba(0,0,0,.2)}
+.v9GateCard h2{font-size:21px;margin:10px 0 18px;color:#075f52}.v9Logo{font-size:13px;font-weight:850;color:#008672}
+.v9Fields{display:grid;gap:12px}.v9Fields label{display:grid;gap:6px;color:#37536a;font-weight:800;font-size:13px}.v9Fields input{width:100%;font-size:16px;min-height:46px}
+#gateMessageV9{min-height:18px;color:#9c341a;font-size:12px;font-weight:700}#adminGateV9 .wfActions button{flex:1}
+#noveltyInboxV9{margin:14px 0;display:grid;gap:9px}.v9Issue{border:1px solid #dcebe8;border-radius:12px;padding:12px;background:white;display:grid;gap:7px}
+.v9IssueHead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}.v9IssueActions{display:flex;gap:7px;flex-wrap:wrap}
+#transferPanelV9{margin:16px 0}#transferPanelV9 .v9TransferOptions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:end}
+#transferPanelV9 label{font-size:12px;font-weight:850;display:grid;gap:5px;color:#476476}
+#transferPanelV9 select,#transferPanelV9 input{width:100%;min-width:0}
+#liveMonitoringV9{margin:8px 0 14px}#liveMonitoringV9 .wfEntry{margin-bottom:8px}
+.v9Online{color:#057a62;font-weight:800}.v9Offline{color:#ba5e14;font-weight:800}
+#cloudLabelV9{font-size:12px;color:#466576;margin:7px 0}
+/* Eliminar explicaciones auxiliares de la interfaz, conservar alertas y estados */
+.hint,.hintLine,.miniNote,.footerNote,.safetyNote,.wfSwitchNote{display:none!important}
+@media(max-width:860px){
+#operatorPortal .workflowGrid{grid-template-columns:1fr}
+#operatorPortal .wfPane{padding:12px;border-radius:11px}
+#operatorPortal .wfFields{grid-template-columns:1fr 1fr;gap:10px}
+#operatorPortal .wfWide{grid-column:1/-1}
+#operatorPortal .mobileResultControl{grid-column:1/-1}
+#operatorPortal .wfActions{display:grid;grid-template-columns:1fr 1fr}
+#operatorPortal .wfActions button{padding:12px 7px}
+#operatorPortal .wfPane>button.primary{width:100%;min-height:52px;font-size:15px;margin-top:8px}
+#operatorPortal h2{font-size:19px} .topbar{padding:10px 12px}
+#transferPanelV9 .v9TransferOptions{grid-template-columns:1fr 1fr}
+}
+@media(max-width:470px){
+.wrap{padding:0 8px;margin:8px auto}.tabs{padding:5px 6px 0}#operatorPortal.section{padding:10px}
+#operatorPortal .wfFields{grid-template-columns:1fr 1fr}
+#operatorPortal .wfFields label:nth-child(1),#operatorPortal .wfFields label:nth-child(2){grid-column:1/-1}
+#operatorPortal .wfFields label:nth-child(3){grid-column:1/-1}
+#operatorPortal .wfFields label:nth-child(4){grid-column:1/-1}
+#operatorPortal .wfPane h3{font-size:15px} #operatorPortal .wfSessionHead strong{font-size:13px}
+#operatorPortal .wfActions button{font-size:12px}#operatorPortal input{width:100%}
+#transferPanelV9 .v9TransferOptions{grid-template-columns:1fr}
+.v9GateCard{padding:20px}
+}
+</style></head>
+<body>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V9</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<main class="wrap">
+<div class="card">
+<div class="tabs">
+<button class="tab active" data-tab="paste" onclick="openTab('paste')">📋 Pegar datas</button>
+<button class="tab" data-tab="results" onclick="openTab('results')">⚠️ Novedades</button>
+<button class="tab" data-tab="squared" onclick="openTab('squared')">✅ Cuadradas</button>
+<button class="tab" data-tab="map" onclick="openTab('map')">🗺️ Mapa</button>
+<button class="tab" data-tab="decisions" onclick="openTab('decisions')">📦 Ajustes y movimientos</button>
+<button class="tab" data-tab="operatorPortal" hidden="" onclick="openTab('operatorPortal')">👷 Captura operarios</button>
+<button class="tab" data-tab="adminPortal" onclick="openTab('adminPortal')">🛡 Gestión de conteos</button>
+</div>
+<section class="section active" id="paste">
+<h2 class="title">Cruce físico vs sistema</h2>
+<div class="scopePanel">
+<div class="scopeText"><b>Alcance:</b> ubicaciones levantadas</div>
+<span class="scopeBadge" id="mappedScopeBadge">Ubicaciones detectadas: 0</span>
+</div>
+<div class="grid">
+<div class="box">
+<div class="inputTop"><h3>👷 Data operador / chicos</h3><button class="secondary" onclick="pasteClipboard('operatorData')">📥 Pegar</button></div>
+<div class="hint">Orden recomendado: <b>Pallet/Ubicación | Código | Cantidad</b>. Acepta separadores por tab, coma, punto y coma o espacios.</div>
+<textarea id="operatorData" placeholder="Ejemplo:\n26.04\t47262\t50\n34-03\t44300\t405\nBulk 4\t47014\t20"></textarea>
+</div>
+<div class="box">
+<div class="inputTop"><h3>🖥️ Data sistema</h3><button class="secondary" onclick="pasteClipboard('systemData')">📥 Pegar</button></div>
+<div class="hint">Orden recomendado: <b>Ubicación | Código | Cantidad</b>. También acepta ubicaciones como 01-30-026-04 o ubicaciones de texto.</div>
+<textarea id="systemData" placeholder="Ejemplo:\n01-30-026-04\t47262\t50\n01-30-034-03\t44300\t405\nBulk_CW4\t47014\t20"></textarea>
+</div>
+</div>
+<div class="box mapUpload"><div class="inputTop"><h3>🗺️ Maestro de ubicaciones (opcional, para mapa completo)</h3><button class="secondary" onclick="pasteClipboard('masterData')">📥 Pegar</button></div><p class="hint">Pega una ubicación por línea o una columna de Excel, incluso posiciones vacías. Si lo dejas vacío, el mapa mostrará solamente las ubicaciones conocidas en las datas del operador y sistema.</p><textarea id="masterData" placeholder="Ubicación
+26-04
+34-03
+52-02
+77-06"></textarea></div>
+<div class="row">
+<button class="primary" onclick="compareData()">✅ Comparar pallets</button>
+<button class="secondary" onclick="loadExample()">🧪 Cargar ejemplo</button>
+<button class="secondary" onclick="savePaste()">💾 Guardar pegado</button>
+<button class="secondary" onclick="loadPaste()">↩️ Recuperar pegado</button>
+<button class="danger" onclick="clearAll()">🧹 Limpiar todo</button>
+</div>
+</section>
+<section class="section" id="results">
+<div class="mainSectionHead"><div><h2>⚠️ Ubicaciones con novedades</h2></div><button class="secondary mini" onclick="copySection('novedades')">📋 Copiar novedades</button></div>
+<div class="kpis" id="kpis"></div><div class="alerts" id="alerts"></div>
+<div class="wfPane v9RecountBox"><h3>📨 Enviar código a reconteo</h3><div class="wfFields"><label>Asignar a<select id="adminTaskUser"></select></label><label>Ubicación<input id="adminTaskLoc" list="wfKnownLocations" placeholder="Ej. 26-04"/></label><label>Código<input id="adminTaskCode" placeholder="Código a verificar"/></label><label>Motivo<select id="adminTaskReason"><option>Validación de faltante</option><option>Posible código mal ingresado</option><option>Posible sobrante en otra ubicación</option><option>Diferencia de cantidad</option><option>Verificación solicitada</option></select></label></div><div class="wfActions"><button class="primary" onclick="createManualTaskV8()">📨 Enviar a reconteo</button></div></div><div id="noveltyInboxV9"></div><div class="sectionStats" id="issuesCount"></div><div id="transferPanelV9"></div><div class="locationCards" id="issuesLocations"></div>
+</section>
+<section class="section" id="squared">
+<div class="mainSectionHead"><div><h2>✅ Ubicaciones cuadradas</h2></div><button class="secondary mini" onclick="copySection('cuadradas')">📋 Copiar cuadradas</button></div>
+<div class="sectionStats" id="squaredCount"></div><div class="locationCards" id="squaredLocations"></div>
+</section>
+<section class="section" id="map">
+<div class="mainSectionHead"><div><h2>🗺️ Mapa de ubicaciones</h2></div><button class="secondary mini" onclick="copySection('mapa')">📋 Copiar mapa</button></div>
+<div class="mapSummary" id="mapKpis"></div>
+<div class="mapLegend"><span><i class="legendDot" style="background:#78dba0"></i>Cuadrada</span><span><i class="legendDot" style="background:#f6ba60"></i>Con novedad</span><span><i class="legendDot" style="background:#92bdef"></i>Ajustada</span><span><i class="legendDot" style="background:#b9c6d2"></i>Sin revisar</span></div>
+<div class="mapToolbar"><input id="mapSearch" oninput="renderMap()" placeholder="Buscar posición, nivel o ubicación"/><select id="mapFilter" onchange="renderMap()"><option value="all">Todos</option><option value="wait">Sin revisar</option><option value="issue">Con novedades</option><option value="square">Cuadradas</option><option value="settled">Ajustadas</option></select></div>
+<div class="mapModules" id="mapGrid"></div>
+</section>
+<section class="section" id="decisions">
+<div class="mainSectionHead"><div><h2>📦 Ajustes y movimientos</h2></div><button class="secondary mini" onclick="downloadExcel()">⬇️ Descargar Excel</button></div>
+<h3 class="wfSectionTitle">✅ Ubicaciones ajustadas · movimientos pendientes de WMS</h3><div class="sectionStats" id="settledCount"></div><div class="locationCards" id="settledLocations"></div><div id="reconciliationPanel"></div>
+<div class="mainSectionHead" style="margin-top:28px"><div><h2>📊 Comparación detallada</h2></div></div>
+<div class="toolbar"><div class="filters"><select id="statusFilter" onchange="renderTable()"><option value="ALL">Todos los estados</option><option value="OK">OK</option><option value="DIFERENCIA CANTIDAD">Diferencia cantidad</option><option value="NO EXISTE EN SISTEMA">No existe en sistema</option><option value="NO REGISTRADO POR OPERADOR">No registrado por operador</option><option value="UBICACIÓN NO RECONOCIDA">Ubicación no reconocida</option><option value="DUPLICADO OPERADOR">Duplicado operador</option></select><select id="sortFilter" onchange="renderTable()"><option value="estado">Por estado</option><option value="pallet">Por ubicación</option><option value="codigo">Por código</option><option value="diferencia">Por diferencia</option></select><input id="searchBox" oninput="renderTable()" placeholder="Buscar código / ubicación"/></div><button class="secondary mini" onclick="copyTable()">📋 Copiar detalle filtrado</button></div>
+<div class="tableWrap"><table id="resultTable"></table></div>
+</section>
+<section class="section" id="operatorPortal">
+<div class="mainSectionHead"><div><h2>👷 Conteo por ubicación</h2></div></div>
+<div id="opSyncV9"></div><div class="workflowGrid">
+<div class="wfPane">
+<h3>Capturar conteo</h3>
+<div class="wfFields">
+<label class="wfWide">Operario habilitado<select id="opUser" onchange="renderOperatorTasksV8()"></select></label>
+<label class="wfWide">Ubicación a revisar<input id="opLocation" list="wfKnownLocations" onchange="updateDraftLocationV8()" placeholder="Ej. 26-04 o Bulk_CW4"/><datalist id="wfKnownLocations"></datalist></label>
+<label>Código<input autocapitalize="off" autocomplete="off" enterkeyhint="next" id="opCode" inputmode="text" onkeydown="if(event.key==='Enter')addDraftV8()" placeholder="Código de producto" spellcheck="false"/></label>
+<label>Cantidad física<input enterkeyhint="done" id="opQty" inputmode="decimal" min="0" onkeydown="if(event.key==='Enter')addDraftV8()" placeholder="Unidades" step="any" type="number"/></label>
+<label class="wfWide mobileResultControl">Resultado<select id="opEntryType"><option value="COUNT">Encontrado físicamente</option><option value="MISSING">No encontrado físicamente → posible faltante</option></select></label>
+</div>
+<div class="wfActions"><button class="primary" onclick="addDraftV8()">＋ Agregar código</button><button class="secondary" onclick="clearDraftV8()">Limpiar borrador</button></div>
+<div class="wfRows" id="opDraftRows"></div>
+<button class="primary" onclick="submitDraftV8()">📨 Enviar conteo a Administración</button>
+</div>
+<div class="wfPane">
+<h3>Reconteos asignados</h3>
+<div id="opTasks"></div>
+<h3 class="wfSectionTitle">Mis conteos enviados</h3><div id="opMySessions"></div>
+</div>
+</div>
+</section>
+<section class="section" id="adminPortal">
+<div class="mainSectionHead"><div><h2>🛡 Administración · Auditoría operativa</h2></div><button class="secondary mini" onclick="exportWorkflowV8()">⬇️ Descargar historial Excel</button></div>
+<div id="liveMonitoringV9"></div><div id="cloudLabelV9"></div><div class="wfCountCards" id="wfOverview"></div>
+<div class="workflowGrid">
+<div class="wfPane"><h3>👥 Operarios habilitados</h3><div class="wfActions"><input id="newOpName" onkeydown="if(event.key==='Enter')addOperatorV8()" placeholder="Nombre y apellido" style="flex:1;min-width:180px"/><button class="primary" onclick="addOperatorV8()">＋ Habilitar</button></div><div id="wfUsers"></div></div>
+</div>
+<h3 class="wfSectionTitle">📥 Bandeja de conteos recibidos</h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar por código, operario, ubicación o estado"/></div><div id="wfSessions"></div>
+<h3 class="wfSectionTitle">🔎 Bandeja de reconteos</h3><div id="wfTasksAdmin"></div>
+<div class="wfPane" style="margin-top:16px"><h3>✅ Integrar conteos aprobados al análisis</h3><p>Genera la data del operador a partir del conteo de aprobación más reciente de cada ubicación. Incluye las correcciones autorizadas y deja las evidencias originales sin cambios. Después se realiza el cruce existente contra sistema.</p><div class="wfActions"><button class="primary" onclick="applyApprovedToComparisonV8()">↔ Integrar aprobados y comparar</button><button class="secondary" onclick="exportWorkflowV8()">Descargar evidencias</button><button class="secondary" onclick="backupWorkflowV8()">Exportar respaldo JSON</button><button class="secondary" onclick="document.getElementById('wfImportFile').click()">Importar respaldo JSON</button><input accept=".json,application/json" hidden="" id="wfImportFile" onchange="importWorkflowV8(event)" type="file"/></div></div>
+<div class="wfPane" id="adminAccountsV9" style="margin-top:16px"><h3>🔐 Cuentas de Administración</h3><div class="wfFields"><label>Nuevo usuario administrador<input autocomplete="off" id="newAdminV9" placeholder="Ej. supervisor.bodega"/></label><label>Contraseña inicial<input autocomplete="new-password" id="newAdminPasswordV9" placeholder="Mínimo 10 caracteres" type="password"/></label></div><div class="wfActions"><button class="primary" onclick="createAdministratorV9()">＋ Crear administrador</button><button class="secondary" onclick="logoutAdministratorV9()">Cerrar sesión</button></div><div id="adminListV9"></div></div></section>
+</div>
+</main>
+<div class="drawerOverlay" hidden="" id="drawerOverlay" onclick="closeDrawer()"></div>
+<aside aria-label="Investigación por código" aria-modal="true" class="drawer" hidden="" id="drawer" role="dialog">
+<div class="drawerHeader"><div><h2 id="drawerTitle">Revisión</h2><p id="drawerSubtitle">Investigación de ubicaciones</p></div><button class="drawerClose" onclick="closeDrawer()">← Volver / cerrar</button></div>
+<div class="drawerContent" id="drawerContent"></div>
+</aside>
+<script>
+'use strict';
+const TEXT_LOCATIONS = ['Aereos_CW','Armados_CW','Bulk_CW1','Bulk_CW2','Bulk_CW3','Bulk_CW4','Bulk_CW5','Bulk_CW6','Compra Local','Cuarentena_CW','Dañados_CW','Expirados_CW','Inb_PL-CW','M_empaque','Papeleria','Procesos_CW','REVERSAR_CW'];
+const PROCESS_LOCATION = 'Procesos_CW';
+const $ = id => document.getElementById(id);
+let results = [], hasCompared = false, parsedErrors = [];
+let auditScope = {mappedLocations:[],operatorTotal:0,systemTotal:0,systemFiltered:0,invalidOperatorLocations:0};
+let allSystemRows=[], confirmations=new Set(), approvedMatches=[], resolutions=[], proposals=[];
+let openLocations=new Set(), currentSignature='';
+let reviews=new Set(),verifiedMissing=new Set(),masterLocations=[],drawerState=null,drawerLastFocus=null,sourceDirty=false;
+$('textLocs').textContent = TEXT_LOCATIONS.join(' | ');
+loadPaste();
+
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtQty(n){return Number(n).toLocaleString('es-EC',{maximumFractionDigits:3});}
+function statusClass(s){if(s==='OK')return'ok';if(s==='DIFERENCIA CANTIDAD'||s==='DUPLICADO OPERADOR')return'diff';if(s==='NO EXISTE EN SISTEMA')return'extra';if(s==='NO REGISTRADO POR OPERADOR')return'missing';return'bad';}
+function updateMappedBadge(count){$('mappedScopeBadge').textContent='Ubicaciones detectadas: '+count;}
+function scopeText(){return `Auditoría sobre ${auditScope.mappedLocations.length} ubicaciones levantadas. Operador: ${auditScope.operatorTotal} líneas aceptadas. Sistema dentro del alcance: ${auditScope.systemFiltered}/${auditScope.systemTotal} líneas.`;}
+function openTab(id){document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',b.dataset.tab===id));document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));}
+function toast(msg){$('syncStatus').textContent=msg;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('syncStatus').textContent='Listo',3500);}
+function savePaste(){try{localStorage.setItem('perchadoAuditOperator',$('operatorData').value);localStorage.setItem('perchadoAuditSystem',$('systemData').value);localStorage.setItem('perchadoAuditMaster',$('masterData').value);toast('Datos guardados en este navegador');}catch(e){toast('No se pudo guardar: revisa almacenamiento local');}}
+function loadPaste(){try{$('operatorData').value=localStorage.getItem('perchadoAuditOperator')||'';$('systemData').value=localStorage.getItem('perchadoAuditSystem')||'';$('masterData').value=localStorage.getItem('perchadoAuditMaster')||'';}catch(e){}}
+function clearAll(){if(!confirm('¿Limpiar datas, auditoría y decisiones guardadas en este navegador?'))return;
+  $('operatorData').value='';$('systemData').value='';$('masterData').value='';closeDrawer();results=[];hasCompared=false;parsedErrors=[];allSystemRows=[];confirmations=new Set();approvedMatches=[];resolutions=[];proposals=[];reviews=new Set();verifiedMissing=new Set();masterLocations=[];openLocations=new Set();currentSignature='';sourceDirty=false;
+  auditScope={mappedLocations:[],operatorTotal:0,systemTotal:0,systemFiltered:0,invalidOperatorLocations:0};
+  ['perchadoAuditOperator','perchadoAuditSystem','perchadoAuditMaster','perchadoAuditDecisionsV5','perchadoAuditDecisionsV6','perchadoAuditDecisionsV7'].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  updateMappedBadge(0);renderAll();toast('Datos y decisiones limpiados');
+}
+function loadExample(){
+  $('operatorData').value='Ubicación\tCódigo\tCantidad\n26.04\t47262\t80\n26.04\t47014\t48\n34-03\t47262\t60\n34-03\t44300\t405\n52-02\t99999\t5\n52-02\t88888\t13\n66-01\t12345\t25';
+  $('systemData').value='Ubicación\tCódigo\tCantidad\n01-30-026-04\t47262\t100\n01-30-026-04\t47014\t48\n01-30-034-03\t47262\t40\n01-30-034-03\t44300\t405\n01-30-052-02\t99999\t8\n01-30-052-02\t88888\t10\n01-30-077-06\t47262\t50\n01-30-066-01\t12345\t25';
+  $('masterData').value='Ubicación\n26-04\n34-03\n52-02\n77-06\n88-01\n90-07\n66-01';if(hasCompared)markInputDirty();toast('Ejemplo con ajustes, faltantes, sobrantes y mapa cargado');
+}
+function normalizeCode(v){return String(v??'').trim().replace(/\.0$/,'');}
+function parseQuantity(value){
+  let s=String(value??'').trim().replace(/\s/g,'');
+  if(!s)return null;
+  if(/^\d{1,3}(?:[.,]\d{3})+$/.test(s))s=s.replace(/[.,]/g,'');
+  else if(/^\d{1,3}(?:\.\d{3})+[,]\d+$/.test(s))s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(?:,\d{3})+[.]\d+$/.test(s))s=s.replace(/,/g,'');
+  else s=s.replace(',','.');
+  if(!/^\d+(?:\.\d+)?$/.test(s))return null;
+  const n=Number(s);return Number.isFinite(n)&&n>=0?n:null;
+}
+function normKeyText(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function normalizeLocation(raw){
+  const original=String(raw??'').trim();if(!original)return {value:'',valid:false,type:'empty',original};
+  const t=original.replace(/\s+/g,' ').trim(), k=normKeyText(t);
+  const alias=[
+    [/^aereos?cw?$|^aereos?$/,'Aereos_CW'],[/^armados?cw?$|^armados?$/,'Armados_CW'],[/^bulk(?:cw)?([1-6])$/,m=>'Bulk_CW'+m[1]],
+    [/^compralocal$/,'Compra Local'],[/^cuarentenacw?$|^cuarentena$/,'Cuarentena_CW'],[/^danadoscw?$|^danados$/,'Dañados_CW'],
+    [/^expiradoscw?$|^expirados$/,'Expirados_CW'],[/^inbplcw$|^inbpl$/,'Inb_PL-CW'],[/^mempaque$|^materialempaque$|^empaque$/,'M_empaque'],
+    [/^papeleria$/,'Papeleria'],[/^procesoscw?$|^procesos$/,'Procesos_CW'],[/^reversarcw?$|^reversar$/,'REVERSAR_CW']
+  ];
+  for(const [re,val] of alias){const m=k.match(re);if(m)return {value:typeof val==='function'?val(m):val,valid:true,type:'text',original};}
+  for(const loc of TEXT_LOCATIONS){if(k===normKeyText(loc))return {value:loc,valid:true,type:'text',original};}
+  let m=t.match(/^(\d{1,3})\s*[-.]\s*(\d{1,2})$/);
+  if(!m)m=t.match(/^01\s*[-.]\s*30\s*[-.]\s*(\d{1,3})\s*[-.]\s*(\d{1,2})$/);
+  if(m){const pos=Number(m[1]),lvl=Number(m[2]);
+    if(pos<1||pos>999||lvl<1||lvl>99)return {value:original,valid:false,type:'bad',original};
+    return {value:`01-30-${String(pos).padStart(3,'0')}-${String(lvl).padStart(2,'0')}`,valid:true,type:'numeric',original};
+  }
+  return {value:original,valid:false,type:'bad',original};
+}
+function cleanHeader(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'').trim();}
+function detectColumns(cols,source){
+  const norm=cols.map(cleanHeader);
+  const locIndex=norm.findIndex(s=>/^(ubicacion|pallet|location|posicion|locacion|ubicacion fisica|ubicacion sistema)$/.test(s));
+  const codeIndex=norm.findIndex(s=>/^(codigo|codigo producto|codigo de producto|variante|sku|producto|product code|item)$/.test(s));
+  const qtyIndex=norm.findIndex(s=>/^(cantidad|cantidad fisica|cantidad sistema|physical quantity|qty|stock|unidades|existencia|stock fisico|stock sistema)$/.test(s));
+  if(locIndex>=0&&codeIndex>=0&&qtyIndex>=0)return {locIndex,codeIndex,qtyIndex,isHeader:true};
+  if(source==='SISTEMA'){
+    const first=normalizeLocation(cols[0]||''),second=normalizeLocation(cols[1]||'');
+    if(first.valid&&!second.valid)return {locIndex:0,codeIndex:1,qtyIndex:2,isHeader:false};
+    if(second.valid&&!first.valid)return {locIndex:1,codeIndex:0,qtyIndex:2,isHeader:false};
+  }
+  return {locIndex:0,codeIndex:1,qtyIndex:2,isHeader:false};
+}
+function splitRow(line){
+  if(line.includes('\t'))return line.split('\t').map(x=>x.trim());
+  if(line.includes(';'))return line.split(';').map(x=>x.trim());
+  if(line.includes(',')){
+    // CSV: comas entre columnas. Para cantidades con separadores de miles, usar tabulaciones o ;.
+    const re=/(?:"([^"]*(?:""[^"]*)*)"|([^,]*))(?:,|$)/g;let m,cols=[];
+    while((m=re.exec(line))!==null){if(m[0]===''&&re.lastIndex>=line.length)break;cols.push((m[1]??m[2]??'').replace(/""/g,'"').trim());if(re.lastIndex>=line.length)break;}
+    return cols;
+  }
+  return line.trim().split(/\s{2,}/).map(x=>x.trim());
+}
+function parseLines(text,source){
+  const out=[],errors=[];let mapping=null;
+  String(text||'').split(/\r?\n/).forEach((line,idx)=>{
+    if(!line.trim())return;
+    const cols=splitRow(line);
+    if(cols.length<3){errors.push({source,line:idx+1,reason:'Menos de tres columnas'});return;}
+    const detected=detectColumns(cols,source);
+    if(detected.isHeader){mapping=detected;return;}
+    const col=mapping||detected;
+    const locRaw=cols[col.locIndex]??'', code=normalizeCode(cols[col.codeIndex]),qty=parseQuantity(cols[col.qtyIndex]);
+    const loc=normalizeLocation(locRaw);
+    if(!code||!locRaw||qty===null||/\s/.test(code)){
+      errors.push({source,line:idx+1,reason:'Código, ubicación o cantidad inválidos'});return;
+    }
+    out.push({source,line:idx+1,code,locOriginal:locRaw,locNorm:loc.value,locValid:loc.valid,qty,key:code+'||'+loc.value});
+  });
+  out.errors=errors;return out;
+}
+function aggregate(rows){
+  const map=new Map();for(const r of rows){
+    if(!map.has(r.key))map.set(r.key,{...r,qty:0,count:0,lines:[]});
+    const a=map.get(r.key);a.qty+=r.qty;a.count++;a.lines.push(r.line);
+  }return map;
+}
+function checksum(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(36)+':'+s.length;}
+function decisionKey(){return checksum($('operatorData').value+'\n#####\n'+$('systemData').value);}
+function saveDecisions(){
+  if(!hasCompared)return;
+  try{localStorage.setItem('perchadoAuditDecisionsV7',JSON.stringify({signature:currentSignature,confirmed:[...confirmations],reviews:[...reviews],verifiedMissing:[...verifiedMissing],matches:approvedMatches,resolutions}));}
+  catch(e){toast('No hay espacio para guardar decisiones locales');}
+}
+function restoreDecisions(){
+  confirmations=new Set();reviews=new Set();verifiedMissing=new Set();approvedMatches=[];resolutions=[];
+  try{const saved=JSON.parse(localStorage.getItem('perchadoAuditDecisionsV7')||'null');
+    if(saved&&saved.signature===currentSignature){
+      confirmations=new Set((saved.confirmed||[]).filter(x=>auditScope.mappedLocations.includes(x)));reviews=new Set((saved.reviews||[]).filter(k=>results.some(r=>reviewKey(r)===k)));verifiedMissing=new Set((saved.verifiedMissing||[]).filter(k=>results.some(r=>reviewKey(r)===k&&!r.hasOperator))); 
+      approvedMatches=(saved.matches||[]).filter(m=>Number(m.qty)>0&&results.some(r=>r.ubicacionNormalizada===m.from&&r.codigo===m.code)&&results.some(r=>r.ubicacionNormalizada===m.to&&r.codigo===m.code));
+      resolutions=(saved.resolutions||[]).filter(d=>Number(d.qty)>0&&results.some(r=>r.ubicacionNormalizada===d.location&&r.codigo===d.code));
+    }
+  }catch(e){}
+}
+function compareData(){
+  const op=parseLines($('operatorData').value,'OPERADOR'),sys=parseLines($('systemData').value,'SISTEMA');
+  parsedErrors=[...op.errors,...sys.errors];
+  if(!op.length||!sys.length){alert('Se necesitan datos válidos en ambos cuadros. Revisa columnas y encabezados.');return;}
+  if(parsedErrors.length){const sample=parsedErrors.slice(0,7).map(e=>`${e.source} línea ${e.line}: ${e.reason}`).join('\n');
+    if(!confirm(`Se detectaron ${parsedErrors.length} filas rechazadas:\n${sample}\n\n¿Continuar con las filas válidas?`))return;
+  }
+  const mappedLocations=[...new Set(op.filter(r=>r.locValid).map(r=>r.locNorm))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  if(!mappedLocations.length){alert('No se detectaron ubicaciones válidas en la data del operador.');return;}
+  const mappedSet=new Set(mappedLocations),sysFiltered=sys.filter(r=>mappedSet.has(r.locNorm));
+  auditScope={mappedLocations,operatorTotal:op.length,systemTotal:sys.length,systemFiltered:sysFiltered.length,invalidOperatorLocations:op.filter(r=>!r.locValid).length};
+  updateMappedBadge(mappedLocations.length);allSystemRows=sys;
+  const opMap=aggregate(op),sysMap=aggregate(sysFiltered),sysByCode=new Map(),opByCode=new Map();
+  sys.forEach(r=>{if(!sysByCode.has(r.code))sysByCode.set(r.code,new Set());sysByCode.get(r.code).add(r.locNorm);});
+  op.forEach(r=>{if(!opByCode.has(r.code))opByCode.set(r.code,new Set());opByCode.get(r.code).add(r.locNorm);});
+  results=[];
+  for(const key of new Set([...opMap.keys(),...sysMap.keys()])){
+    const a=opMap.get(key),b=sysMap.get(key),base=a||b;
+    let status='',obs='',delta=(a?a.qty:0)-(b?b.qty:0);
+    if(a&&b){status=delta===0?'OK':'DIFERENCIA CANTIDAD';obs=delta===0?'Código, ubicación y cantidad cuadran.':'Diferencia entre físico y sistema.';
+      if(a.count>1){obs+=` Operador registró ${a.count} filas para la misma llave; se sumaron.`;if(status==='OK')status='DUPLICADO OPERADOR';}
+    }else if(a&&!b){status=a.locValid?'NO EXISTE EN SISTEMA':'UBICACIÓN NO RECONOCIDA';obs=a.locValid?'Código físico sin saldo en sistema en esta ubicación.':'No se reconoce la ubicación física.';
+      if(a.count>1)obs+=` Duplicado operador (${a.count} líneas).`;
+    }else{status='NO REGISTRADO POR OPERADOR';obs='Sistema tiene stock en esta ubicación, pero el operador no registró este código; requiere cierre del conteo para tratarlo como faltante.';}
+    const alternatives=[...(sysByCode.get(base.code)||[])].filter(x=>x!==base.locNorm);
+    if(alternatives.length)obs+=' Otras ubicaciones en sistema: '+alternatives.join(' | ')+'.';
+    if(!a&&b){const otherOp=[...(opByCode.get(base.code)||[])].filter(x=>x!==base.locNorm);if(otherOp.length)obs+=' Contado en: '+otherOp.join(' | ')+'.';}
+    results.push({estado:status,codigo:base.code,ubicacionOperador:a?a.locOriginal:'',ubicacionNormalizada:base.locNorm,ubicacionSistema:b?b.locNorm:'',qtyOperador:a?a.qty:null,qtySistema:b?b.qty:null,diferencia:delta,observacion:obs,lineaOperador:a?a.lines.join(', '):'',lineaSistema:b?b.lines.join(', '):'',locValid:base.locValid,duplicado:!!(a&&a.count>1),hasOperator:!!a});
+  }
+  results.sort((a,b)=>a.ubicacionNormalizada.localeCompare(b.ubicacionNormalizada,undefined,{numeric:true})||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}));
+  hasCompared=true;sourceDirty=false;masterLocations=parseMasterLocations($('masterData').value);currentSignature=decisionKey();openLocations=new Set();closeDrawer();
+  restoreDecisions();savePaste();renderAll();openTab(auditScope.mappedLocations.some(l=>locationKind(l)==='novedad')?'results':'squared');toast('Auditoría lista · mapa y decisiones locales disponibles');
+}
+function baseEligible(r){return r.locValid&&!r.duplicado&&(r.hasOperator||confirmations.has(r.ubicacionNormalizada)||verifiedMissing.has(reviewKey(r)));}
+function remaining(r){
+  let v=r.diferencia;
+  for(const m of approvedMatches){if(m.code!==r.codigo)continue;if(m.from===r.ubicacionNormalizada)v+=Number(m.qty);if(m.to===r.ubicacionNormalizada)v-=Number(m.qty);}
+  for(const d of resolutions){if(d.code!==r.codigo||d.location!==r.ubicacionNormalizada)continue;v+=d.type==='FALTANTE'?Number(d.qty):-Number(d.qty);}
+  return Math.abs(v)<1e-7?0:Number(v.toFixed(5));
+}
+function candidateOtherLocations(r){
+  const seen=new Set(),found=[];
+  for(const s of allSystemRows){if(s.code!==r.codigo||s.locNorm===r.ubicacionNormalizada||seen.has(s.locNorm))continue;
+    seen.add(s.locNorm);found.push({loc:s.locNorm,reviewed:auditScope.mappedLocations.includes(s.locNorm)});
+  }return found;
+}
+function rebuildProposals(){
+  const deficits=results.filter(r=>baseEligible(r)&&remaining(r)<0&&r.ubicacionNormalizada!==PROCESS_LOCATION)
+    .map(r=>({...r,pending:-remaining(r)}));
+  const surpluses=results.filter(r=>baseEligible(r)&&remaining(r)>0&&r.ubicacionNormalizada!==PROCESS_LOCATION)
+    .map(r=>({...r,pending:remaining(r)}));
+  const matches=[];
+  for(const d of deficits){for(const s of surpluses){
+    if(d.codigo!==s.codigo||d.ubicacionNormalizada===s.ubicacionNormalizada||d.pending<=0||s.pending<=0)continue;
+    const qty=Math.min(d.pending,s.pending);matches.push({code:d.codigo,from:d.ubicacionNormalizada,to:s.ubicacionNormalizada,qty});
+    d.pending-=qty;s.pending-=qty;
+  }}
+  proposals=matches;
+}
+function confirmLocation(idx){if(sourceDirty){alert('Vuelve a comparar antes de guardar decisiones.');return;}
+  const loc=auditScope.mappedLocations[idx];if(!loc)return;
+  if(confirmations.has(loc)){
+    if(approvedMatches.some(m=>m.from===loc||m.to===loc)||resolutions.some(d=>d.location===loc)){
+      alert('Primero revierte los ajustes y resoluciones de esta ubicación.');return;
+    }
+    confirmations.delete(loc);
+  }else{
+    if(!confirm(`¿Confirmas que el conteo en ${loc} está COMPLETO?\n\nLos códigos que figuren solo en sistema podrán considerarse faltantes para investigar.`))return;
+    confirmations.add(loc);
+  }
+  saveDecisions();renderAll();
+}
+function approveMatch(idx){
+  const p=proposals[idx];if(!p||p.qty<=0||sourceDirty)return;
+  const a=results.find(r=>r.codigo===p.code&&r.ubicacionNormalizada===p.from),b=results.find(r=>r.codigo===p.code&&r.ubicacionNormalizada===p.to);
+  if(!a||!b||!reviews.has(reviewKey(a))||!reviews.has(reviewKey(b))){alert('Debes marcar el código como REVISADO en ambas ubicaciones antes de registrar el ajuste.');return;}
+  if(!confirm(`¿Verificaste físicamente el ajuste del código ${p.code}?\n\nSistema: ${fmtQty(p.qty)} unidades de ${p.from} → ${p.to}.\n\nSe registrará una PROPUESTA APROBADA; la web NO modificará el WMS.`))return;
+  approvedMatches.push({...p});saveDecisions();renderAll();toast('Ajuste registrado para ejecutar en WMS');
+}
+function undoMatch(idx){if(sourceDirty){alert('Vuelve a comparar para continuar.');return;}if(!approvedMatches[idx])return;if(!confirm('¿Revertir este ajuste local?'))return;approvedMatches.splice(idx,1);saveDecisions();renderAll();}
+function resolveRow(idx){
+  const r=results[idx];if(!r||!baseEligible(r)||sourceDirty)return;
+  if(!reviews.has(reviewKey(r))){alert('Primero marca como REVISADO este código en el panel de investigación.');return;}
+  const diff=remaining(r);if(!diff||r.ubicacionNormalizada===PROCESS_LOCATION)return;
+  const hasOther=proposals.some(p=>p.code===r.codigo&&(p.from===r.ubicacionNormalizada||p.to===r.ubicacionNormalizada));
+  if(hasOther&&!confirm('Existe una posible ubicación para ajustar este código. ¿Confirmas que la descartaste tras la revisión física y deseas regularizar el saldo?'))return;
+  const type=diff<0?'FALTANTE':'SOBRANTE',qty=Math.abs(diff);
+  const msg=type==='FALTANTE'
+   ?`FALTANTE ${r.codigo}: ${fmtQty(qty)} unidades.\n\nProponer traslado lógico desde ${r.ubicacionNormalizada} a ${PROCESS_LOCATION}.\n\n¿Confirmaste la revisión física y el destino a Procesos_CW?`
+   :`SOBRANTE ${r.codigo}: ${fmtQty(qty)} unidades.\n\nRegistrar sobrante en la MISMA ubicación ${r.ubicacionNormalizada}; no se creará ubicación de sobrantes.\n\n¿Confirmaste la revisión física?`;
+  if(!confirm(msg))return;
+  resolutions.push({code:r.codigo,location:r.ubicacionNormalizada,qty,type,target:type==='FALTANTE'?PROCESS_LOCATION:r.ubicacionNormalizada});
+  saveDecisions();renderAll();toast(type==='FALTANTE'?'Faltante marcado para Procesos_CW':'Sobrante registrado en su ubicación');
+}
+function undoResolution(idx){if(sourceDirty){alert('Vuelve a comparar para continuar.');return;}if(!resolutions[idx])return;if(!confirm('¿Revertir esta resolución local?'))return;resolutions.splice(idx,1);saveDecisions();renderAll();}
+
+function resolveMissingDirect(idx){
+  const r=results[idx];if(!r||r.hasOperator||r.diferencia>=0||!r.locValid||r.duplicado||sourceDirty)return;
+  const qty=-remaining(r);if(qty<=0)return;
+  if(!confirm(`¿Confirmas que NO encontraste el código ${r.codigo} en ${r.ubicacionNormalizada} después de revisarlo físicamente?\n\nSe generará el movimiento de ${fmtQty(qty)} unidades hacia Procesos_CW.`))return;
+  verifiedMissing.add(reviewKey(r));reviews.add(reviewKey(r));
+  resolutions.push({code:r.codigo,location:r.ubicacionNormalizada,qty,type:'FALTANTE',target:PROCESS_LOCATION});
+  saveDecisions();renderAll();renderDrawer();toast('Faltante registrado para Procesos_CW');
+}
+function adjustChoiceChanged(){
+  const a=$('adjustFrom'),b=$('adjustTo'),q=$('adjustQty'),max=$('adjustMax');if(!a||!b||!q)return;
+  const code=drawerState?.code,from=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===a.value),to=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===b.value);
+  const cap=from&&to&&from!==to?Math.max(0,Math.min(-remaining(from),remaining(to))):0;
+  q.max=String(cap);q.value=cap>0?String(cap):'';if(max)max.textContent=cap>0?`Disponible: ${fmtQty(cap)} unidades`:'Elige origen faltante y destino sobrante';
+}
+function applyCustomAdjustment(){
+  if(sourceDirty||!drawerState||drawerState.type!=='code')return;
+  const code=drawerState.code,fromLoc=$('adjustFrom')?.value,toLoc=$('adjustTo')?.value,qty=Number($('adjustQty')?.value);
+  const a=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===fromLoc),b=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===toLoc);
+  if(!a||!b||a===b||!baseEligible(a)||!baseEligible(b)){alert('Selecciona dos ubicaciones distintas con conteo validado.');return;}
+  if(!reviews.has(reviewKey(a))||!reviews.has(reviewKey(b))){alert('Primero marca como revisado el código en origen y destino.');return;}
+  const max=Math.min(-remaining(a),remaining(b));
+  if(!Number.isFinite(qty)||qty<=0||qty>max+1e-8){alert('La cantidad debe ser mayor que cero y no superar el faltante o el sobrante disponible.');return;}
+  if(!confirm(`AJUSTAR ${code}\n\nOrigen: ${fromLoc}\nDestino: ${toLoc}\nCantidad: ${fmtQty(qty)}\n\n¿Registrar este movimiento pendiente en WMS?`))return;
+  approvedMatches.push({code,from:fromLoc,to:toLoc,qty});saveDecisions();renderAll();renderDrawer();toast('Ajuste registrado');
+}
+function toggleLocation(idx){const loc=auditScope.mappedLocations[idx];if(!loc)return;
+  if(openLocations.has(loc))openLocations.delete(loc);else openLocations.add(loc);
+  renderLocations();
+}
+function navigateLocation(loc){openMapLocation(loc);}
+function countStatus(s){return results.filter(r=>r.estado===s).length;}
+function renderKpis(){
+  const ok=countStatus('OK'),total=results.length,err=results.filter(r=>r.diferencia!==0).length;
+  const settled=results.filter(r=>r.diferencia!==0&&remaining(r)===0).length;
+  const cells=[['Ubicaciones',auditScope.mappedLocations.length],['Códigos/posiciones',total],['OK original',ok],['Con diferencias',err],['Ajustados / regularizados',settled],['Exactitud original',total?((ok/total)*100).toFixed(1)+'%':'0%']];
+  $('kpis').innerHTML=cells.map(([label,n])=>`<div class="kpi"><div class="n">${escapeHtml(n)}</div><div class="l">${escapeHtml(label)}</div></div>`).join('');
+}
+function renderAlerts(){
+  if(!hasCompared){$('alerts').innerHTML='<div class="alert a-blue">Pega las dos datas y ejecuta la comparación.</div>';return;}
+  const issues=[];
+  issues.push(`<div class="alert a-blue">🎯 ${escapeHtml(scopeText())}</div>`);
+  if(auditScope.systemFiltered===0)issues.push('<div class="alert a-red">🚫 Ninguna ubicación del operador se encontró en el sistema. Verifica el formato de las columnas.</div>');
+  if(parsedErrors.length)issues.push(`<div class="alert a-red">⚠️ ${parsedErrors.length} filas no se procesaron por datos inválidos. Verificar antes de cerrar la auditoría.</div>`);
+  if(auditScope.invalidOperatorLocations)issues.push(`<div class="alert a-yellow">📍 ${auditScope.invalidOperatorLocations} líneas del operador tienen ubicaciones no reconocidas.</div>`);
+  if(results.some(r=>r.duplicado))issues.push('<div class="alert a-yellow">♻️ Hay códigos duplicados en una ubicación. Verificar antes de ajustarlos.</div>');
+  issues.push(`<div class="alert a-ok">✅ ${countStatus('OK')} combinaciones cuadran desde el conteo inicial.</div>`);
+  issues.push(`<div class="alert a-blue">📦 ${wmsMovements().length} movimientos registrados · ${surplusEntries().length} sobrantes para ajuste de entrada.</div>`);
+  $('alerts').innerHTML=issues.join('');
+}
+function shortLoc(loc){const m=String(loc).match(/^01-30-(\d{3})-(\d{2})$/);return m?`${Number(m[1])}-${m[2]}`:loc;}
+function reviewKey(r){return r.codigo+'||'+r.ubicacionNormalizada;}
+function locationKind(loc){
+  const rows=results.filter(r=>r.ubicacionNormalizada===loc);
+  if(!rows.length)return 'wait';
+  const initiallySquare=rows.every(r=>r.estado==='OK'&&r.diferencia===0&&!r.duplicado&&r.locValid);
+  if(initiallySquare)return 'cuadrada';
+  if(rows.every(r=>!r.duplicado&&r.locValid&&remaining(r)===0&&(r.hasOperator||confirmations.has(loc)||verifiedMissing.has(reviewKey(r)))))return 'conciliada';
+  return 'novedad';
+}
+function badgeForKind(kind){return kind==='cuadrada'?'CUADRADA':kind==='conciliada'?'AJUSTADA':kind==='novedad'?'CON NOVEDADES':'SIN REVISAR';}
+function cssKind(kind){return {cuadrada:'square',conciliada:'settled',novedad:'issue',wait:'wait'}[kind]||'wait';}
+function eligibleForAction(r){return !sourceDirty&&baseEligible(r)&&reviews.has(reviewKey(r))&&remaining(r)!==0&&r.ubicacionNormalizada!==PROCESS_LOCATION;}
+function rowStatus(r){
+  const bal=remaining(r),originallyOk=r.estado==='OK'&&r.diferencia===0;
+  if(r.duplicado)return 'DUPLICADO · VERIFICAR';
+  if(!r.locValid)return 'UBICACIÓN INVÁLIDA';
+  if(!r.hasOperator&&!confirmations.has(r.ubicacionNormalizada)&&!verifiedMissing.has(reviewKey(r)))return 'SIN CONTEO · VERIFICAR';
+  if(originallyOk)return 'CUADRADO';
+  if(bal===0)return 'AJUSTADO · PENDIENTE WMS';
+  if(reviews.has(reviewKey(r)))return bal<0?'FALTANTE REVISADO':'SOBRANTE REVISADO';
+  return bal<0?'FALTANTE · REVISAR':'SOBRANTE · REVISAR';
+}
+function renderOneLocation(loc){
+  const idx=auditScope.mappedLocations.indexOf(loc),rows=results.filter(r=>r.ubicacionNormalizada===loc);
+  const kind=locationKind(loc),open=openLocations.has(loc),finished=confirmations.has(loc),bad=rows.filter(r=>remaining(r)!==0||r.duplicado||!r.locValid||(!r.hasOperator&&!finished)).length;
+  const cols=kind==='cuadrada'?'<th>Código</th><th>Físico</th><th>Sistema</th><th>Estado</th>':'<th>Código</th><th>Físico</th><th>Sistema</th><th>Dif. inicial</th><th>Pendiente</th><th>Estado / seguimiento</th><th>Investigar</th>';
+  const body=rows.map(r=>{
+    const rowid=results.indexOf(r),bal=remaining(r),orig=(r.estado==='OK'&&r.diferencia===0);
+    if(kind==='cuadrada')return `<tr><td><b>${escapeHtml(r.codigo)}</b></td><td>${fmtQty(r.qtyOperador)}</td><td>${fmtQty(r.qtySistema)}</td><td><span class="badge square">CUADRADO</span></td></tr>`;
+    const c=orig?'square':bal===0?'settled':'issue';
+    const hasCandidate=proposals.some(p=>p.code===r.codigo&&(p.from===r.ubicacionNormalizada||p.to===r.ubicacionNormalizada));
+    const directAction='';
+    return `<tr><td><b>${escapeHtml(r.codigo)}</b></td><td>${r.qtyOperador===null?'—':fmtQty(r.qtyOperador)}</td><td>${r.qtySistema===null?'—':fmtQty(r.qtySistema)}</td><td class="${r.diferencia<0?'negative':r.diferencia>0?'positive':''}">${r.diferencia>0?'+':''}${fmtQty(r.diferencia)}</td><td class="${bal<0?'negative':bal>0?'positive':''}">${bal>0?'+':''}${fmtQty(bal)}</td><td><span class="badge ${c}">${escapeHtml(rowStatus(r))}</span></td><td>${orig?'—':`<button class="textBtn" onclick="openCodeReview(${rowid})">🔎 Ver código ${escapeHtml(r.codigo)}</button> ${directAction}`}</td></tr>`;
+  }).join('');
+  const actions=kind==='cuadrada'?'':`<button class="${finished?'secondary':'primary'} mini" onclick="confirmLocation(${idx})">${finished?'↩ Reabrir conteo':'✓ Confirmar conteo completo'}</button>`;
+  const bodyContent=open?`<div class="locDetails"><div class="locTools"><span class="miniNote">${rows.length} códigos · ${rows.filter(r=>r.estado==='OK').length} OK originales · ${bad} requieren seguimiento · Conteo ${finished?'cerrado':'sin cerrar'}</span>${actions}</div><div class="responsiveRows"><table class="locTable"><thead><tr>${cols}</tr></thead><tbody>${body}</tbody></table></div></div>`:'';
+  return `<article class="locCard" data-kind="${kind}" id="location-${idx}"><button class="locToggle" onclick="toggleLocation(${idx})" aria-expanded="${open}"><span class="locName"><span class="chevron">${open?'▾':'▸'}</span><b>📍 ${escapeHtml(shortLoc(loc))}</b><span class="muted fullLoc">${escapeHtml(loc)}</span></span><span class="locCounter"><span class="badge ${cssKind(kind)}">${badgeForKind(kind)}</span><span class="small">${rows.length} códigos</span></span></button>${bodyContent}</article>`;
+}
+function renderLocations(){
+  for(const [kind,containerId,countId] of [['novedad','issuesLocations','issuesCount'],['cuadrada','squaredLocations','squaredCount'],['conciliada','settledLocations','settledCount']]){
+    const locs=hasCompared?auditScope.mappedLocations.filter(loc=>locationKind(loc)===kind):[];
+    $(countId).textContent=hasCompared?`${locs.length} ubicaciones · ${locs.reduce((n,l)=>n+results.filter(r=>r.ubicacionNormalizada===l).length,0)} combinaciones código + ubicación`:'';
+    $(containerId).innerHTML=locs.map(renderOneLocation).join('')||`<div class="emptyState">${!hasCompared?'Carga las datas y compara para ver resultados.':kind==='novedad'?'No hay ubicaciones con novedades pendientes.':'Todavía no hay ubicaciones en esta categoría.'}</div>`;
+  }
+}
+function movementLine(code,from,to,qty){return {code:String(code),from:String(from),to:String(to),qty:Number(qty)};}
+function wmsMovements(){return [
+  ...approvedMatches.map(m=>movementLine(m.code,m.from,m.to,m.qty)),
+  ...resolutions.filter(d=>d.type==='FALTANTE').map(d=>movementLine(d.code,d.location,PROCESS_LOCATION,d.qty))
+];}
+function surplusEntries(){return resolutions.filter(d=>d.type==='SOBRANTE').map(d=>movementLine(d.code,'SOBRANTE',d.location,d.qty));}
+function movementRowsHTML(items){return items.map(m=>`<tr><td><b>${escapeHtml(m.code)}</b></td><td>${escapeHtml(m.from)}</td><td>${escapeHtml(m.to)}</td><td>${fmtQty(m.qty)}</td></tr>`).join('')||'<tr><td colspan="4">Sin registros</td></tr>';}
+function movementBlock(title,kind,items){return `<div class="movementSection"><div class="mainSectionHead"><h3>${title} <span class="muted">(${items.length})</span></h3><div class="actionRow"><button class="secondary mini" onclick="copySection('${kind}')">📋 Copiar</button></div></div><div class="tableWrap compactTable movementWrap"><table class="moveTable"><thead><tr><th>Código</th><th>Origen</th><th>Destino</th><th>Cantidad</th></tr></thead><tbody>${movementRowsHTML(items)}</tbody></table></div></div>`;}
+function renderReconciliation(){
+  if(!hasCompared){$('reconciliationPanel').innerHTML='<div class="emptyState">Compara las datas.</div>';return;}
+  rebuildProposals();
+  const adjustments=approvedMatches.map(m=>movementLine(m.code,m.from,m.to,m.qty));
+  const process=resolutions.filter(d=>d.type==='FALTANTE').map(d=>movementLine(d.code,d.location,PROCESS_LOCATION,d.qty));
+  const surplus=surplusEntries();
+  const pending=results.filter(r=>remaining(r)!==0||r.duplicado).map((r)=>`<tr><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.ubicacionNormalizada)}</td><td>${fmtQty(remaining(r))}</td><td>${escapeHtml(rowStatus(r))}</td><td><button class="textBtn" onclick="openCodeReview(${results.indexOf(r)})">Revisar</button></td></tr>`).join('')||'<tr><td colspan="5">Sin pendientes</td></tr>';
+  const decisionControls=[...approvedMatches.map((m,i)=>`<tr><td>AJUSTE</td><td>${escapeHtml(m.code)}</td><td>${escapeHtml(m.from)} → ${escapeHtml(m.to)}</td><td>${fmtQty(m.qty)}</td><td><button class="secondary mini" onclick="undoMatch(${i})">Deshacer</button></td></tr>`),...resolutions.map((d,i)=>`<tr><td>${d.type}</td><td>${escapeHtml(d.code)}</td><td>${escapeHtml(d.location)} → ${escapeHtml(d.target)}</td><td>${fmtQty(d.qty)}</td><td><button class="secondary mini" onclick="undoResolution(${i})">Deshacer</button></td></tr>`)].join('')||'<tr><td colspan="5">Sin decisiones</td></tr>';
+  $('reconciliationPanel').innerHTML=`<div class="movementBar"><span>${wmsMovements().length} movimientos para WMS</span><div class="actionRow"><button class="primary mini" onclick="copySection('wms')">📋 Copiar movimientos WMS</button><button class="secondary mini" onclick="copySection('todosmov')">Copiar todos los registros</button></div></div>
+    ${movementBlock('Ajustes entre ubicaciones','ajustesm',adjustments)}
+    ${movementBlock('Faltantes → Procesos_CW','procesosm',process)}
+    ${movementBlock('Sobrantes encontrados','sobrantesm',surplus)}
+    <div class="miniNote"><b>SOBRANTE</b> en la columna Origen identifica un ajuste de entrada; no es una ubicación para traslado del WMS.</div>
+    <div class="mainSectionHead" style="margin-top:24px"><h3>Pendientes</h3><button class="secondary mini" onclick="copySection('pendientes')">📋 Copiar</button></div><div class="tableWrap compactTable"><table><thead><tr><th>Código</th><th>Ubicación</th><th>Saldo</th><th>Estado</th><th></th></tr></thead><tbody>${pending}</tbody></table></div>
+    <div class="mainSectionHead" style="margin-top:24px"><h3>Deshacer decisiones</h3></div><div class="tableWrap compactTable"><table><thead><tr><th>Tipo</th><th>Código</th><th>Movimiento</th><th>Cantidad</th><th></th></tr></thead><tbody>${decisionControls}</tbody></table></div>`;
+}
+function parseMasterLocations(raw){
+  const out=new Set();String(raw||'').split(/\r?\n/).forEach(line=>{
+    if(!line.trim())return;
+    const parts=line.split(/[\t;]/).map(v=>v.trim());
+    for(const part of parts){if(/^(ubicacion|pallet|position|posicion)$/i.test(part))continue;const loc=normalizeLocation(part);if(loc.valid){out.add(loc.value);break;}}
+  });return [...out];
+}
+function getMapLocations(){return [...new Set([...masterLocations,...allSystemRows.filter(r=>r.locValid).map(r=>r.locNorm),...auditScope.mappedLocations])].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+function mapKind(loc){return auditScope.mappedLocations.includes(loc)?locationKind(loc):'wait';}
+function renderMap(){
+  const all=getMapLocations(),states={cuadrada:0,novedad:0,conciliada:0,wait:0};all.forEach(l=>states[mapKind(l)]++);
+  $('mapKpis').innerHTML=[['Ubicaciones conocidas',all.length],['Sin revisar',states.wait],['Cuadradas',states.cuadrada],['Con novedad',states.novedad],['Ajustadas',states.conciliada]].map(([label,value])=>`<div class="kpi"><div class="n">${value}</div><div class="l">${label}</div></div>`).join('');
+  if(!hasCompared){$('mapGrid').innerHTML='<div class="emptyState">Pega las datas y compara para generar el mapa.</div>';return;}
+  const q=$('mapSearch').value.toLowerCase().trim(),filter=$('mapFilter').value;
+  const subset=all.filter(l=>(!q||l.toLowerCase().includes(q)||shortLoc(l).toLowerCase().includes(q))&&(filter==='all'||cssKind(mapKind(l))===filter));
+  const groups=new Map();
+  for(const loc of subset){const m=loc.match(/^01-30-(\d{3})-(\d{2})$/);const pos=m?Number(m[1]):0;const low=Math.floor((pos-1)/10)*10+1;const grp=m?`Posiciones ${String(low).padStart(3,'0')}–${String(low+9).padStart(3,'0')}`:'Ubicaciones especiales';if(!groups.has(grp))groups.set(grp,[]);groups.get(grp).push(loc);}
+  $('mapGrid').innerHTML=[...groups].map(([group,items])=>`<div class="mapModule"><h3>${escapeHtml(group)} · ${items.length} ubicaciones</h3><div class="mapTiles">${items.map(loc=>{const k=mapKind(loc),cls=cssKind(k);const m=loc.match(/^01-30-\d{3}-(\d{2})$/);return `<button class="mapTile ${cls}" title="${escapeHtml(loc)} · ${badgeForKind(k)}" onclick="openMapLocation(${escapeHtml(JSON.stringify(loc))})"><span>${escapeHtml(shortLoc(loc))}</span><small>${{cuadrada:'OK',conciliada:'AJUS.',novedad:'NOV.',wait:'NO REV.'}[k]}</small></button>`;}).join('')}</div></div>`).join('')||'<div class="emptyState">No hay ubicaciones con ese filtro.</div>';
+}
+function copySection(kind){
+  if(sourceDirty){alert('Se editaron las datas: vuelve a comparar antes de copiar resultados.');return;}
+  if(!hasCompared){toast('Primero compara las datas');return;}
+  let header=[],rows=[];
+  let noHeader=false;
+  if(['wms','todosmov','ajustesm','procesosm','sobrantesm'].includes(kind)){
+    const all=[...wmsMovements(),...surplusEntries()];
+    const subset=kind==='wms'?wmsMovements():kind==='todosmov'?all:kind==='ajustesm'?approvedMatches.map(m=>movementLine(m.code,m.from,m.to,m.qty)):kind==='procesosm'?resolutions.filter(d=>d.type==='FALTANTE').map(d=>movementLine(d.code,d.location,PROCESS_LOCATION,d.qty)):surplusEntries();
+    noHeader=true;rows=subset.map(m=>[m.code,m.from,m.to,m.qty]);
+  }else if(['novedades','cuadradas','conciliadas'].includes(kind)){
+    const target={novedades:'novedad',cuadradas:'cuadrada',conciliadas:'conciliada'}[kind];
+    header=['Ubicacion','Estado ubicacion','Codigo','Fisico','Sistema','Diferencia inicial','Saldo pendiente','Estado codigo','Revisado'];
+    rows=results.filter(r=>locationKind(r.ubicacionNormalizada)===target).map(r=>[r.ubicacionNormalizada,badgeForKind(target),r.codigo,r.qtyOperador??'',r.qtySistema??'',r.diferencia,remaining(r),rowStatus(r),reviews.has(reviewKey(r))?'SI':'NO']);
+  }else if(kind==='mapa'){
+    header=['Ubicacion','Estado','Tiene conteo operador','Conteo completo confirmado'];rows=getMapLocations().map(loc=>[loc,badgeForKind(mapKind(loc)),auditScope.mappedLocations.includes(loc)?'SI':'NO',confirmations.has(loc)?'SI':'NO']);
+  }else if(kind==='ajustes_pendientes'){
+    header=['Codigo','Ubicacion faltante','Ubicacion sobrante','Unidades candidatas'];rows=proposals.map(p=>[p.code,p.from,p.to,p.qty]);
+  }else if(kind==='pendientes'){
+    header=['Codigo','Ubicacion','Diferencia','Estado','Revisado'];rows=results.filter(r=>remaining(r)!==0||r.duplicado).map(r=>[r.codigo,r.ubicacionNormalizada,remaining(r),rowStatus(r),reviews.has(reviewKey(r))?'SI':'NO']);
+  }else if(kind==='decisiones'){
+    header=['Tipo','Codigo','Desde','Hacia / registrada en','Unidades','Pendiente WMS'];rows=[...approvedMatches.map(m=>['AJUSTE',m.code,m.from,m.to,m.qty,'SI']),...resolutions.map(d=>[d.type,d.code,d.location,d.target,d.qty,'SI'])];
+  }
+  const tsv=[...(noHeader?[]:[header.join('\t')]),...rows.map(row=>row.map(v=>String(v??'').replace(/[\r\n\t]+/g,' ')).join('\t'))].join('\n');
+  copyText(tsv,`${kind}: ${rows.length} filas copiadas`);
+}
+async function copyText(value,msg){try{await navigator.clipboard.writeText(value);toast(msg);}catch(e){const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();const ok=document.execCommand('copy');t.remove();toast(ok?msg:'No se pudo copiar automáticamente');}}
+async function pasteClipboard(id){try{const txt=await navigator.clipboard.readText();$(id).value=txt;$(id).dispatchEvent(new Event('input'));toast('Datos pegados desde portapapeles');}catch(e){$(id).focus();toast('Usa Ctrl+V dentro del cuadro para pegar');}}
+function markReview(idx){
+  const r=results[idx];if(!r||sourceDirty)return;
+  if(!baseEligible(r)){alert(!r.hasOperator&&!confirmations.has(r.ubicacionNormalizada)?'Primero confirma que el conteo de la ubicación está completo.':'Revisa ubicaciones inválidas o registros duplicados antes de continuar.');return;}
+  reviews.add(reviewKey(r));saveDecisions();renderAll();renderDrawer();toast(`Código ${r.codigo} revisado en ${shortLoc(r.ubicacionNormalizada)}`);
+}
+function openCodeReview(idx){const r=results[idx];if(!r)return;drawerState={type:'code',code:r.codigo,location:r.ubicacionNormalizada};showDrawer();renderDrawer();}
+function openMapLocation(loc){drawerState={type:'location',location:loc};showDrawer();renderDrawer();}
+function showDrawer(){drawerLastFocus=document.activeElement;$('drawerOverlay').hidden=false;$('drawer').hidden=false;document.body.style.overflow='hidden';}
+function closeDrawer(){const wasOpen=$('drawer')&&!$('drawer').hidden;$('drawerOverlay').hidden=true;$('drawer').hidden=true;document.body.style.overflow='';drawerState=null;if(wasOpen&&drawerLastFocus&&typeof drawerLastFocus.focus==='function'&&document.contains(drawerLastFocus))drawerLastFocus.focus();}
+function drawerActionMatch(idx){approveMatch(idx);renderDrawer();}
+function drawerActionResolve(idx){resolveRow(idx);renderDrawer();}
+function renderDrawer(){
+  if(!drawerState||!hasCompared)return;
+  if(drawerState.type==='location'){
+    const loc=drawerState.location,k=mapKind(loc),codes=[...new Set(allSystemRows.filter(r=>r.locNorm===loc).map(r=>r.code))],audited=auditScope.mappedLocations.includes(loc);
+    $('drawerTitle').textContent='Ubicación '+shortLoc(loc);$('drawerSubtitle').textContent=badgeForKind(k);
+    $('drawerContent').innerHTML=`<div class="drawerItemHead"><span class="badge ${cssKind(k)}">${badgeForKind(k)}</span><span>${codes.length} códigos en sistema</span></div><div class="drawerItem">${codes.slice(0,120).map(c=>`<span class="badge wait" style="margin:3px">${escapeHtml(c)}</span>`).join('')||'Sin códigos'}</div>${audited?`<button class="primary drawerAction" onclick="goToLocation(${escapeHtml(JSON.stringify(loc))})">Ver ubicación</button>`:`<button class="secondary drawerAction" onclick="closeDrawer();openTab('paste')">Cargar conteo</button>`}`;return;
+  }
+  const code=drawerState.code,all=results.filter(r=>r.codigo===code),known=new Map();
+  for(const s of allSystemRows.filter(s=>s.code===code))known.set(s.locNorm,(known.get(s.locNorm)||0)+s.qty);
+  const auditedSet=new Set(all.map(r=>r.ubicacionNormalizada));
+  const ordered=[...all].sort((a,b)=>a.ubicacionNormalizada===drawerState.location?-1:b.ubicacionNormalizada===drawerState.location?1:a.ubicacionNormalizada.localeCompare(b.ubicacionNormalizada,undefined,{numeric:true}));
+  $('drawerTitle').textContent='Código '+code;
+  $('drawerSubtitle').textContent='Ubicación '+shortLoc(drawerState.location);
+  const cards=ordered.map(r=>{
+    const idx=results.indexOf(r),bal=remaining(r),ref=r.ubicacionNormalizada===drawerState.location,rev=reviews.has(reviewKey(r)),cls=bal===0?'square':'issue';
+    const needs=bal!==0||r.duplicado;
+    let actions='';
+    if(!r.hasOperator&&bal<0){
+      actions=`<button class="warn drawerAction" onclick="resolveMissingDirect(${idx})">→ Enviar a faltantes (${fmtQty(-bal)})</button>`;
+    }else if(needs&&!r.duplicado&&r.locValid){
+      if(!rev)actions=`<button class="secondary drawerAction" onclick="markReview(${idx})">✓ Marcar revisado</button>`;
+      else if(bal!==0)actions=`<button class="${bal<0?'warn':'primary'} drawerAction" onclick="drawerActionResolve(${idx})">${bal<0?'→ Enviar a faltantes':'＋ Registrar sobrante'} (${fmtQty(Math.abs(bal))})</button>`;
+    }
+    return `<div class="drawerItem ${ref?'active':''}"><div class="drawerItemHead"><strong>📍 ${escapeHtml(shortLoc(r.ubicacionNormalizada))}</strong><span class="badge ${cls}">${escapeHtml(rowStatus(r))}</span></div><div class="drawerItemData"><div class="dataMetric"><span>Físico</span><strong>${r.qtyOperador===null?'—':fmtQty(r.qtyOperador)}</strong></div><div class="dataMetric"><span>Sistema</span><strong>${r.qtySistema===null?'—':fmtQty(r.qtySistema)}</strong></div><div class="dataMetric"><span>Diferencia pendiente</span><strong class="${bal<0?'negative':bal>0?'positive':''}">${bal>0?'+':''}${fmtQty(bal)}</strong></div></div><div class="actionRow">${actions}</div></div>`;
+  }).join('');
+  const unaudited=[...known].filter(([loc])=>!auditedSet.has(loc)).map(([loc,qty])=>`<div class="drawerItem untested"><div class="drawerItemHead"><b>📍 ${escapeHtml(shortLoc(loc))}</b><span class="badge wait">SIN REVISAR</span></div><div class="drawerItemData"><div class="dataMetric"><span>Físico</span><strong>—</strong></div><div class="dataMetric"><span>Sistema</span><strong>${fmtQty(qty)}</strong></div></div></div>`).join('');
+  const deficits=all.filter(r=>baseEligible(r)&&remaining(r)<0&&!r.duplicado),surpluses=all.filter(r=>baseEligible(r)&&remaining(r)>0&&!r.duplicado);
+  const canAdjust=deficits.length&&surpluses.length;
+  const fromOpts=deficits.map(r=>`<option value="${escapeHtml(r.ubicacionNormalizada)}">${escapeHtml(shortLoc(r.ubicacionNormalizada))} · faltan ${fmtQty(-remaining(r))}</option>`).join('');
+  const toOpts=surpluses.map(r=>`<option value="${escapeHtml(r.ubicacionNormalizada)}">${escapeHtml(shortLoc(r.ubicacionNormalizada))} · sobran ${fmtQty(remaining(r))}</option>`).join('');
+  const adjustEditor=canAdjust?`<div class="adjustBox"><h3>Ajustar entre ubicaciones</h3><div class="adjustFields"><label>Origen (faltante)<select id="adjustFrom" onchange="adjustChoiceChanged()">${fromOpts}</select></label><label>Destino (sobrante)<select id="adjustTo" onchange="adjustChoiceChanged()">${toOpts}</select></label><label>Cantidad<input id="adjustQty" inputmode="decimal" type="number" step="any" min="0" /></label></div><div class="actionRow"><button class="primary drawerAction" onclick="applyCustomAdjustment()">↔ Registrar ajuste</button><span class="miniNote" id="adjustMax"></span></div></div>`:'';
+  const movements=approvedMatches.filter(m=>m.code===code).map(m=>`<tr><td>${escapeHtml(m.from)}</td><td>${escapeHtml(m.to)}</td><td>${fmtQty(m.qty)}</td></tr>`).join('');
+  const process=resolutions.filter(d=>d.code===code).map(d=>`<tr><td>${escapeHtml(d.type==='FALTANTE'?d.location:'SOBRANTE')}</td><td>${escapeHtml(d.target)}</td><td>${fmtQty(d.qty)}</td></tr>`).join('');
+  const previous=movements+process?`<h3>Movimientos registrados</h3><div class="tableWrap compactTable"><table class="moveTable"><thead><tr><th>Origen</th><th>Destino</th><th>Cantidad</th></tr></thead><tbody>${movements+process}</tbody></table></div>`:'';
+  $('drawerContent').innerHTML=`<h3>Estado por ubicación</h3>${cards}${unaudited?`<h3>Ubicaciones sin revisar</h3>${unaudited}`:''}${adjustEditor}${previous}`;
+  if(canAdjust)adjustChoiceChanged();
+}
+function goToLocation(loc){const k=locationKind(loc),tab=k==='cuadrada'?'squared':k==='conciliada'?'settled':'results';openLocations.add(loc);closeDrawer();openTab(tab);renderLocations();const el=$('location-'+auditScope.mappedLocations.indexOf(loc));if(el)el.scrollIntoView({block:'nearest'});}
+function renderAll(){rebuildProposals();renderKpis();renderAlerts();renderLocations();renderMap();renderReconciliation();renderTable();}
+function renderTable(){
+  const f=$('statusFilter').value,q=$('searchBox').value.toLowerCase().trim(),sort=$('sortFilter').value;
+  let rows=results.filter(r=>(f==='ALL'||r.estado===f)&&JSON.stringify(r).toLowerCase().includes(q));
+  const byLoc=r=>r.ubicacionNormalizada;
+  rows.sort((a,b)=>sort==='pallet'?byLoc(a).localeCompare(byLoc(b),undefined,{numeric:true})||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}):
+    sort==='codigo'?a.codigo.localeCompare(b.codigo,undefined,{numeric:true}):sort==='diferencia'?Math.abs(b.diferencia)-Math.abs(a.diferencia):a.estado.localeCompare(b.estado)||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}));
+  $('resultTable').innerHTML='<thead><tr><th>Estado</th><th>Código</th><th>Ubicación operador</th><th>Ubicación normalizada</th><th>Ubicación sistema</th><th>Qty operador</th><th>Qty sistema</th><th>Diferencia original</th><th>Saldo pendiente</th><th>Observación</th><th>Línea Op.</th><th>Línea Sis.</th></tr></thead><tbody>'+rows.map(r=>`<tr><td><span class="status ${statusClass(r.estado)}">${escapeHtml(r.estado)}</span></td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.ubicacionOperador)}</td><td>${escapeHtml(r.ubicacionNormalizada)}</td><td>${escapeHtml(r.ubicacionSistema)}</td><td>${r.qtyOperador===null?'':fmtQty(r.qtyOperador)}</td><td>${r.qtySistema===null?'':fmtQty(r.qtySistema)}</td><td><b>${r.diferencia>0?'+':''}${fmtQty(r.diferencia)}</b></td><td>${fmtQty(remaining(r))}</td><td>${escapeHtml(r.observacion)}</td><td>${escapeHtml(r.lineaOperador)}</td><td>${escapeHtml(r.lineaSistema)}</td></tr>`).join('')+'</tbody>';
+}
+function visibleResults(){const f=$('statusFilter').value,q=$('searchBox').value.toLowerCase().trim();return results.filter(r=>(f==='ALL'||r.estado===f)&&JSON.stringify(r).toLowerCase().includes(q));}
+function copyTable(){
+  if(sourceDirty){alert('Vuelve a comparar antes de copiar resultados.');return;}
+  if(!hasCompared)return;
+  const headers=['Estado','Código','Ubicación operador','Ubicación normalizada','Ubicación sistema','Qty operador','Qty sistema','Diferencia original','Saldo pendiente','Observación'];
+  const txt=[headers.join('\t'),...visibleResults().map(r=>[r.estado,r.codigo,r.ubicacionOperador,r.ubicacionNormalizada,r.ubicacionSistema,r.qtyOperador??'',r.qtySistema??'',r.diferencia,remaining(r),r.observacion].join('\t'))].join('\n');
+  navigator.clipboard.writeText(txt).then(()=>toast('Resultados filtrados copiados')).catch(()=>toast('No se pudo copiar: permisos del navegador'));
+}
+function downloadExcel(){
+  if(sourceDirty){alert('Vuelve a comparar antes de descargar Excel.');return;}
+  if(!hasCompared||!results.length){alert('Primero ejecuta la comparación.');return;}
+  if(typeof XLSX==='undefined'){alert('La librería Excel no está disponible. Revisa tu conexión a internet.');return;}
+  const wb=XLSX.utils.book_new();
+  const append=(sheet,data)=>{const ws=XLSX.utils.json_to_sheet(data.length?data:[{Informacion:'Sin registros'}]);XLSX.utils.book_append_sheet(wb,ws,sheet);};
+  append('Comparacion',visibleResults().map(r=>({Estado:r.estado,Codigo:r.codigo,Ubicacion_Operador:r.ubicacionOperador,Ubicacion_Normalizada:r.ubicacionNormalizada,Ubicacion_Sistema:r.ubicacionSistema,Qty_Operador:r.qtyOperador??'',Qty_Sistema:r.qtySistema??'',Diferencia_Original:r.diferencia,Saldo_Pendiente:remaining(r),Observacion:r.observacion,Linea_Operador:r.lineaOperador,Linea_Sistema:r.lineaSistema})));
+  append('Ubicaciones',auditScope.mappedLocations.map(loc=>{const rows=results.filter(r=>r.ubicacionNormalizada===loc);return {Ubicacion:loc,Estado:badgeForKind(locationKind(loc)),Conteo_Completo:confirmations.has(loc)?'SI':'NO',Codigos:rows.length,Cuadrados_Original:rows.filter(r=>r.estado==='OK').length,Novedades_Pendientes:rows.filter(r=>remaining(r)!==0).length,Unidades_Originales_En_Diferencia:rows.reduce((a,r)=>a+Math.abs(r.diferencia),0)};}));
+  append('Mapa',getMapLocations().map(loc=>({Ubicacion:loc,Estado:badgeForKind(mapKind(loc)),Conteo_Operador:auditScope.mappedLocations.includes(loc)?'SI':'NO',Conteo_Confirmado:confirmations.has(loc)?'SI':'NO'})));
+  append('Revisiones',results.filter(r=>reviews.has(reviewKey(r))).map(r=>({Codigo:r.codigo,Ubicacion:r.ubicacionNormalizada,Estado:rowStatus(r),Revisado:'SI'})));
+  append('Movimientos_WMS',wmsMovements().map(m=>({Codigo:m.code,Ubicacion_Origen:m.from,Ubicacion_Destino:m.to,Cantidad:m.qty})));
+  append('Sobrantes_4_columnas',surplusEntries().map(m=>({Codigo:m.code,Origen:m.from,Destino:m.to,Cantidad:m.qty})));
+  append('Ajustes',approvedMatches.map(m=>({Codigo:m.code,Ubicacion_Origen:m.from,Ubicacion_Destino:m.to,Cantidad:m.qty,Estado:'REGISTRADO - PENDIENTE WMS'})));
+  append('Regularizaciones',resolutions.map(d=>({Tipo:d.type,Codigo:d.code,Ubicacion_Encontrada:d.location,Ubicacion_Destino:d.target,Cantidad:d.qty,Estado:'REGISTRADO LOCAL - PENDIENTE WMS'})));
+  append('Pendientes',results.filter(r=>remaining(r)!==0).map(r=>({Codigo:r.codigo,Ubicacion:r.ubicacionNormalizada,Saldo_Pendiente:remaining(r),Tipo:remaining(r)<0?'FALTANTE':'SOBRANTE',Recuento_Completo:confirmations.has(r.ubicacionNormalizada)?'SI':'NO'})));
+  append('Validacion',parsedErrors.map(e=>({Fuente:e.source,Linea:e.line,Observacion:e.reason})));
+  const date=new Date(),stamp=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+  XLSX.writeFile(wb,'PERCHADO_AUDITORIA_V8_'+stamp+'.xlsx');
+}
+function markInputDirty(){if(hasCompared){sourceDirty=true;$('syncStatus').textContent='Datas modificadas · vuelve a comparar';closeDrawer();}}
+$('operatorData').addEventListener('input',markInputDirty);
+$('systemData').addEventListener('input',markInputDirty);
+$('masterData').addEventListener('input',markInputDirty);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer();});
+updateMappedBadge(0);renderAll();
+</script>
+<script>
+/* V8: flujo aislado del motor de conciliación V7; no altera WMS */
+'use strict';
+const WF_V8_KEY='perchado_auditoria_v9_workflow_local';
+let wfV8={version:8,users:[],sessions:[],tasks:[],corrections:{},events:[]};
+let profileV8='admin', draftV8=[], draftContextV8={user:'',location:''};
+const wfToday=()=>new Date().toISOString();
+const wfId=()=>((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'wf_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2));
+const wfEsc=escapeHtml;
+function wfLoad(){try{const parsed=JSON.parse(localStorage.getItem(WF_V8_KEY)||'null');if(parsed&&parsed.version===8&&Array.isArray(parsed.sessions)&&Array.isArray(parsed.users)){wfV8={...wfV8,...parsed,corrections:parsed.corrections||{},events:parsed.events||[],tasks:parsed.tasks||[]};}}catch(e){console.warn('Respaldo local dañado; la edición no será sobrescrita',e);}}
+function wfStore(eventName,detail){if(eventName)wfV8.events.push({id:wfId(),at:wfToday(),event:eventName,detail:detail||''});try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));}catch(e){alert('No se pudo guardar en el dispositivo. Exporta un respaldo y revisa el almacenamiento.');return false;}return true;}
+function wfFormatDate(t){if(!t)return '—';const d=new Date(t);return Number.isNaN(d.valueOf())?String(t):d.toLocaleString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function wfStatus(s){return ({pending:'Pendiente de administración',approved:'Aprobado para comparación',rejected:'Rechazado',open:'Pendiente de operario',answered:'Reconteo recibido',closed:'Reconteo aprobado',cancelled:'Cancelado'})[s]||s;}
+function wfClass(s){return ({pending:'pending',open:'pending',approved:'approved',closed:'approved',answered:'review',rejected:'rejected',cancelled:'rejected'})[s]||'';}
+function wfNormalLocation(raw){const x=normalizeLocation(raw);return x.valid?x.value:'';}
+function wfKnown(){const locations=new Set([...masterLocations,...auditScope.mappedLocations]);for(const r of parseLines($('systemData').value,'SISTEMA'))if(r.locValid)locations.add(r.locNorm);for(const x of wfV8.sessions)locations.add(x.location);for(const t of wfV8.tasks)locations.add(t.location);return [...locations].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+function wfCatalog(){const byCode=new Map(),byLoc=new Map();for(const row of parseLines($('systemData').value,'SISTEMA')){if(!row.locValid)continue;if(!byCode.has(row.code))byCode.set(row.code,[]);byCode.get(row.code).push(row);if(!byLoc.has(row.locNorm))byLoc.set(row.locNorm,new Set());byLoc.get(row.locNorm).add(row.code);}return{byCode,byLoc};}
+function editDistanceV8(a,b){if(Math.abs(a.length-b.length)>2)return 99;let prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let cur=[i];for(let j=1;j<=b.length;j++)cur.push(Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+Number(a[i-1]!==b[j-1])));prev=cur;}return prev[b.length];}
+function auditCodeV8(code,location,catalog){if(!catalog.byCode.size)return{state:'SIN MAESTRO',note:'Carga la data del sistema para investigar códigos.',suggestions:[]};const exact=catalog.byCode.get(code)||[];if(exact.some(r=>r.locNorm===location))return{state:'COINCIDENCIA',note:'Código identificado en esta ubicación según sistema.',suggestions:[]};if(exact.length)return{state:'POSIBLE UBICACIÓN CRUZADA',note:'Código reconocido en otras ubicaciones: '+[...new Set(exact.map(r=>r.locNorm))].slice(0,5).join(' | '),suggestions:[]};let candidates=[];for(const [known,rows] of catalog.byCode){if(Math.abs(known.length-code.length)>2)continue;const d=editDistanceV8(code,known);if(d>0&&d<=2)candidates.push({code:known,d,local:rows.some(r=>r.locNorm===location),locs:[...new Set(rows.map(r=>r.locNorm))]});}candidates.sort((a,b)=>Number(b.local)-Number(a.local)||a.d-b.d||a.code.localeCompare(b.code));const suggested=candidates.slice(0,4);return{state:suggested.length?'REVISAR CÓDIGO DIGITADO':'CÓDIGO SIN COINCIDENCIA',note:suggested.length?'Posibles códigos: '+suggested.map(x=>x.code+' ('+(x.local?'misma ubicación':x.locs.join(','))+')').join(' · '):'No existe coincidencia exacta en la data del sistema. Verificar físicamente.',suggestions:suggested};}
+function setProfileV8(mode){profileV8=mode==='operator'?'operator':'admin';document.querySelectorAll('.tab').forEach(b=>{b.hidden=(profileV8==='operator'&&b.dataset.tab!=='operatorPortal')||(profileV8==='admin'&&b.dataset.tab==='operatorPortal');});$('viewAdmin').classList.toggle('on',profileV8==='admin');$('viewOperator').classList.toggle('on',profileV8==='operator');openTab(profileV8==='operator'?'operatorPortal':'adminPortal');renderWorkflowV8();}
+function addOperatorV8(){const name=$('newOpName').value.trim().replace(/\s+/g,' ');if(name.length<2||name.length>80)return alert('Escribe un nombre válido (2 a 80 caracteres).');if(wfV8.users.some(x=>x.name.toLowerCase()===name.toLowerCase()))return alert('Ya existe ese usuario; puedes habilitarlo en la lista.');wfV8.users.push({id:wfId(),name,enabled:true,createdAt:wfToday()});$('newOpName').value='';wfStore('HABILITAR_OPERARIO',name);renderWorkflowV8();}
+function toggleOperatorV8(id){const person=wfV8.users.find(u=>u.id===id);if(!person)return;person.enabled=!person.enabled;wfStore(person.enabled?'HABILITAR_OPERARIO':'DESHABILITAR_OPERARIO',person.name);renderWorkflowV8();}
+function renderUserSelectorsV8(){const options=wfV8.users.filter(u=>u.enabled).map(u=>`<option value="${wfEsc(u.id)}">${wfEsc(u.name)}</option>`).join('');for(const id of ['opUser','adminTaskUser']){const node=$(id),prev=node.value;node.innerHTML='<option value="">'+(options?'Selecciona un nombre':'Primero habilita operarios en Administración')+'</option>'+options;if([...node.options].some(x=>x.value===prev))node.value=prev;}const list=$('wfKnownLocations');list.innerHTML=wfKnown().map(loc=>`<option value="${wfEsc(loc)}"></option>`).join('');}
+function personNameV8(id){return wfV8.users.find(x=>x.id===id)?.name||'Usuario no encontrado';}
+function updateDraftLocationV8(){const loc=wfNormalLocation($('opLocation').value);if(draftV8.length&&draftContextV8.location&&loc!==draftContextV8.location){alert('No puedes mezclar dos ubicaciones. Envía o limpia el borrador primero.');$('opLocation').value=draftContextV8.location;}}
+function addDraftV8(){const user=$('opUser').value,rawLoc=$('opLocation').value,loc=wfNormalLocation(rawLoc),code=normalizeCode($('opCode').value),type=$('opEntryType').value;let qty=type==='MISSING'?0:parseQuantity($('opQty').value);if(!wfV8.users.some(x=>x.id===user&&x.enabled))return alert('Selecciona un operario habilitado.');if(!loc)return alert('Selecciona una ubicación reconocida o con formato válido.');if(!code)return alert('Ingresa un código.');if(qty===null||qty<0)return alert('Ingresa una cantidad válida (puede ser 0 para no encontrado).');if(draftV8.length&&(draftContextV8.user!==user||draftContextV8.location!==loc))return alert('El borrador pertenece a otro operario o ubicación. Envíalo o límpialo.');draftContextV8={user,location:loc};draftV8.push({id:wfId(),code,qty,type,originalCode:code,recordedAt:wfToday()});$('opCode').value='';$('opQty').value='';$('opEntryType').value='COUNT';renderOperatorDraftV8();$('opCode').focus();}
+function removeDraftLineV8(id){draftV8=draftV8.filter(x=>x.id!==id);if(!draftV8.length)draftContextV8={user:'',location:''};renderOperatorDraftV8();}
+function clearDraftV8(){if(draftV8.length&&!confirm('¿Limpiar el borrador sin enviarlo?'))return;draftV8=[];draftContextV8={user:'',location:''};renderOperatorDraftV8();}
+function renderOperatorDraftV8(){$('opDraftRows').innerHTML=draftV8.length?`<h4>Registros por enviar (${draftV8.length})</h4>`+draftV8.map(x=>`<div class="wfEntry"><div><strong class="wfMonospace">${wfEsc(x.code)}</strong> · ${fmtQty(x.qty)} u <span class="wfTag ${x.type==='MISSING'?'alert':''}">${x.type==='MISSING'?'NO ENCONTRADO':'CONTADO'}</span></div><button class="danger wfActionSmall" onclick="removeDraftLineV8('${x.id}')">Eliminar</button></div>`).join(''):'<div class="wfEmpty">Aún no hay códigos en este borrador.</div>';}
+function submitDraftV8(){if(!draftV8.length)return alert('Agrega al menos un registro.');const u=wfV8.users.find(x=>x.id===draftContextV8.user&&x.enabled);if(!u)return alert('El operario ya no está habilitado.');if(!confirm(`Enviar ${draftV8.length} códigos de ${draftContextV8.location} a Administración? Una vez enviado, el original no se edita.`))return;const session={id:wfId(),userId:u.id,location:draftContextV8.location,submittedAt:wfToday(),status:'pending',entries:draftV8.map(r=>({...r})),reviewedAt:null};wfV8.sessions.push(session);if(!wfStore('CONTEO_ENVIADO',session.id))return;draftV8=[];draftContextV8={user:'',location:''};$('opLocation').value='';$('opCode').value='';$('opQty').value='';toast('Conteo enviado a bandeja de Administración (guardado local)');renderWorkflowV8();}
+function createTaskV8({userId,location,code,reason,sessionId='',entryId=''}){if(!wfV8.users.some(u=>u.id===userId&&u.enabled))return alert('Elige un operario habilitado.');if(!wfNormalLocation(location)||!code)return alert('Recuento requiere ubicación y código válidos.');const existing=wfV8.tasks.some(t=>t.status==='open'&&t.location===location&&t.code===code&&t.userId===userId&&t.entryId===entryId);if(existing)return alert('Ya existe un reconteo pendiente para el mismo operario, código y ubicación.');const task={id:wfId(),userId,location: wfNormalLocation(location),code:normalizeCode(code),reason,sessionId,entryId,status:'open',createdAt:wfToday(),response:null,closedAt:null};wfV8.tasks.push(task);wfStore('RECONTEO_SOLICITADO',task.id);renderWorkflowV8();return task;}
+function createManualTaskV8(){const userId=$('adminTaskUser').value,location=$('adminTaskLoc').value,code=$('adminTaskCode').value.trim(),reason=$('adminTaskReason').value;const t=createTaskV8({userId,location,code,reason});if(t){$('adminTaskLoc').value='';$('adminTaskCode').value='';toast('Reconteo asignado');}}
+function taskFromEntryV8(sessionId,entryId){const session=wfV8.sessions.find(x=>x.id===sessionId),entry=session?.entries.find(x=>x.id===entryId);if(!session||!entry)return;const reason=prompt('Motivo de reconteo (el original quedará intacto):','Revisar posible código mal ingresado / verificar ubicación y cantidad');if(reason===null)return;createTaskV8({userId:session.userId,location:session.location,code:entry.code,reason:reason.trim()||'Validación física',sessionId,entryId});}
+function answerTaskV8(id){const task=wfV8.tasks.find(t=>t.id===id);if(!task||task.status!=='open')return;const inputCode=$('taskCode_'+id),inputQty=$('taskQty_'+id),inputType=$('taskType_'+id);const code=normalizeCode(inputCode?.value),type=inputType?.value;const qty=type==='MISSING'?0:parseQuantity(inputQty?.value);if(!code||qty===null||qty<0)return alert('Revisa código, resultado y cantidad de reconteo.');if(!confirm('¿Enviar evidencia de reconteo? El registro original seguirá disponible.'))return;task.response={userId:task.userId,code,qty,type,at:wfToday()};task.status='answered';wfStore('RECONTEO_RESPONDIDO',id);renderWorkflowV8();}
+function approveTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||t.status!=='answered'||!t.response)return;if(!confirm('Aprobar el reconteo como evidencia validada. Solo impactará la comparación si su conteo asociado también está aprobado. No se modifica el WMS.'))return;t.status='closed';t.closedAt=wfToday();if(t.entryId){wfV8.corrections[t.entryId]={code:t.response.code,qty:t.response.qty,type:t.response.type,taskId:t.id,at:wfToday(),reason:t.reason};}else{/* Solicitudes sin conteo original son evidencia autónoma: NO reemplazan el conteo integral de esa ubicación. */}wfStore('RECONTEO_APROBADO',t.id);renderWorkflowV8();}
+function cancelTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||!['open','answered'].includes(t.status))return;if(!confirm('¿Cancelar esta solicitud? El historial se conservará.'))return;t.status='cancelled';t.closedAt=wfToday();wfStore('RECONTEO_CANCELADO',id);renderWorkflowV8();}
+function setSessionStatusV8(id,status){const s=wfV8.sessions.find(x=>x.id===id);if(!s||!['pending','approved','rejected'].includes(s.status))return;if(status==='approved'&&wfV8.tasks.some(t=>t.sessionId===id&&['open','answered'].includes(t.status)))return alert('Este conteo tiene reconteos aún pendientes de cerrar.');if(status==='approved'&&!$('systemData').value.trim()&&!confirm('Aún no existe data del sistema para auditar los códigos. ¿Aprobar de todas formas?'))return;if(!confirm(`¿${status==='approved'?'Aprobar este conteo para comparación':'Rechazar este conteo'}? Se conservará el historial.`))return;s.status=status;s.reviewedAt=wfToday();wfStore(status==='approved'?'CONTEO_APROBADO':'CONTEO_RECHAZADO',id);renderWorkflowV8();}
+function wfSessionView(s,catalog){const pending=wfV8.tasks.some(t=>t.sessionId===s.id&&['open','answered'].includes(t.status)),classes=wfClass(s.status),rows=s.entries.map(e=>{const correction=wfV8.corrections[e.id],audit=auditCodeV8(correction?.code||e.code,s.location,catalog);const tag=e.type==='MISSING'?'<span class="wfTag alert">Posible faltante</span>':'';const modified=correction?`<div class="wfMini">✅ Validado en reconteo: ${wfEsc(correction.code)} · ${fmtQty(correction.qty)} u</div>`:'';return `<tr><td class="wfMonospace">${wfEsc(e.code)}</td><td>${fmtQty(e.qty)}</td><td>${tag}${wfEsc(e.type==='MISSING'?'No encontrado':'Encontrado')}</td><td><span class="wfTag ${audit.state!=='COINCIDENCIA'?'alert':''}">${wfEsc(audit.state)}</span><div class="wfMini">${wfEsc(audit.note)}</div>${modified}</td><td><button class="secondary wfActionSmall" onclick="taskFromEntryV8('${s.id}','${e.id}')">🔎 Revisar / reconteo</button></td></tr>`;}).join('');return `<div class="wfSession"><div class="wfSessionHead"><strong>📍 ${wfEsc(s.location)} · ${wfEsc(personNameV8(s.userId))}</strong><span class="wfStatus ${classes}">${wfEsc(wfStatus(s.status))}</span></div><div class="wfMini">Enviado: ${wfFormatDate(s.submittedAt)} · ${s.entries.length} códigos ${pending?'· ⚠️ Hay reconteos pendientes':''}</div><div class="tableWrap compactTable"><table class="wfTable"><thead><tr><th>Código original</th><th>Físico original</th><th>Resultado</th><th>Auditoría del código</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div><div class="wfActions"><button class="primary wfActionSmall" onclick="setSessionStatusV8('${s.id}','approved')" ${pending?'disabled':''}>✓ Aprobar para comparación</button><button class="danger wfActionSmall" onclick="setSessionStatusV8('${s.id}','rejected')">Rechazar conteo</button></div></div>`;}
+function renderAdminV8(){const enabled=wfV8.users.filter(u=>u.enabled).length,pending=wfV8.sessions.filter(s=>s.status==='pending').length,openTasks=wfV8.tasks.filter(t=>t.status==='open'||t.status==='answered').length,approved=wfV8.sessions.filter(s=>s.status==='approved').length;const cards=[['Habilitados',enabled],['Conteos por revisar',pending],['Reconteos pendientes',openTasks],['Conteos aprobados',approved]];$('wfOverview').innerHTML=cards.map(([label,n])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');$('wfUsers').innerHTML=wfV8.users.length?wfV8.users.map(u=>`<div class="wfEntry"><div><b>${wfEsc(u.name)}</b> <span class="wfTag ${u.enabled?'':'alert'}">${u.enabled?'Habilitado':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick="toggleOperatorV8('${u.id}')">${u.enabled?'Deshabilitar':'Habilitar'}</button></div>`).join(''):'<div class="wfEmpty">Sin operarios registrados. Habilita nombres para iniciar conteos.</div>';const search=$('wfSessionSearch').value.trim().toLowerCase(),catalog=wfCatalog();const records=[...wfV8.sessions].reverse().filter(s=>!search||[personNameV8(s.userId),s.location,s.status,...s.entries.map(e=>e.code)].join(' ').toLowerCase().includes(search));$('wfSessions').innerHTML=records.length?records.map(s=>wfSessionView(s,catalog)).join(''):'<div class="wfEmpty">No hay conteos para este filtro.</div>';const tasks=[...wfV8.tasks].reverse();$('wfTasksAdmin').innerHTML=tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>${wfEsc(t.code)} · ${wfEsc(t.location)}</strong><span class="wfStatus ${wfClass(t.status)}">${wfEsc(wfStatus(t.status))}</span></div><div class="wfMini">Operario: ${wfEsc(personNameV8(t.userId))} · ${wfFormatDate(t.createdAt)}<div>Motivo: ${wfEsc(t.reason)}</div>${t.response?`<div>Respuesta: código ${wfEsc(t.response.code)} · ${fmtQty(t.response.qty)} u · ${wfEsc(t.response.type==='MISSING'?'No encontrado':'Encontrado')} · ${wfFormatDate(t.response.at)}</div>`:''}</div><div class="wfActions">${t.status==='answered'?`<button class="primary wfActionSmall" onclick="approveTaskV8('${t.id}')">✓ Aprobar reconteo</button>`:''}${['open','answered'].includes(t.status)?`<button class="danger wfActionSmall" onclick="cancelTaskV8('${t.id}')">Cancelar</button>`:''}</div></div>`).join(''):'<div class="wfEmpty">Sin solicitudes de reconteo.</div>';}
+function renderOperatorTasksV8(){const id=$('opUser').value;const tasks=wfV8.tasks.filter(t=>t.userId===id&&t.status==='open');$('opTasks').innerHTML=!id?'<div class="wfEmpty">Elige tu nombre para consultar los reconteos.</div>':tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>📍 ${wfEsc(t.location)} · ${wfEsc(t.code)}</strong><span class="wfStatus pending">Pendiente</span></div><div class="wfMini">${wfEsc(t.reason)} · Asignado ${wfFormatDate(t.createdAt)}</div><div class="wfFields" style="margin-top:10px"><label>Código observado<input id="taskCode_${t.id}" value="${wfEsc(t.code)}"/></label><label>Cantidad encontrada<input id="taskQty_${t.id}" type="number" min="0" step="any"/></label><label class="wfWide">Resultado<select id="taskType_${t.id}"><option value="COUNT">Encontrado físicamente</option><option value="MISSING">No encontrado físicamente</option></select></label></div><div class="wfActions"><button class="primary wfActionSmall" onclick="answerTaskV8('${t.id}')">📨 Enviar reconteo</button></div></div>`).join(''):'<div class="wfEmpty">No tienes reconteos pendientes.</div>';const sessions=wfV8.sessions.filter(s=>s.userId===id).slice(-10).reverse();$('opMySessions').innerHTML=sessions.length?sessions.map(s=>`<div class="wfEntry"><div>📍 <strong>${wfEsc(s.location)}</strong><div class="wfMini">${s.entries.length} códigos · ${wfFormatDate(s.submittedAt)}</div></div><span class="wfStatus ${wfClass(s.status)}">${wfEsc(wfStatus(s.status))}</span></div>`).join(''):'<div class="wfEmpty">No hay conteos enviados por este operario.</div>';}
+function renderWorkflowV8(){renderUserSelectorsV8();renderOperatorDraftV8();renderAdminV8();renderOperatorTasksV8();}
+function applyApprovedToComparisonV8(){const approved=wfV8.sessions.filter(s=>s.status==='approved');if(!approved.length)return alert('No hay conteos aprobados.');if(!$('systemData').value.trim())return alert('Carga la data del sistema en «Pegar datas» antes de comparar.');const current=new Map();for(const s of approved){const previous=current.get(s.location);if(!previous||new Date(s.reviewedAt||s.submittedAt)>=new Date(previous.reviewedAt||previous.submittedAt))current.set(s.location,s);}const rows=[];for(const s of current.values()){for(const e of s.entries){const corrected=wfV8.corrections[e.id]||e;rows.push([s.location,corrected.code,corrected.type==='MISSING'?0:corrected.qty].join('\t'));}}if(!rows.length)return alert('No se encontraron registros en los conteos aprobados.');if(!confirm(`Integrar ${rows.length} líneas de ${current.size} ubicaciones aprobadas. Esto REEMPLAZARÁ el cuadro «Data operador» del análisis actual, sin borrar los originales de la bandeja. ¿Continuar?`))return;$('operatorData').value='Ubicación\tCódigo\tCantidad\n'+rows.join('\n');savePaste();compareData();wfStore('APROBADOS_INTEGRADOS',`${rows.length} líneas / ${current.size} ubicaciones`);renderWorkflowV8();openTab('results');toast('Conteos aprobados integrados al cruce (no modifica WMS)');}
+function wfDownloadBlob(text,name,type){const b=new Blob([text],{type}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),8000);}
+function backupWorkflowV8(){wfDownloadBlob(JSON.stringify(wfV8,null,2),'PERCHADO_V8_RESPALDO_'+new Date().toISOString().slice(0,10)+'.json','application/json');}
+async function importWorkflowV8(e){const file=e.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(parsed.version!==8||!Array.isArray(parsed.users)||!Array.isArray(parsed.sessions)||!Array.isArray(parsed.tasks)||!parsed.corrections||!Array.isArray(parsed.events))throw Error('No corresponde a un respaldo V8 íntegro.');if(!confirm('¿Sustituir los datos locales de usuarios, conteos y reconteos por el respaldo? Exporta antes la versión actual para no perderla.'))return;wfV8=parsed;wfStore('RESPALDO_IMPORTADO',file.name);renderWorkflowV8();toast('Respaldo restaurado');}catch(err){alert('No se pudo importar: '+err.message);}finally{e.target.value='';}}
+function exportWorkflowV8(){if(typeof XLSX==='undefined')return backupWorkflowV8();const wb=XLSX.utils.book_new(),add=(name,items)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(items.length?items:[{Estado:'Sin datos'}]),name);add('Usuarios',wfV8.users.map(u=>({Nombre:u.name,Habilitado:u.enabled?'SI':'NO',Alta:wfFormatDate(u.createdAt)})));add('Conteos_originales',wfV8.sessions.flatMap(s=>s.entries.map(e=>({Conteo:s.id,Operario:personNameV8(s.userId),Ubicacion:s.location,Codigo_Original:e.code,Cantidad_Original:e.qty,Tipo_Original:e.type,Enviado:wfFormatDate(s.submittedAt),Estado:s.status}))));add('Correcciones',wfV8.sessions.flatMap(s=>s.entries.filter(e=>wfV8.corrections[e.id]).map(e=>({Operario:personNameV8(s.userId),Ubicacion:s.location,Codigo_Original:e.code,Cantidad_Original:e.qty,Codigo_Validado:wfV8.corrections[e.id].code,Cantidad_Validada:wfV8.corrections[e.id].qty,Reconteo:wfV8.corrections[e.id].taskId}))));add('Reconteos',wfV8.tasks.map(t=>({Operario:personNameV8(t.userId),Ubicacion:t.location,Codigo_Solicitado:t.code,Motivo:t.reason,Estado:t.status,Fecha:wfFormatDate(t.createdAt),Codigo_Respuesta:t.response?.code||'',Cantidad_Respuesta:t.response?.qty??'',Fecha_Respuesta:wfFormatDate(t.response?.at)})));add('Trazabilidad',wfV8.events.map(e=>({Fecha:wfFormatDate(e.at),Accion:e.event,Referencia:e.detail})));XLSX.writeFile(wb,'PERCHADO_V8_EVIDENCIAS_'+new Date().toISOString().slice(0,10)+'.xlsx');}
+wfLoad();renderWorkflowV8();/* Perchado V9 inicia después de instalar seguridad */
+</script>
+<script>/* PERCHADO V9 - acceso, captura móvil, novedades y supervisión */
+'use strict';
+const ADMIN_LOCAL_KEY_V9='perchado_v9_admin_accounts';
+let adminAccessV9=false, adminIdentityV9='', cloudV9=null, cloudEnabledV9=!!(window.PERCHADO_FIREBASE_CONFIG?.apiKey&&!String(window.PERCHADO_FIREBASE_CONFIG.apiKey).includes('REEMPLAZA'));
+let cloudAdminsV9=[];
+let manualTransfersV9=[];
+window.perchadoV9Moves=manualTransfersV9;
+let cloudIngestV9=false, lastLiveV9=[], sendingV9=false;
+const q9=id=>document.getElementById(id);
+const enc9=s=>escapeHtml(String(s??''));
+const wfStoreBaseV9=wfStore;
+const profileBaseV9=setProfileV8;
+const oldRenderAllV9=renderAll;
+const oldRenderWorkflowV9=renderWorkflowV8;
+const oldSaveDecisionsV9=saveDecisions;
+const oldRestoreDecisionsV9=restoreDecisions;
+const oldRemainingV9=remaining;
+const oldWmsV9=wmsMovements;
+const oldReconciliationV9=renderReconciliation;
+const oldAddDraftV9=addDraftV8;
+const oldAddOperatorV9=addOperatorV8;
+const oldToggleOperatorV9=toggleOperatorV8;
+const oldAnswerTaskV9=answerTaskV8;
+const oldApproveTaskNewV9=approveTaskV8;
+const oldCancelTaskV9=cancelTaskV8;
+const oldSessionStatusV9=setSessionStatusV8;
+const oldRemoveDraftV9=removeDraftLineV8;
+const oldClearDraftV9=clearDraftV8;
+const oldSubmitDraftV9=submitDraftV8;
+const oldCreateTaskV9=createTaskV8;
+const oldApproveTaskV9=approveTaskV8;
+const oldCopySectionV9=copySection;
+const oldDownloadExcelV9=downloadExcel;
+const oldImportWorkflowV9=importWorkflowV8;
+
+function localAdminAccountsV9(){try{return JSON.parse(localStorage.getItem(ADMIN_LOCAL_KEY_V9)||'[]')||[];}catch{return [];}}
+function adminUsernameV9(raw){return String(raw||'').trim().toLowerCase().replace(/\s+/g,'.');}
+function passwordBytesV9(value){return new TextEncoder().encode(value);}
+async function passwordHashV9(password,salt){
+ if(!crypto?.subtle)throw Error('Usa HTTPS o localhost para configurar contraseñas.');
+ const key=await crypto.subtle.importKey('raw',passwordBytesV9(password),'PBKDF2',false,['deriveBits']);
+ const digest=await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt),iterations:210000,hash:'SHA-256'},key,256);
+ return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function localCreateAdminV9(name,password){
+ const username=adminUsernameV9(name),accounts=localAdminAccountsV9();
+ if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(username))throw Error('El usuario debe tener 3 a 35 caracteres, sin espacios ni tildes.');
+ if(password.length<10)throw Error('La contraseña debe tener al menos 10 caracteres.');
+ if(accounts.some(a=>a.username===username))throw Error('Ya existe este administrador.');
+ const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
+ accounts.push({username,salt,hash:await passwordHashV9(password,salt),createdAt:wfToday()});
+ localStorage.setItem(ADMIN_LOCAL_KEY_V9,JSON.stringify(accounts));return username;
+}
+function gateMessageV9(msg){q9('gateMessageV9').textContent=msg||'';}
+function showAdminGateV9(){
+ const setup=!cloudEnabledV9&&!localAdminAccountsV9().length;
+ q9('gateTitleV9').textContent=setup?'Crear administrador inicial':'Ingreso de Administración';
+ q9('loginButtonV9').textContent=setup?'Crear y entrar':'Ingresar';
+ q9('adminGateV9').hidden=false;gateMessageV9('');q9('loginPasswordV9').value='';q9('loginUserV9').focus();
+}
+async function loginAdministratorV9(){
+ const name=adminUsernameV9(q9('loginUserV9').value),pass=q9('loginPasswordV9').value;
+ try{
+   q9('loginButtonV9').disabled=true;gateMessageV9('Validando acceso...');
+   if(!name||!pass)throw Error('Ingresa usuario y contraseña.');
+   if(cloudEnabledV9){
+     if(!cloudV9?.ready)throw Error('Firebase todavía no está disponible.');
+     await cloudV9.loginAdmin(name,pass);
+   }else{
+     const accounts=localAdminAccountsV9();
+     if(!accounts.length) await localCreateAdminV9(name,pass);
+     else {
+       const item=accounts.find(x=>x.username===name);
+       if(!item||await passwordHashV9(pass,item.salt)!==item.hash)throw Error('Usuario o contraseña incorrectos.');
+     }
+   }
+   adminAccessV9=true;adminIdentityV9=name;q9('adminGateV9').hidden=true;
+   profileBaseV9('admin');renderAdminAccountsV9();renderLiveMonitoringV9();updateCloudStatusV9();
+ }catch(e){gateMessageV9(e.message||'No se pudo iniciar sesión.');}
+ finally{q9('loginButtonV9').disabled=false;}
+}
+async function createAdministratorV9(){
+ if(!adminAccessV9)return;
+ const name=q9('newAdminV9').value,password=q9('newAdminPasswordV9').value;
+ try{
+  if(cloudEnabledV9)await cloudV9.createAdmin(adminUsernameV9(name),password);
+  else await localCreateAdminV9(name,password);
+  q9('newAdminV9').value='';q9('newAdminPasswordV9').value='';renderAdminAccountsV9();toast('Administrador creado');
+ }catch(e){alert('No se pudo crear el administrador: '+(e.message||e));}
+}
+function renderAdminAccountsV9(){
+ const html=cloudEnabledV9?cloudAdminsV9.map(a=>`<div class="wfEntry"><div>🔐 ${enc9(a.username||'Administrador')} <span class="wfTag ${a.active?'':'alert'}">${a.active?'Activo':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick='toggleAdministratorV9(${JSON.stringify(a.id)},${a.active?'false':'true'})' ${a.username===adminIdentityV9?'disabled':''}>${a.active?'Deshabilitar':'Habilitar'}</button></div>`).join(''):
+ localAdminAccountsV9().map(a=>`<div class="wfEntry">🔐 ${enc9(a.username)} <span class="wfTag">Administrador local</span></div>`).join('');
+ q9('adminListV9').innerHTML=html||'<div class="wfEmpty">Sin usuarios administrativos registrados.</div>';
+}
+async function toggleAdministratorV9(id,active){
+ if(!adminAccessV9||!cloudEnabledV9||!cloudV9?.ready)return;
+ if(!confirm(`${active?'Habilitar':'Deshabilitar'} este administrador?`))return;
+ try{await cloudV9.setAdminActive(id,active);}catch(e){alert('No se pudo cambiar el acceso: '+e.message);}
+}
+
+async function logoutAdministratorV9(){
+ adminAccessV9=false;adminIdentityV9='';cloudAdminsV9=[];
+ if(cloudEnabledV9){wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};lastLiveV9=[];}
+ profileBaseV9('operator');renderLiveMonitoringV9();updateCloudStatusV9();
+ if(cloudEnabledV9&&cloudV9){try{await cloudV9.enterOperator();}catch(e){q9('opSyncV9').textContent='Firebase no disponible: '+e.message;}}
+}
+function cancelAdminLoginV9(){q9('adminGateV9').hidden=true;setProfileV8('operator');}
+setProfileV8=function(mode){
+ if(mode==='operator'){
+   q9('adminGateV9').hidden=true;
+   if(adminAccessV9){logoutAdministratorV9();return;}
+   profileBaseV9('operator');updateCloudStatusV9();return;
+ }
+ if(adminAccessV9){profileBaseV9('admin');return;}
+ showAdminGateV9();
+};
+function updateCloudStatusV9(){
+ const text=cloudEnabledV9?(cloudV9?.connected?'Firebase · en vivo':('Firebase · sin conexión'+(cloudV9?.lastError?' · '+cloudV9.lastError:''))):'Modo local · sin sincronización';
+ q9('cloudLabelV9').textContent=text;
+ q9('cloudLabelV9').className=cloudEnabledV9&&cloudV9?.connected?'v9Online':'v9Offline';
+ q9('opSyncV9').textContent=text;
+ if(!hasCompared||!sourceDirty)q9('syncStatus').textContent=cloudEnabledV9?(cloudV9?.connected?'☁ En vivo':'⚠ Sin conexión'):'Prueba local';
+}
+
+function cloudWritableV9(){
+ if(!cloudEnabledV9)return true;
+ if(cloudV9?.ready&&cloudV9.connected&&cloudV9.getCurrentUid())return true;
+ alert('Firebase no está conectado o la sesión aún no inicia. Conserva el borrador y reintenta cuando veas «Firebase · en vivo».');
+ return false;
+}
+addOperatorV8=function(){if(!adminAccessV9||!cloudWritableV9())return;oldAddOperatorV9();};
+toggleOperatorV8=function(id){if(!adminAccessV9||!cloudWritableV9())return;oldToggleOperatorV9(id);};
+answerTaskV8=function(id){if(!cloudWritableV9())return;oldAnswerTaskV9(id);};
+approveTaskV8=function(id){if(!adminAccessV9||!cloudWritableV9())return;oldApproveTaskNewV9(id);};
+cancelTaskV8=function(id){if(!adminAccessV9||!cloudWritableV9())return;oldCancelTaskV9(id);};
+setSessionStatusV8=function(id,status){if(!adminAccessV9||!cloudWritableV9())return;oldSessionStatusV9(id,status);};
+
+// Conteo libre: código escrito sin bloquear aunque no esté en sistema.
+// El código queda íntegro en la evidencia original.
+// El análisis posterior indica duplicados, códigos sospechosos y errores.
+function rebuildDraftV9(){try{localStorage.setItem('perchado_v9_draft',JSON.stringify({items:draftV8,context:draftContextV8}));}catch{}scheduleLiveV9();}
+let liveTimeoutV9=null;
+function scheduleLiveV9(){
+ if(liveTimeoutV9)clearTimeout(liveTimeoutV9);
+ renderLiveMonitoringV9();
+ liveTimeoutV9=setTimeout(()=>{
+  liveTimeoutV9=null;
+  if(cloudEnabledV9&&cloudV9?.ready&&profileV8==='operator')cloudV9.saveLive({
+   userId:draftContextV8.user,location:draftContextV8.location,
+   entries:draftV8.map(x=>({...x})),updatedAt:wfToday(),status:draftV8.length?'counting':'completed'
+  }).catch(e=>updateCloudStatusV9());
+ },550);
+}
+addDraftV8=function(){
+ // V8 validations are retained for location/quantity. The code validator is removed in HTML script patch.
+ if(draftV8.length>=250)return alert('Máximo 250 códigos por conteo. Envía esta ubicación y continúa en una nueva sesión.');
+ const before=draftV8.length;oldAddDraftV9();if(draftV8.length!==before)rebuildDraftV9();
+};
+removeDraftLineV8=function(id){oldRemoveDraftV9(id);rebuildDraftV9();};
+clearDraftV8=function(){const before=draftV8.length;oldClearDraftV9();if(draftV8.length!==before)rebuildDraftV9();};
+submitDraftV8=function(){if(!cloudWritableV9())return;const before=draftV8.length;oldSubmitDraftV9();if(before&&draftV8.length===0)rebuildDraftV9();};
+
+wfStore=function(eventName,detail){
+ const saved=cloudEnabledV9?(wfV8.events.push({id:wfId(),at:wfToday(),event:eventName,detail:detail||''}),true):wfStoreBaseV9(eventName,detail);
+ if(!saved||cloudIngestV9||!cloudEnabledV9||!cloudV9?.ready)return saved;
+ let coll=null,item=null;
+ if(eventName==='HABILITAR_OPERARIO'||eventName==='DESHABILITAR_OPERARIO'){
+   coll='operators';item=wfV8.users.find(u=>u.name===detail);
+ }else if(eventName==='CONTEO_ENVIADO'||eventName==='CONTEO_APROBADO'||eventName==='CONTEO_RECHAZADO'){
+   coll='sessions';item=wfV8.sessions.find(x=>x.id===detail);
+ }else if(eventName?.startsWith('RECONTEO_')){
+   coll='tasks';item=wfV8.tasks.find(x=>x.id===detail);
+   if(eventName==='RECONTEO_APROBADO'&&item?.entryId&&wfV8.corrections[item.entryId]){
+     cloudV9.persist('corrections',{id:item.entryId,...wfV8.corrections[item.entryId]}).catch(e=>alert('No se sincronizó la corrección: '+e.message));
+   }
+ }
+ if(coll&&item)cloudV9.persist(coll,{...item}).catch(e=>{
+  console.error('Error de sincronización',e);q9('opSyncV9').textContent='⚠ Pendiente de sincronización · '+e.message;
+ });
+ return saved;
+};
+
+function setCloudDataV9(group,docs){
+ cloudIngestV9=true;
+ if(group==='admins'){cloudAdminsV9=docs;renderAdminAccountsV9();}
+ if(group==='operators')wfV8.users=docs;
+ if(group==='sessions')wfV8.sessions=docs.sort((a,b)=>(a.submittedAt||'').localeCompare(b.submittedAt||''));
+ if(group==='tasks')wfV8.tasks=docs.sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));
+ if(group==='corrections'){wfV8.corrections=Object.fromEntries(docs.map(x=>[x.id,x]));}
+ if(group==='liveCounts')lastLiveV9=docs.filter(x=>x.status==='counting'&&x.entries?.length);
+ if(['operators','sessions','tasks','corrections'].includes(group)){
+   if(!cloudEnabledV9){try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));}catch{}}
+   oldRenderWorkflowV9();
+ }
+ renderLiveMonitoringV9();renderNoveltiesV9();updateCloudStatusV9();
+ cloudIngestV9=false;
+}
+window.perchadoFirebaseReadyV9=function(api){
+ cloudV9=api;cloudEnabledV9=true;updateCloudStatusV9();
+ api.onData=(group,records)=>setCloudDataV9(group,records);
+ api.onStatus=()=>updateCloudStatusV9();
+ api.enterOperator().then(()=>updateCloudStatusV9()).catch(e=>{
+  q9('opSyncV9').textContent='⚠ Firebase: '+(e.message||'Error de conexión');
+ });
+};
+function renderLiveMonitoringV9(){
+ const box=q9('liveMonitoringV9');if(!box)return;
+ if(!adminAccessV9){box.innerHTML='';return;}
+ const live=cloudEnabledV9?lastLiveV9:(draftV8.length?[{userId:draftContextV8.user,location:draftContextV8.location,entries:draftV8,updatedAt:wfToday()}]:[]);
+ const completed=wfV8.sessions.filter(x=>x.status==='pending').length;
+ box.innerHTML=`<div class="wfPane"><h3>📡 Monitoreo de conteos en vivo · ${live.length} en proceso · ${completed} por revisar</h3><div class="wfRows">${live.length?live.map(r=>`<div class="wfEntry"><div><b>${enc9(personNameV8(r.userId))}</b> · ${enc9(r.location||'Ubicación por definir')}<div class="wfMini">${r.entries?.length||0} códigos capturados · ${wfFormatDate(r.updatedAt)}</div><div class="wfMini">${(r.entries||[]).slice(-4).map(x=>enc9(x.code)+' × '+fmtQty(x.qty)).join(' · ')}</div><details style="margin-top:7px"><summary style="cursor:pointer">Ver todos los ${r.entries?.length||0} códigos</summary><div style="max-height:260px;overflow:auto">${(r.entries||[]).map(e=>`<div class="wfMini">${enc9(e.code)} · ${fmtQty(e.qty)} u</div>`).join('')}</div></details></div><span class="wfStatus review">Contando</span></div>`).join(''):'<div class="wfEmpty">Sin conteos activos en este momento.</div>'}</div></div>`;
+}
+
+// Reconteos desde administración en la bandeja de códigos y desde Novedades.
+function requestRecountV9(location,code,userId='',reason='Diferencia de inventario'){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(!cloudWritableV9())return;
+ const loc=wfNormalLocation(location),person=userId||q9('adminTaskUser').value;
+ if(!loc||!code||!person)return alert('Selecciona operario, ubicación y código para reconteo.');
+ const sess=[...wfV8.sessions].reverse().find(s=>s.userId===person&&s.location===loc&&s.entries.some(e=>e.code===code));
+ const entry=sess?.entries.find(e=>e.code===code);
+ if(!confirm(`Solicitar reconteo\nUbicación: ${loc}\nCódigo: ${code}\nOperario: ${personNameV8(person)}?`))return;
+ return oldCreateTaskV9({userId:person,location:loc,code,reason,sessionId:sess?.id||'',entryId:entry?.id||''});
+}
+function taskFromEntryV8(sessionId,entryId){
+ if(!adminAccessV9)return;
+ const s=wfV8.sessions.find(x=>x.id===sessionId),e=s?.entries.find(x=>x.id===entryId);if(!s||!e)return;
+ const reason=prompt('Motivo del reconteo:','Revisión de código o cantidad');if(reason===null)return;
+ requestRecountV9(s.location,e.code,s.userId,reason.trim()||'Verificar físicamente');
+}
+function createManualTaskV8(){requestRecountV9(q9('adminTaskLoc').value,q9('adminTaskCode').value.trim(),q9('adminTaskUser').value,q9('adminTaskReason').value);}
+function fillRecountV9(location,code,userId=''){
+ if(!adminAccessV9)return showAdminGateV9();
+ q9('adminTaskLoc').value=location;q9('adminTaskCode').value=code;
+ if(userId&&[...q9('adminTaskUser').options].some(x=>x.value===userId))q9('adminTaskUser').value=userId;
+ openTab('results');q9('adminTaskCode').focus();q9('adminTaskLoc').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderNoveltiesV9(){
+ const target=q9('noveltyInboxV9');if(!target)return;
+ if(!adminAccessV9){target.innerHTML='';return;}
+ const catalog=wfCatalog(),issues=[];
+ for(const s of wfV8.sessions){
+  if(s.status==='rejected')continue;
+  for(const e of s.entries){
+   const audit=auditCodeV8(e.code,s.location,catalog);
+   if(audit.state==='COINCIDENCIA'&&e.type!=='MISSING')continue;
+   issues.push({key:s.id+'_'+e.id,loc:s.location,code:e.code,user:s.userId,origin:'Captura',state:audit.state,note:audit.note});
+  }
+ }
+ if(hasCompared){for(const r of results.filter(r=>remaining(r)!==0||r.duplicado)){
+  issues.push({key:r.codigo+'_'+r.ubicacionNormalizada,loc:r.ubicacionNormalizada,code:r.codigo,user:'',origin:'Comparación',state:rowStatus(r),note:`Físico ${r.qtyOperador??'—'} · Sistema ${r.qtySistema??'—'} · Diferencia ${fmtQty(remaining(r))}`});
+ }}
+ const latest=issues.slice(-90).reverse();
+ target.innerHTML=latest.length?`<h3 class="wfSectionTitle">Novedades para revisar (${issues.length})</h3>`+latest.map(x=>{
+  const js=[x.loc,x.code,x.user].map(a=>JSON.stringify(a)).join(',');
+  const canMove=hasCompared&&results.some(r=>r.codigo===x.code&&r.ubicacionNormalizada===x.loc&&remaining(r)>0);
+  return `<div class="v9Issue"><div class="v9IssueHead"><b>${enc9(x.code)} · ${enc9(x.loc)}</b><span class="wfTag alert">${enc9(x.state)}</span></div><div class="wfMini">${enc9(x.origin)} · ${enc9(x.note)}</div><div class="v9IssueActions"><button class="secondary mini" onclick='fillRecountV9(${js})'>📨 Reconteo</button>${canMove?`<button class="primary mini" onclick='selectSurplusV9(${JSON.stringify(x.loc)},${JSON.stringify(x.code)})'>↔ Ajustar ubicación</button>`:''}</div></div>`;
+ }).join(''):'<div class="wfEmpty">No hay códigos con novedades registradas.</div>';
+ renderTransfersV9();
+}
+// Ajuste de excedente localizado en destino: fuente elegida entre ubicaciones
+// que tienen el código en sistema. No se asume que el origen esté físicamente libre.
+remaining=function(r){
+ let value=oldRemainingV9(r);
+ for(const m of manualTransfersV9){if(m.code!==r.codigo)continue;if(m.from===r.ubicacionNormalizada)value+=m.qty;if(m.to===r.ubicacionNormalizada)value-=m.qty;}
+ return Math.abs(value)<1e-7?0:Number(value.toFixed(5));
+}
+wmsMovements=function(){return [...oldWmsV9(),...manualTransfersV9.map(m=>movementLine(m.code,m.from,m.to,m.qty))];}
+saveDecisions=function(){oldSaveDecisionsV9();if(!hasCompared)return;
+ try{const key='perchadoAuditDecisionsV7',record=JSON.parse(localStorage.getItem(key)||'{}');record.transfers=manualTransfersV9;localStorage.setItem(key,JSON.stringify(record));}catch(e){console.warn(e);}
+}
+restoreDecisions=function(){oldRestoreDecisionsV9();try{const a=JSON.parse(localStorage.getItem('perchadoAuditDecisionsV7')||'null');
+ manualTransfersV9=(a?.signature===currentSignature&&Array.isArray(a.transfers)?a.transfers:[]).filter(x=>x.code&&x.from&&x.to&&Number.isFinite(Number(x.qty))&&Number(x.qty)>0);
+ window.perchadoV9Moves=manualTransfersV9;
+ }catch{manualTransfersV9=[];window.perchadoV9Moves=manualTransfersV9;}
+}
+function availableSourcesV9(code,to){
+ const stocks=new Map();for(const row of allSystemRows.filter(x=>x.code===code&&x.locNorm!==to))stocks.set(row.locNorm,(stocks.get(row.locNorm)||0)+row.qty);
+ return [...stocks].map(([loc,qty])=>{
+   const counted=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===loc);
+   const reserved=manualTransfersV9.filter(m=>m.code===code&&m.from===loc).reduce((n,m)=>n+m.qty,0);
+   const amount=counted?Math.max(0,-remaining(counted)):Math.max(0,qty-reserved);
+   return {loc,amount,unverified:!auditScope.mappedLocations.includes(loc),onSystem:qty};
+ }).filter(x=>x.amount>0).sort((a,b)=>Number(a.unverified)-Number(b.unverified)||a.loc.localeCompare(b.loc,undefined,{numeric:true}));
+}
+let transferTargetV9={code:'',location:''};
+function selectSurplusV9(location,code){transferTargetV9={location,code};renderTransfersV9();q9('transferPanelV9').scrollIntoView({behavior:'smooth',block:'center'});}
+function renderTransfersV9(){
+ const box=q9('transferPanelV9');if(!box||!adminAccessV9)return;
+ if(!hasCompared){box.innerHTML='';return;}
+ const surplus=results.filter(r=>remaining(r)>0&&baseEligible(r)).sort((a,b)=>a.ubicacionNormalizada.localeCompare(b.ubicacionNormalizada));
+ if(!surplus.length){box.innerHTML='';return;}
+ if(!surplus.some(r=>r.codigo===transferTargetV9.code&&r.ubicacionNormalizada===transferTargetV9.location))transferTargetV9={code:surplus[0].codigo,location:surplus[0].ubicacionNormalizada};
+ const current=results.find(r=>r.codigo===transferTargetV9.code&&r.ubicacionNormalizada===transferTargetV9.location),sources=availableSourcesV9(transferTargetV9.code,transferTargetV9.location);
+ box.innerHTML=`<div class="wfPane"><h3>↔ Ajustar sobrante hacia la ubicación encontrada</h3><div class="v9TransferOptions"><label>Sobrante destino<select id="transferDestV9" onchange="changeTransferTargetV9()">${surplus.map(r=>`<option value="${enc9(r.codigo+'||'+r.ubicacionNormalizada)}" ${r===current?'selected':''}>${enc9(r.codigo)} · ${enc9(r.ubicacionNormalizada)} (+${fmtQty(remaining(r))})</option>`).join('')}</select></label><label>Ubicación origen<select id="transferSourceV9" onchange="changeTransferSourceV9()">${sources.map(x=>`<option value="${enc9(x.loc)}">${enc9(x.loc)} (${fmtQty(x.amount)} u ${x.unverified?'· sin conteo':'· faltante'})</option>`).join('')}</select></label><label>Cantidad<input id="transferQtyV9" type="number" min="0.001" step="any" inputmode="decimal" placeholder="Cantidad" /></label><button class="primary" onclick="confirmTransferV9()" ${sources.length?'':'disabled'}>Registrar movimiento</button></div><div class="wfMini" id="transferSourceInfoV9">${sources.length?'Origen con saldo en sistema; confirma físicamente antes de ejecutar WMS.':'No existen ubicaciones de origen elegibles para este código.'}</div></div>`;
+ if(sources.length){q9('transferQtyV9').value=Math.min(remaining(current),sources[0].amount);changeTransferSourceV9();}
+}
+function changeTransferTargetV9(){const [code,location]=q9('transferDestV9').value.split('||');transferTargetV9={code,location};renderTransfersV9();}
+function changeTransferSourceV9(){const src=availableSourcesV9(transferTargetV9.code,transferTargetV9.location).find(s=>s.loc===q9('transferSourceV9')?.value);
+ const dest=results.find(r=>r.codigo===transferTargetV9.code&&r.ubicacionNormalizada===transferTargetV9.location);
+ if(!src||!dest)return; q9('transferQtyV9').max=Math.min(remaining(dest),src.amount);
+ q9('transferQtyV9').value=Math.min(remaining(dest),src.amount);
+ q9('transferSourceInfoV9').textContent=src.unverified?'Origen sin conteo físico: se registra propuesta pendiente de verificar antes del movimiento en WMS.':'Origen con faltante registrado; se requiere validación física.';
+}
+function confirmTransferV9(){
+ if(!adminAccessV9||sourceDirty)return alert('Vuelve a comparar la data antes de ajustar.');
+ const code=transferTargetV9.code,to=transferTargetV9.location,from=q9('transferSourceV9')?.value,qty=Number(q9('transferQtyV9')?.value);
+ const dest=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===to),src=availableSourcesV9(code,to).find(s=>s.loc===from);
+ if(!dest||!src||!baseEligible(dest)||!Number.isFinite(qty)||qty<=0||qty>Math.min(src.amount,remaining(dest)))return alert('Origen, destino o cantidad no válidos.');
+ if(!src.unverified){const origin=results.find(r=>r.codigo===code&&r.ubicacionNormalizada===from);if(!origin||!reviews.has(reviewKey(origin)))return alert('Primero debes marcar como revisado el faltante físico en el origen.');}
+ if(!confirm(`Movimiento propuesto para WMS\nCódigo ${code}\nDesde ${from}\nHacia ${to}\nCantidad ${qty}\n${src.unverified?'ATENCIÓN: el origen no tiene conteo físico validado. Confirma la existencia allí antes de ejecutar.':'Origen contado con faltante.'}\n\n¿Guardar propuesta?`))return;
+ manualTransfersV9.push({id:wfId(),code,from,to,qty,originVerified:!src.unverified,createdAt:wfToday(),by:adminIdentityV9});window.perchadoV9Moves=manualTransfersV9;
+ saveDecisions();renderAll();toast('Movimiento propuesto; pendiente de WMS');
+}
+function undoTransferV9(id){const idx=manualTransfersV9.findIndex(m=>m.id===id);if(idx<0||!confirm('¿Anular la propuesta de traslado?'))return;manualTransfersV9.splice(idx,1);saveDecisions();renderAll();}
+renderReconciliation=function(){oldReconciliationV9();if(!hasCompared)return;
+ const list=manualTransfersV9.map(m=>`<tr><td>${enc9(m.code)}</td><td>${enc9(m.from)} → ${enc9(m.to)}</td><td>${fmtQty(m.qty)}</td><td>${m.originVerified?'Origen revisado':'Origen por verificar'}</td><td><button class="secondary mini" onclick='undoTransferV9(${JSON.stringify(m.id)})'>Deshacer</button></td></tr>`).join('');
+ if(list)q9('reconciliationPanel').insertAdjacentHTML('beforeend',`<h3 class="wfSectionTitle">Movimientos por ubicación origen seleccionada</h3><div class="tableWrap compactTable"><table><thead><tr><th>Código</th><th>Movimiento</th><th>Cantidad</th><th>Estado origen</th><th></th></tr></thead><tbody>${list}</tbody></table></div>`);
+};
+copySection=function(kind){
+ if(['ajustesm','decisiones'].includes(kind)&&manualTransfersV9.length){
+  if(!hasCompared||sourceDirty)return alert('Primero compara las datas.');
+  const lines=['Codigo\tOrigen\tDestino\tCantidad',...([...approvedMatches,...manualTransfersV9].map(m=>[m.code,m.from,m.to,m.qty].join('\t')))];
+  copyText(lines.join('\n'),'Ajustes copiados');return;
+ }
+ oldCopySectionV9(kind);
+};
+renderAll=function(){oldRenderAllV9();if(typeof renderNoveltiesV9==='function')renderNoveltiesV9();};
+renderWorkflowV8=function(){oldRenderWorkflowV9();renderLiveMonitoringV9();renderNoveltiesV9();};
+exportWorkflowV8=(function(base){return function(){base();};})(exportWorkflowV8);
+importWorkflowV8=async function(event){if(cloudEnabledV9){alert('Con Firebase activo la importación masiva queda bloqueada para evitar sobrescribir datos de otros equipos.');event.target.value='';return;}await oldImportWorkflowV9(event);};
+// Integración: reconteos independientes aprobados de una ubicación ya contada.
+// El primer conteo permanece intacto, la nueva evidencia se muestra en la bandeja.
+applyApprovedToComparisonV8=function(){
+ const approved=wfV8.sessions.filter(s=>s.status==='approved');
+ if(!approved.length)return alert('No hay conteos aprobados.');
+ if(!q9('systemData').value.trim())return alert('Carga la data del sistema en «Pegar datas».');
+ const current=new Map();
+ for(const s of approved){const old=current.get(s.location);if(!old||new Date(s.reviewedAt||s.submittedAt)>=new Date(old.reviewedAt||old.submittedAt))current.set(s.location,s);}
+ const byLocation=new Map();
+ for(const s of current.values()){
+   const rows=[];
+   for(const e of s.entries){const corrected=wfV8.corrections[e.id]||e;rows.push({code:corrected.code,qty:corrected.type==='MISSING'?0:corrected.qty});}
+   byLocation.set(s.location,rows);
+ }
+ const standalone=wfV8.tasks.filter(t=>t.status==='closed'&&!t.entryId&&t.response&&byLocation.has(t.location))
+  .sort((a,b)=>(a.closedAt||a.createdAt).localeCompare(b.closedAt||b.createdAt));
+ for(const t of standalone){const rows=byLocation.get(t.location),code=t.response.code;
+  const index=rows.findIndex(r=>r.code===code),row={code,qty:t.response.type==='MISSING'?0:t.response.qty};
+  if(index>=0)rows[index]=row;else rows.push(row);
+ }
+ const lines=[...byLocation].flatMap(([loc,items])=>items.map(x=>[loc,x.code,x.qty].join('\t')));
+ if(!lines.length)return alert('No hay registros aprobados.');
+ if(!confirm(`Integrar ${lines.length} líneas de ${current.size} ubicaciones. Sustituirá la data del operador, conservará los originales y NO modificará el WMS. ¿Continuar?`))return;
+ q9('operatorData').value='Ubicación\tCódigo\tCantidad\n'+lines.join('\n');
+ savePaste();compareData();wfStore('APROBADOS_INTEGRADOS',`${lines.length} líneas / ${current.size} ubicaciones`);renderWorkflowV8();openTab('results');toast('Conteos y reconteos aprobados integrados');
+};
+
+// Prueba local: borrador recargable sin alterar registros definitivos.
+try{const draft=JSON.parse(localStorage.getItem('perchado_v9_draft')||'null');if(draft&&Array.isArray(draft.items)&&draft.context){draftV8=draft.items;draftContextV8=draft.context;renderOperatorDraftV8();}}catch{}
+// En nube, los datos administrativos históricos del navegador no otorgan acceso.
+if(cloudEnabledV9){wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};}
+// Inicio sin acceso administrativo hasta autenticación
+profileBaseV9('operator');renderLiveMonitoringV9();renderNoveltiesV9();updateCloudStatusV9();
+</script><script type="module">/* PERCHADO V9: Firebase Auth y Firestore, aislado de otras aplicaciones. */
+import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,signInAnonymously,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,collection,doc,getDoc,setDoc,deleteDoc,updateDoc,onSnapshot,query,where} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+const cfg=window.PERCHADO_FIREBASE_CONFIG;
+if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
+ const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app);
+ const space=['perchado_v9','app'];
+ const coll=group=>collection(db,...space,group);
+ const ref=(group,id)=>doc(db,...space,group,String(id));
+ let unsub=[],generation=0,seen=new Set(),errored=new Map(),listening=[];
+ const api={ready:true,connected:false,admin:false,lastError:'',onData:null,onStatus:null,
+    async enterOperator(){
+      clearSubscriptions();
+      if(auth.currentUser&&!auth.currentUser.isAnonymous)await signOut(auth);
+      if(!auth.currentUser)await signInAnonymously(auth);
+      api.admin=false;subscribe(false);return auth.currentUser;
+    },
+    async loginAdmin(username,password){
+      clearSubscriptions();
+      if(auth.currentUser)await signOut(auth);
+      const email=validateUsername(username)+'@perchado.example';
+      const result=await signInWithEmailAndPassword(auth,email,password);
+      try{
+        const role=await getDoc(ref('admins',result.user.uid));
+        if(!role.exists()||role.data().active!==true||role.data().username!==validateUsername(username))throw Error('Cuenta no habilitada como Administrador.');
+        api.admin=true;subscribe(true);return result.user;
+      }catch(e){await signOut(auth);throw e;}
+    },
+    async createAdmin(username,password){
+      if(!api.admin||!auth.currentUser)throw Error('Inicia sesión de Administración.');
+      if(password.length<10)throw Error('La contraseña requiere al menos 10 caracteres.');
+      const normalized=validateUsername(username),email=normalized+'@perchado.example';
+      const secondary=initializeApp(cfg,'perchado-admin-create-'+Date.now());
+      const secondaryAuth=getAuth(secondary);
+      let user;
+      try{
+        const created=await createUserWithEmailAndPassword(secondaryAuth,email,password);user=created.user;
+        await setDoc(ref('admins',user.uid),{username:normalized,active:true,createdAt:new Date().toISOString(),createdBy:auth.currentUser.uid});
+      }finally{try{await signOut(secondaryAuth);}catch{}await deleteApp(secondary);}
+      return user?.uid;
+    },
+    async setAdminActive(uid,active){
+      if(!api.admin||!auth.currentUser)throw Error('Sin permiso administrativo.');
+      if(uid===auth.currentUser.uid)throw Error('No puedes deshabilitar tu propia cuenta.');
+      await updateDoc(ref('admins',uid),{active:!!active,changedBy:auth.currentUser.uid,changedAt:new Date().toISOString()});
+    },
+    async persist(group,item){
+      if(!['operators','sessions','tasks','corrections'].includes(group)||!item?.id)throw Error('Documento inválido.');
+      if(!auth.currentUser)throw Error('No hay sesión activa en Firebase Authentication.');
+      const clean=JSON.parse(JSON.stringify(item));
+      if(group==='sessions'){
+        if(api.admin){await updateDoc(ref(group,clean.id),{status:clean.status,reviewedAt:clean.reviewedAt||null});return;}
+        if(clean.status!=='pending')throw Error('Los conteos solo pueden aprobarse desde Administración.');
+        clean.deviceUid=auth.currentUser.uid;
+        if(clean.entries.length>250)throw Error('Máximo 250 líneas por conteo. Divide el trabajo en dos sesiones.');
+      }
+      if(group==='tasks'&&!api.admin){
+        if(clean.status!=='answered')throw Error('Solo puedes enviar tu reconteo pendiente.');
+        await updateDoc(ref(group,clean.id),{status:'answered',response:clean.response});return;
+      }
+      if(['operators','corrections'].includes(group)&&!api.admin)throw Error('Acción exclusiva de Administración.');
+      await setDoc(ref(group,clean.id),clean);
+    },
+    async saveLive(data){
+      if(!auth.currentUser||!auth.currentUser.isAnonymous)return;
+      const id=auth.currentUser.uid;
+      if(!data.entries?.length){await deleteDoc(ref('liveCounts',id));return;}
+      await setDoc(ref('liveCounts',id),{...data,id,deviceUid:id,entries:data.entries.slice(-250)});
+    },
+    getCurrentUid(){return auth.currentUser?.uid||'';}
+ };
+ function validateUsername(u){const x=String(u||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(x))throw Error('Usuario inválido: 3–35 caracteres, sin tildes ni espacios.');return x;}
+ function clearSubscriptions(){
+   ++generation;for(const stop of unsub){try{stop();}catch{}}unsub=[];
+   seen=new Set();errored=new Map();listening=[];api.connected=false;api.lastError='';api.onStatus?.();
+ }
+ function notify(){
+   api.connected=listening.length>0&&seen.size===listening.length&&errored.size===0;
+   api.lastError=[...errored.values()].join('; ');api.onStatus?.();
+ }
+ function subscribe(admin){
+    const stamp=generation;
+    listening=admin?['admins','operators','sessions','tasks','corrections','liveCounts']:['operators','sessions','tasks'];
+    const currentUid=auth.currentUser.uid;
+    for(const group of listening){
+      const requested=(group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
+                      (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):coll(group);
+      unsub.push(onSnapshot(requested,{includeMetadataChanges:true},snapshot=>{
+        if(stamp!==generation)return;
+        seen.add(group);
+        if(snapshot.metadata.fromCache)errored.set(group,group+': esperando servidor');else errored.delete(group);
+        notify();
+        api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
+      },e=>{
+        if(stamp!==generation)return;
+        errored.set(group,`${group}: ${e.code||e.message}`);notify();console.error('PERCHADO/Firestore',group,e);
+      }));
+    }
+ }
+ window.perchadoFirebaseReadyV9?.(api);
+}
+</script></body>
+</html>
