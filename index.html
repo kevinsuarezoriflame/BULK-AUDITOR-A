@@ -275,9 +275,33 @@ window.PERCHADO_FIREBASE_CONFIG = {
 #operatorPortal{padding-bottom:80px}
 
 </style>
+<style id="perchado-v22-admin-floating-chat">
+#v22AdminChatFloat[hidden],#v22AdminChatBadge[hidden]{display:none!important}
+#v22AdminChatFloat{position:fixed;right:18px;bottom:18px;z-index:1110;border-radius:999px;min-width:54px;height:54px;padding:0 16px;background:linear-gradient(120deg,#08a998,#087e77);color:#fff;border:2px solid #e9fffa;box-shadow:0 8px 25px rgba(3,77,72,.25);font-size:22px;display:flex;gap:7px;align-items:center;justify-content:center;cursor:pointer}
+#v22AdminChatFloat .v20ChatBadge{position:absolute;right:-4px;top:-5px;background:#dd5a41;color:#fff;border:2px solid white;min-width:20px;height:20px;border-radius:11px;font-size:11px;padding:0 4px;display:grid;place-items:center;font-weight:900}
+#v20ChatAdmin{position:fixed;right:18px;bottom:82px;z-index:1111;width:min(620px,calc(100vw - 24px));height:min(520px,calc(100dvh - 120px));margin:0;padding:0;border:1px solid #aadfd3;border-radius:17px;box-shadow:0 15px 44px rgba(1,54,49,.24);background:#fbfffd;overflow:hidden;display:flex;flex-direction:column}
+#v20ChatAdmin .v20ChatAdminHead{padding:10px 13px;margin:0;border-bottom:1px solid #c1e6db;background:linear-gradient(115deg,#e4f7f2,#f5fffc);min-height:57px;flex:0 0 auto}
+.v22AdminHeadActions{display:flex;align-items:center;gap:8px;min-width:0}
+#v20ChatAdmin .v20ChatGrid{display:grid;grid-template-columns:minmax(155px,0.9fr) minmax(250px,2fr);gap:0;flex:1;min-height:0;overflow:hidden}
+#v20ChatAdmin #v20ThreadList{padding:10px;max-height:none;min-height:0;overflow-y:auto;border-right:1px solid #cce7de}
+#v20ChatAdmin #v20ChatAdminConversation{border:0;border-radius:0;min-height:0;max-height:none;height:100%;overflow:hidden}
+#v20ChatAdmin #v20ChatAdminMessages{min-height:0;flex:1}
+@media(max-width:590px){
+ #v22AdminChatFloat{right:12px;bottom:12px}
+ #v20ChatAdmin{right:7px;bottom:74px;width:calc(100vw - 14px);height:min(560px,calc(100dvh - 100px))}
+ #v20ChatAdmin .v20ChatGrid{grid-template-columns:minmax(100px,35%) minmax(0,65%)}
+ #v20ChatAdmin #v20ThreadList{padding:6px}
+ #v20ChatAdmin .v20Thread{padding:9px 6px;overflow-wrap:anywhere}
+ #v20ChatAdmin .v20ChatForm{padding:7px;gap:5px}
+ #v20ChatAdmin .v20ChatForm textarea{min-width:0}
+ #v20ChatAdmin .v20ChatForm button{min-width:42px}
+ #v20ChatAdmin .v20ChatAdminHead h3{font-size:14px!important}
+ #v20AdminChatStatus{max-width:100px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V20</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V22</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div class="perchadoStickyNav" id="perchadoStickyNavV15">
@@ -365,7 +389,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 </div>
 <div class="wfActions"><button class="primary" onclick="addDraftV8()">＋ Agregar código</button></div>
 <div class="wfRows" id="opDraftRows"></div>
-<button class="primary" onclick="submitDraftV8()">✓ Finalizar conteo de ubicación</button>
+<button class="primary" onclick="submitDraftV8()" title="Finalizar conteo de ubicación y registrarlo para Administración" aria-label="Registrar conteo y finalizar ubicación">📝 Registrar</button>
 </div>
 <div class="wfPane">
 <h3>📍 Reconteos pendientes por ubicación</h3>
@@ -382,16 +406,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 </div>
 <h3 class="wfSectionTitle">📍 Avance de ubicaciones</h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar ubicación, código u operario"/></div><div id="wfSessions"></div>
 <h3 class="wfSectionTitle">🔎 Reconteos · resumen</h3><div id="wfTasksAdmin"></div>
-<section id="v20ChatAdmin" hidden aria-label="Mensajes entre Administración y Operarios">
- <div class="v20ChatAdminHead"><h3 style="margin:0;font-size:16px">💬 Mensajes de Operarios</h3><span id="v20AdminChatStatus" style="font-size:12px;color:#58786f">Sin mensajes</span></div>
- <div class="v20ChatGrid">
-  <div id="v20ThreadList"><div class="v20ChatEmpty">Esperando conversaciones…</div></div>
-  <div id="v20ChatAdminConversation"><div class="v20ChatHeader"><div><strong id="v20AdminChatTitle">Selecciona un colaborador</strong><small>Conversación individual</small></div></div><div id="v20ChatAdminMessages" class="v20ChatList" role="log" aria-live="polite"><div class="v20ChatEmpty">Elige una conversación para responder.</div></div>
-   <div id="v20AdminChatState" class="v20ChatState"></div>
-   <form class="v20ChatForm" onsubmit="v20SendChat(event,'admin')"><textarea id="v20AdminChatInput" rows="1" maxlength="1000" placeholder="Responder al colaborador..." aria-label="Responder al colaborador" onkeydown="v20ChatEnter(event,'admin')"></textarea><button type="submit" title="Enviar respuesta" aria-label="Enviar respuesta">➤</button></form>
-  </div>
- </div>
-</section>
+
 
 <div class="wfPane v16ResetBox" style="margin-top:18px">
  <div class="v16ResetRow"><div><h3>🗑️ Limpieza de datos</h3><p class="v16Help">Borra las datas pegadas, la comparación y los ajustes guardados <strong>en este navegador</strong>. No elimina los conteos, reconteos ni las ubicaciones cuadradas cerradas guardadas en Firebase.</p></div>
@@ -2774,6 +2789,17 @@ compareData=async function(){
 };
 </script>
 <!-- Chat discreto: Operarios abre bajo demanda; Administración responde en bandeja -->
+<button type="button" id="v22AdminChatFloat" hidden title="Mensajes de Operarios" aria-label="Abrir mensajes de Operarios" onclick="v22ToggleAdminChat()">💬 <span id="v22AdminChatBadge" class="v20ChatBadge" hidden>0</span></button>
+<section id="v20ChatAdmin" hidden aria-label="Mensajes entre Administración y Operarios">
+ <div class="v20ChatAdminHead"><h3 style="margin:0;font-size:16px">💬 Mensajes de Operarios</h3><div class="v22AdminHeadActions"><span id="v20AdminChatStatus" style="font-size:12px;color:#58786f">Sin mensajes</span><button type="button" class="v20Close" aria-label="Cerrar mensajes" title="Cerrar mensajes" onclick="v22ToggleAdminChat(false)">×</button></div></div>
+ <div class="v20ChatGrid">
+  <div id="v20ThreadList"><div class="v20ChatEmpty">Esperando conversaciones…</div></div>
+  <div id="v20ChatAdminConversation"><div class="v20ChatHeader"><div><strong id="v20AdminChatTitle">Selecciona un colaborador</strong><small>Conversación individual</small></div></div><div id="v20ChatAdminMessages" class="v20ChatList" role="log" aria-live="polite"><div class="v20ChatEmpty">Elige una conversación para responder.</div></div>
+   <div id="v20AdminChatState" class="v20ChatState"></div>
+   <form class="v20ChatForm" onsubmit="v20SendChat(event,'admin')"><textarea id="v20AdminChatInput" rows="1" maxlength="1000" placeholder="Responder al colaborador..." aria-label="Responder al colaborador" onkeydown="v20ChatEnter(event,'admin')"></textarea><button type="submit" title="Enviar respuesta" aria-label="Enviar respuesta">➤</button></form>
+  </div>
+ </div>
+</section>
 <button type="button" id="v20ChatFloat" hidden title="Mensajes con Administración" aria-label="Abrir chat con Administración" onclick="v20ToggleOperatorChat()">💬 <span id="v20OpChatBadge" class="v20ChatBadge" hidden>0</span></button>
 <section id="v20ChatWindow" hidden aria-label="Chat con Administración">
   <div class="v20ChatHeader"><div><strong>💬 Administración</strong><small id="v20OpChatIdentity">Elige tu nombre para conversar</small></div><button type="button" class="v20Close" onclick="v20ToggleOperatorChat(false)" title="Cerrar chat" aria-label="Cerrar chat">×</button></div>
@@ -2784,7 +2810,7 @@ compareData=async function(){
 
 <script id="perchado-v20-chat-controller">
 /* PERCHADO V20: mensajería ligera, sin cambiar el flujo del inventario. */
-const v20Chat={api:null,operatorId:'',operatorOpen:false,adminThreadId:'',operatorMessages:[],adminMessages:[],threads:[],stopOperator:null,stopAdminMessages:null,stopInbox:null,adminStarted:false,sending:false};
+const v20Chat={api:null,operatorId:'',operatorOpen:false,adminOpen:false,adminThreadId:'',operatorMessages:[],adminMessages:[],threads:[],stopOperator:null,stopAdminMessages:null,stopInbox:null,adminStarted:false,sending:false};
 const v20El=id=>document.getElementById(id);
 const v20Escape=s=>escapeHtml(String(s??''));
 function v20ChatTime(n){return n?new Date(Number(n)).toLocaleString('es-EC',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';}
@@ -2813,7 +2839,7 @@ function v20RenderThreads(){
  const list=v20El('v20ThreadList'),status=v20El('v20AdminChatStatus');if(!list)return;
  const arr=[...v20Chat.threads].sort((a,b)=>Number(b.lastMessageAtMs||0)-Number(a.lastMessageAtMs||0));
  const unread=arr.filter(t=>t.lastSenderRole==='operator'&&Number(t.lastMessageAtMs)>v20LastSeen('admin',t.id)).length;
- if(status)status.textContent=arr.length+' conversaciones'+(unread?' · '+unread+' sin leer':'');
+ if(status)status.textContent=arr.length+' conversaciones'+(unread?' · '+unread+' sin leer':'');v22UpdateAdminBadge(unread);
  list.innerHTML=arr.length?arr.map(t=>{
   const newMsg=t.lastSenderRole==='operator'&&Number(t.lastMessageAtMs)>v20LastSeen('admin',t.id);
   return `<button type="button" class="v20Thread ${v20Chat.adminThreadId===t.id?'active':''}" onclick='v20SelectAdminChat(${JSON.stringify(String(t.id))})'><span style="display:flex;align-items:center;gap:6px"><strong>${v20Escape(t.operatorName||personNameV8(t.id))}</strong>${newMsg?'<span class="v20Unread">1</span>':''}</span><small>${v20Escape(t.preview||'Sin mensajes')}</small></button>`;
@@ -2846,19 +2872,33 @@ function v20SelectAdminChat(id){
  if(v20Chat.adminThreadId!==id){v20Stop('stopAdminMessages');v20Chat.adminThreadId=id;v20Chat.adminMessages=[];}
  const t=v20Chat.threads.find(x=>x.id===id);
  v20El('v20AdminChatTitle').textContent=t?.operatorName||personNameV8(id);
- v20MarkSeen('admin',id);v20RenderThreads();
+ if(v20Chat.adminOpen)v20MarkSeen('admin',id);v20RenderThreads();
  if(!v20Chat.api)return;
  if(!v20Chat.stopAdminMessages)v20Chat.stopAdminMessages=v20Chat.api.watchMessages(id,messages=>{
   v20Chat.adminMessages=messages;v20ChatMessages(messages,v20El('v20ChatAdminMessages'),'admin');
-  v20MarkSeen('admin',id);v20RenderThreads();v20ChatStatus('v20AdminChatState','Sincronizado · mensajes en vivo');
+  if(v20Chat.adminOpen)v20MarkSeen('admin',id);v20RenderThreads();v20ChatStatus('v20AdminChatState','Sincronizado · mensajes en vivo');
  },e=>v20ChatStatus('v20AdminChatState','⚠ '+v21FriendlyChatError(e)));
 }
 function v20ChatSync(){
  const isOp=profileV8==='operator',allowedAdmin=profileV8==='admin'&&adminAccessV9;
- const floater=v20El('v20ChatFloat'),windowEl=v20El('v20ChatWindow'),adminPanel=v20El('v20ChatAdmin');
- floater.hidden=!isOp;windowEl.hidden=!isOp||!v20Chat.operatorOpen;adminPanel.hidden=!allowedAdmin;
+ const floater=v20El('v20ChatFloat'),windowEl=v20El('v20ChatWindow'),adminPanel=v20El('v20ChatAdmin'),adminFloater=v20El('v22AdminChatFloat');
+ floater.hidden=!isOp;windowEl.hidden=!isOp||!v20Chat.operatorOpen;adminFloater.hidden=!allowedAdmin;adminPanel.hidden=!allowedAdmin||!v20Chat.adminOpen;
  if(isOp){v20Stop('stopInbox');v20Stop('stopAdminMessages');v20Chat.adminThreadId='';v20WatchOperator();}
  else{v20Stop('stopOperator');v20Chat.operatorId='';if(allowedAdmin)v20StartAdmin();else{v20Stop('stopInbox');v20Stop('stopAdminMessages');v20Chat.adminThreadId='';}}
+}
+function v22UpdateAdminBadge(count){
+ const badge=v20El('v22AdminChatBadge');if(!badge)return;
+ badge.hidden=!count;badge.textContent=count>9?'9+':String(count);
+}
+function v22ToggleAdminChat(force){
+ if(!(profileV8==='admin'&&adminAccessV9))return;
+ v20Chat.adminOpen=typeof force==='boolean'?force:!v20Chat.adminOpen;
+ if(v20Chat.adminOpen){
+  if(v20Chat.adminThreadId){v20MarkSeen('admin',v20Chat.adminThreadId);}
+  else if(v20Chat.threads.length){v20SelectAdminChat([...v20Chat.threads].sort((a,b)=>Number(b.lastMessageAtMs||0)-Number(a.lastMessageAtMs||0))[0].id);}
+  v20El('v20AdminChatInput')?.focus();
+ }
+ v20RenderThreads();v20ChatSync();
 }
 function v20ToggleOperatorChat(force){
  v20Chat.operatorOpen=typeof force==='boolean'?force:!v20Chat.operatorOpen;
@@ -2893,7 +2933,7 @@ setProfileV8=function(mode){const result=v20OldSetProfile(mode);v20ChatSync();re
 const v20OldLogin=loginAdministratorV9;
 loginAdministratorV9=async function(){const result=await v20OldLogin();v20ChatSync();return result;};
 const v20OldLogout=logoutAdministratorV9;
-logoutAdministratorV9=async function(){const result=await v20OldLogout();v20Chat.operatorOpen=false;v20ChatSync();return result;};
+logoutAdministratorV9=async function(){const result=await v20OldLogout();v20Chat.operatorOpen=false;v20Chat.adminOpen=false;v20ChatSync();return result;};
 const v20OldCancelGate=cancelAdminLoginV9;
 cancelAdminLoginV9=async function(){const result=await v20OldCancelGate();v20ChatSync();return result;};
 v20El('opUser')?.addEventListener('change',()=>v20ChatSync());
