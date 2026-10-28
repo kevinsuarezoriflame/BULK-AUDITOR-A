@@ -4411,5 +4411,141 @@ openTab=function(id){
  if(id==='decisions'&&hasCompared)renderReconciliation();
 };
 </script>
+
+<style id="perchado-v36-reconteos-visibles-style">
+/* Sólo indicadores y acciones de reconteo: no se modifica el motor de sincronización. */
+#issuesLocations .locTable tr.v36RecountedRow:not(.v12ActionRow)>td,
+#settledLocations .locTable tr.v36RecountedRow:not(.v12ActionRow)>td {
+  border-bottom-color:#c9eae2;
+}
+.v36RecountTag {
+  display:inline-flex;align-items:center;white-space:nowrap;vertical-align:middle;
+  gap:4px;padding:4px 7px;border:1px solid #a3ded8;border-radius:7px;
+  background:#e7f8f6;color:#0a786f;font-size:10px;font-weight:800;
+  margin:3px 0 0 5px;line-height:1.2;
+}
+.v36RecountTag.v36Validated {background:#e5f8ec;color:#167348;border-color:#a6dfbf;}
+.v36RecountTag.v36Review {background:#ecf8fb;color:#1d7285;border-color:#b3e1e8;}
+#issuesLocations .locTable .v36RecountSurplus,
+#settledLocations .locTable .v36RecountSurplus {
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  white-space:nowrap!important;flex:0 0 auto!important;
+  width:auto!important;min-width:0!important;max-width:none!important;
+  min-height:29px!important;height:29px!important;padding:4px 7px!important;
+  border-radius:8px!important;border:1px solid #a8e1c0!important;
+  background:#e5f9ed!important;color:#087442!important;
+  box-shadow:none!important;font-size:10px!important;font-weight:800!important;
+  line-height:1.1!important;
+}
+#issuesLocations .locTable .v36RecountSurplus:hover,
+#settledLocations .locTable .v36RecountSurplus:hover {background:#d0f4df!important;}
+@media(max-width:620px){.v36RecountTag{font-size:10px;}}
+</style>
+<script id="perchado-v36-recounted-surplus">
+'use strict';
+/* V36: reconteo recibido = visible y accionable; la cantidad sólo impacta la auditoría
+   tras confirmación administrativa, nunca genera un movimiento WMS automático. */
+function v36LatestRecount(loc,code){
+  const matches=wfV8.tasks.filter(t=>t.location===loc&&String(t.code)===String(code)&&
+    (t.status==='answered'||t.status==='closed')&&t.response&&
+    Number.isFinite(Number(t.response.qty))&&Number(t.response.qty)>=0);
+  matches.sort((a,b)=>String(b.response?.at||b.closedAt||b.createdAt||'').localeCompare(String(a.response?.at||a.closedAt||a.createdAt||''))||
+    String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  return matches[0]||null;
+}
+function v36RecountState(loc,code){
+  const task=v36LatestRecount(loc,code);
+  if(!task)return null;
+  const open=wfV8.tasks.some(t=>t.location===loc&&String(t.code)===String(code)&&t.status==='open');
+  const answered=task.status==='answered'&&!open;
+  const qty=Number(task.response.qty),sys=v13ForCode(code,loc);
+  const surplus=answered&&!sourceDirty&&hasCompared&&qty>sys&&
+    !v15Confirmed(loc,code);
+  return {task,answered,open,qty,sys,surplus,difference:qty-sys};
+}
+// La función de botones original V19 sigue manejando movimientos, bajas y confirmaciones.
+// Añadimos sólo el camino de sobrante para el reconteo recibido aún sin validar.
+const v36OriginalCodeButtons=v19CodeButtons;
+v19CodeButtons=function(loc,code){
+  const html=v36OriginalCodeButtons.apply(this,arguments);
+  if(!adminAccessV9||v18Square(loc))return html;
+  const state=v36RecountState(loc,code);
+  if(!state||!state.surplus)return html;
+  const args=v15Arg(loc)+','+v15Arg(code);
+  const control=`<button type="button" class="v36RecountSurplus" aria-label="Confirmar reconteo y registrar sobrante" onclick='v36RegisterRecountSurplus(${args})'>＋ Sobrante</button>`;
+  // Conservar todos los botones existentes y la fila única de V32.
+  return html.replace('</div>',control+'</div>');
+};
+// El indicador se coloca en Estado / seguimiento, no ocupa otra línea de acciones.
+function v36DecorateRecounted(){
+  if(!adminAccessV9)return;
+  document.querySelectorAll('#issuesLocations .locCard,#settledLocations .locCard,#squaredLocations .locCard').forEach(card=>{
+    const loc=card.querySelector('.fullLoc')?.textContent?.trim();if(!loc)return;
+    card.querySelectorAll('tbody tr:not(.v12ActionRow)').forEach(row=>{
+      const cells=row.querySelectorAll(':scope > td');if(cells.length<7)return;
+      const code=cells[0].querySelector('b')?.textContent?.trim();if(!code)return;
+      const state=v36RecountState(loc,code);if(!state)return;
+      row.classList.add('v36RecountedRow');
+      const target=cells[5];if(target.querySelector('.v36RecountTag'))return;
+      const span=document.createElement('span');
+      span.className='v36RecountTag '+(state.answered?'v36Review':'v36Validated');
+      span.textContent=state.answered?`✓ Recontado · ${fmtQty(state.qty)} u · por validar`:`✓ Recontado · ${fmtQty(state.qty)} u`;
+      target.appendChild(span);
+    });
+  });
+}
+const v36OriginalRenderLocations=renderLocations;
+renderLocations=function(){
+  const result=v36OriginalRenderLocations.apply(this,arguments);
+  v36DecorateRecounted();return result;
+};
+const v36RegisterBusy=new Set();
+async function v36RegisterRecountSurplus(loc,code){
+  if(!adminAccessV9||!hasCompared||sourceDirty)return perchadoAlert('Actualiza la comparación WMS antes de registrar sobrantes.');
+  const key=loc+'|'+code;
+  if(v36RegisterBusy.has(key))return;
+  const state=v36RecountState(loc,code);
+  if(!state||!state.answered||!state.surplus||state.open)return perchadoAlert('Este código debe tener un reconteo recibido con sobrante, sin otro reconteo abierto.');
+  if(!v13Row(loc,code)||!v13ValidLocation(loc))return perchadoAlert('La ubicación debe existir en la comparación WMS.');
+  if(cloudEnabledV9&&!cloudWritableV9())return;
+  const {task,qty,sys,difference}=state;
+  if(!(difference>0&&Number.isFinite(difference)))return perchadoAlert('El reconteo no muestra un sobrante frente al WMS actual.');
+  if(!await perchadoConfirm(`¿Confirmar el reconteo recibido y registrar el sobrante?\n\nCódigo: ${code}\nUbicación: ${loc}\nFísico recontado: ${fmtQty(qty)} u\nStock WMS: ${fmtQty(sys)} u\nSobrante: +${fmtQty(difference)} u\n\nSolo registra la novedad. NO genera un movimiento WMS.`))return;
+  // El WMS o las tareas pueden cambiar mientras el usuario responde al diálogo.
+  const current=v36RecountState(loc,code);
+  if(!current||current.task.id!==task.id||!current.answered||!current.surplus||Math.abs(current.difference-difference)>0.000001)
+    return perchadoAlert('El reconteo o WMS cambió. Revisa la fila y vuelve a confirmar.');
+  v36RegisterBusy.add(key);
+  const now=wfToday(),verifyId=v17VerifyKey(loc,code),surplusId=v15SurplusKey(loc,code);
+  const previous=wfV8.corrections[verifyId];
+  const verified={id:verifyId,kind:'physical_verified',approved:true,code:String(code),location:String(loc),qty,source:'task:'+task.id,
+    taskId:task.id,wmsQty:sys,by:adminIdentityV9,at:now,
+    history:[...(previous?.history||[]),{qty,source:'task:'+task.id,taskId:task.id,by:adminIdentityV9,at:now}]};
+  const surplus={id:surplusId,kind:'confirmed_surplus',status:'confirmed',code:String(code),location:String(loc),qty:difference,
+    verificationId:verifyId,taskId:task.id,by:adminIdentityV9,at:now};
+  try{
+    if(cloudEnabledV9)await cloudV9.persist('corrections',verified);
+    wfV8.corrections[verifyId]=verified;
+    if(cloudEnabledV9)await cloudV9.persist('corrections',surplus);
+    wfV8.corrections[surplusId]=surplus;
+    const answered=wfV8.tasks.filter(t=>t.location===loc&&String(t.code)===String(code)&&t.status==='answered');
+    for(const t of answered){
+      const updated={...t,status:'closed',closedAt:now,disposition:t.id===task.id?'Reconteo confirmado · sobrante registrado':'Recuento anterior revisado'};
+      if(cloudEnabledV9)await cloudV9.persist('tasks',updated);
+      Object.assign(t,updated);
+    }
+    if(!cloudEnabledV9)wfStore('RECONTEO_SOBRANTE_REGISTRADO',loc+' / '+code+' / '+difference);
+    v12Panel={kind:'',loc:'',code:''};
+    renderAll();renderWorkflowV8();
+    toast(`Recontado y registrado: sobrante +${fmtQty(difference)} u · ${loc}. Sin movimiento WMS.`);
+  }catch(e){
+    // Las escrituras existentes no se deshacen: reabrir y reintentar completa sólo lo pendiente.
+    renderAll();
+    perchadoAlert('No se completó la sincronización del reconteo. Verifica el estado y vuelve a intentar: '+(e?.message||e));
+  }finally{v36RegisterBusy.delete(key);}
+}
+if(adminAccessV9&&hasCompared)v36DecorateRecounted();
+</script>
+
 </body>
 </html>
