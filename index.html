@@ -301,7 +301,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V28</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V30</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div class="perchadoStickyNav" id="perchadoStickyNavV15">
@@ -522,7 +522,7 @@ function toast(msg){
  clearTimeout(toast.timer);
  toast.timer=setTimeout(()=>{node.hidden=true;},2700);
 }
-function savePaste(){try{localStorage.setItem('perchadoAuditOperator',$('operatorData').value);localStorage.setItem('perchadoAuditSystem',$('systemData').value);localStorage.setItem('perchadoAuditMaster',$('masterData').value);toast('Datos guardados en este navegador');}catch(e){toast('No se pudo guardar: revisa almacenamiento local');}}
+function savePaste(){try{localStorage.setItem('perchadoAuditOperator',$('operatorData').value);localStorage.setItem('perchadoAuditSystem',$('systemData').value);localStorage.setItem('perchadoAuditMaster',$('masterData').value);}catch(e){toast('No se pudo guardar: revisa almacenamiento local');}}
 function loadPaste(){try{$('operatorData').value=localStorage.getItem('perchadoAuditOperator')||'';$('systemData').value=localStorage.getItem('perchadoAuditSystem')||'';$('masterData').value='';localStorage.removeItem('perchadoAuditMaster');}catch(e){}}
 async function clearAll(){if(!await perchadoConfirm('¿Limpiar datas, auditoría y decisiones guardadas en este navegador?'))return;
   $('operatorData').value='';$('systemData').value='';$('masterData').value='';closeDrawer();results=[];hasCompared=false;parsedErrors=[];allSystemRows=[];confirmations=new Set();approvedMatches=[];resolutions=[];proposals=[];reviews=new Set();verifiedMissing=new Set();masterLocations=[];openLocations=new Set();currentSignature='';sourceDirty=false;
@@ -1492,7 +1492,7 @@ renderOneLocation=function(loc){
   const rowid=results.indexOf(r),bal=remaining(r),entry=latest.get(String(r.codigo));
   const c=r.duplicado?'wait':bal===0?'square':'issue';
   const status=r.estado==='OK'&&r.diferencia===0&&!r.duplicado&&!entry?'CUADRADO':rowStatus(r);
-  const requireAction=bal!==0||r.duplicado||!r.locValid||!!entry;
+  const requireAction=bal!==0||r.duplicado||!r.locValid||!!entry||(typeof v30CountEntries==='function'&&!v18Square(loc)&&v30CountEntries(loc,r.codigo).length>0);
   const entryInfo=entry?`<div class="v12EntryMeta">Conteo recibido: ${fmtQty(entry.entry.qty)} u · ${v12Safe(personNameV8(entry.session.userId))} · ${v12Safe(wfStatus(entry.session.status))}</div>`:'';
   const task=v12TaskFor(loc,r.codigo);
   const row=`<tr><td><b>${v12Safe(r.codigo)}</b></td><td>${r.qtyOperador===null?'—':fmtQty(r.qtyOperador)}</td><td>${r.qtySistema===null?'—':fmtQty(r.qtySistema)}</td><td class="${r.diferencia<0?'negative':r.diferencia>0?'positive':''}">${r.diferencia>0?'+':''}${fmtQty(r.diferencia)}</td><td class="${bal<0?'negative':bal>0?'positive':''}">${bal>0?'+':''}${fmtQty(bal)}</td><td><span class="badge ${c}">${v12Safe(status)}</span>${entryInfo}</td><td>${requireAction||task?v12RowAction(rowid,loc,r.codigo,bal):'—'}</td></tr>`;
@@ -3520,6 +3520,72 @@ renderAdminV8=function(){
  v29OldAdminRender();
  for(const id of expanded){const d=[...document.querySelectorAll('.v29CountDetails')].find(x=>x.dataset.sid===id);if(d)d.open=true;}
 };
+</script>
+
+<style id="perchado-v30-direct-trash-styles">
+.v30InlineTrash{border:1px solid #efd1cb!important;background:#fff5f3!important;color:#a43f35!important;border-radius:9px!important;padding:6px 9px!important;min-width:37px;min-height:36px;line-height:1;cursor:pointer;font-size:16px;box-shadow:none!important}
+.v30InlineTrash:hover{background:#ffe8e5!important;border-color:#e7aaa0!important}
+.v30Line{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:1px solid #e8f3ef;min-height:44px}
+.v30Line:last-child{border-bottom:0}
+.v30LineCode{font-size:13px;font-weight:700;color:#143c38}
+.v30LineQty{font-size:12px;color:#386b62;margin-left:6px}
+.v30LiveRows{margin-top:8px;border:1px solid #d4eee7;border-radius:11px;background:#f9fefc;max-height:350px;overflow:auto}
+.v30InlineRemoveGroup{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;margin-left:6px;vertical-align:middle}
+.v30InlineRemoveGroup .v30InlineTrash{min-width:30px;min-height:30px;padding:4px 6px!important;font-size:14px}
+.v30InlineRemoveGroup .v30InlineTrash:disabled{opacity:.45;cursor:default}
+.v30CountRows{margin:7px 0;border:1px solid #e0f0ec;border-radius:10px;background:#f8fdfa;max-height:210px;overflow:auto}
+.v30CountRows .v30Line{padding:5px 8px}
+.v30CountHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+@media(max-width:600px){.v30Line{min-height:46px}.v30InlineTrash{min-width:43px;min-height:43px}.v30InlineRemoveGroup .v30InlineTrash{min-width:38px;min-height:38px}}
+</style>
+<script id="perchado-v30-inline-delete-and-quiet-save">
+'use strict';
+// PERCHADO V30: conservar sincronización y avisos de errores; no notificar cada guardado silencioso.
+// La papelera en Novedades y en Monitoreo usa el mecanismo de exclusión auditada V29.
+function v30CountEntries(loc,code){
+  if(!adminAccessV9)return [];
+  const sessions=(wfV8.sessions||[]).filter(s=>s.location===loc&&s.status!=='archived'&&s.status!=='rejected')
+    .sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||'')));
+  const newest=sessions[0];
+  return newest?(newest.entries||[]).filter(e=>String(e.code)===String(code)&&!v29IsRemoved(e.id))
+    .map(e=>({entry:e,session:newest})):[];
+}
+// Los botones se presentan directamente en la tabla de Novedades, no solo en Gestión de conteos.
+const v30PrevRowAction=v12RowAction;
+v12RowAction=function(idx,loc,code,delta,latest){
+  const html=v30PrevRowAction(idx,loc,code,delta,latest);
+  if(!adminAccessV9||v18Square(loc))return html;
+  const records=v30CountEntries(loc,code);
+  if(!records.length)return html;
+  return html+`<div class="v30InlineRemoveGroup" aria-label="Retirar registro individual">${records.map(({entry,session})=>`<button type="button" class="v30InlineTrash" title="Retirar código ${wfEsc(entry.code)} (${fmtQty(entry.qty)} u) del conteo" aria-label="Retirar código ${wfEsc(entry.code)} (${fmtQty(entry.qty)} unidades)" onclick='v29RemoveCompleted(${JSON.stringify(session.id)},${JSON.stringify(entry.id)})'>🗑️</button>`).join('')}</div>`;
+};
+// Monitoreo: mostrar cada línea del conteo en vivo, con papelera visible sin desplegables.
+let v30LiveKey='';
+renderLiveMonitoringV9=function(){
+  const box=document.getElementById('liveMonitoringV9');if(!box)return;
+  if(!adminAccessV9){if(box.innerHTML)box.innerHTML='';v30LiveKey='';return;}
+  const live=cloudEnabledV9?lastLiveV9:(draftV8.length?[{userId:draftContextV8.user,location:draftContextV8.location,entries:draftV8,updatedAt:wfToday()}]:[]);
+  const completed=wfV8.sessions.filter(x=>x.status==='pending').length;
+  const signature=JSON.stringify([completed,...live.map(r=>[r.userId,r.location,r.status,r.updatedAt,(r.entries||[]).map(e=>[e.id,e.code,e.qty,!!v29IsRemoved(e.id)])])]);
+  if(signature===v30LiveKey)return;
+  v30LiveKey=signature;
+  const scrollPositions={};box.querySelectorAll('.v30LiveRows').forEach(el=>scrollPositions[el.dataset.key]=el.scrollTop);
+  box.innerHTML=`<div class="wfPane"><h3>📡 Monitoreo de conteos en vivo · ${live.length} en proceso · ${completed} por revisar</h3><div class="wfRows">${live.length?live.map((r,i)=>{
+    const active=(r.entries||[]).filter(e=>!v29IsRemoved(e.id));
+    return `<div class="wfEntry"><div style="flex:1;min-width:0"><div class="v30CountHead"><b>${enc9(personNameV8(r.userId))} · ${enc9(r.location||'Ubicación por definir')}</b><span class="wfStatus review">Contando</span></div><div class="wfMini">${active.length} códigos registrados · ${wfFormatDate(r.updatedAt)}</div><div class="v30LiveRows" data-key="${i}">${active.length?active.map(e=>`<div class="v30Line"><div><span class="v30LineCode">${enc9(e.code)}</span><span class="v30LineQty">${fmtQty(e.qty)} u</span></div><button type="button" class="v30InlineTrash" title="Eliminar este código del conteo activo" aria-label="Retirar código ${enc9(e.code)}" onclick='v29RemoveLive(${JSON.stringify(e.id)})'>🗑️</button></div>`).join(''):'<div class="wfMini" style="padding:10px">Sin códigos activos</div>'}</div></div></div>`;
+  }).join(''):'<div class="wfEmpty">Sin conteos activos en este momento.</div>'}</div></div>`;
+  box.querySelectorAll('.v30LiveRows').forEach(el=>{if(scrollPositions[el.dataset.key]!=null)el.scrollTop=scrollPositions[el.dataset.key];});
+};
+// En el seguimiento de un conteo finalizado, cada línea también presenta la papelera directa.
+v29SessionActions=function(s){
+  if(!adminAccessV9)return '';
+  const valid=(s.entries||[]).filter(e=>!v29IsRemoved(e.id));
+  const closed=typeof v18Square==='function'&&v18Square(s.location);
+  const list=valid.map(e=>`<div class="v30Line"><div><span class="v30LineCode">${wfEsc(e.code)}</span><span class="v30LineQty">${fmtQty(e.qty)} u</span></div>${closed?'<span class="v29Deleted">Cerrada</span>':`<button type="button" class="v30InlineTrash" title="Retirar registro incorrecto" aria-label="Retirar código ${wfEsc(e.code)}" onclick='v29RemoveCompleted(${JSON.stringify(s.id)},${JSON.stringify(e.id)})'>🗑️</button>`}</div>`).join('');
+  return `<div class="v29RowTools"><div class="v30CountRows">${list||'<span class="wfMini" style="padding:8px">Sin códigos activos</span>'}</div><button type="button" class="v29Danger" ${closed?'disabled title="Ubicación cerrada"':''} onclick='v29ArchiveCount(${JSON.stringify(s.id)})' title="Retirar el conteo completo">🗑️ Conteo</button></div>`;
+};
+// Refrescar una sola vez al cargar la nueva versión. No modificar Firebase ni datos locales.
+if(adminAccessV9){renderLiveMonitoringV9();renderAdminV8();if(hasCompared)renderLocations();}
 </script>
 </body>
 </html>
