@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V33 · Control de inventario</title>
+<title>PERCHADO V35 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -522,7 +522,12 @@ function toast(msg){
  clearTimeout(toast.timer);
  toast.timer=setTimeout(()=>{node.hidden=true;},2700);
 }
-function savePaste(){try{localStorage.setItem('perchadoAuditOperator',$('operatorData').value);localStorage.setItem('perchadoAuditSystem',$('systemData').value);localStorage.setItem('perchadoAuditMaster',$('masterData').value);}catch(e){toast('No se pudo guardar: revisa almacenamiento local');}}
+function savePaste(){
+ try{
+  const fields=[['perchadoAuditOperator','operatorData'],['perchadoAuditSystem','systemData'],['perchadoAuditMaster','masterData']];
+  for(const [key,id] of fields){const value=$(id).value;if(localStorage.getItem(key)!==value)localStorage.setItem(key,value);}
+ }catch(e){toast('No se pudo guardar: revisa almacenamiento local');}
+}
 function loadPaste(){try{$('operatorData').value=localStorage.getItem('perchadoAuditOperator')||'';$('systemData').value=localStorage.getItem('perchadoAuditSystem')||'';$('masterData').value='';localStorage.removeItem('perchadoAuditMaster');}catch(e){}}
 async function clearAll(){if(!await perchadoConfirm('¿Limpiar datas, auditoría y decisiones guardadas en este navegador?'))return;
   $('operatorData').value='';$('systemData').value='';$('masterData').value='';closeDrawer();results=[];hasCompared=false;parsedErrors=[];allSystemRows=[];confirmations=new Set();approvedMatches=[];resolutions=[];proposals=[];reviews=new Set();verifiedMissing=new Set();masterLocations=[];openLocations=new Set();currentSignature='';sourceDirty=false;
@@ -942,7 +947,7 @@ function renderDrawer(){
   if(canAdjust)adjustChoiceChanged();
 }
 function goToLocation(loc){const k=locationKind(loc),tab=k==='cuadrada'?'squared':k==='conciliada'?'settled':'results';openLocations.add(loc);closeDrawer();openTab(tab);renderLocations();const el=$('location-'+auditScope.mappedLocations.indexOf(loc));if(el)el.scrollIntoView({block:'nearest'});}
-function renderAll(){rebuildProposals();renderKpis();renderAlerts();renderLocations();renderMap();renderReconciliation();renderTable();}
+function renderAll(){rebuildProposals();renderKpis();renderAlerts();renderLocations();if(document.getElementById('map')?.classList.contains('active'))renderMap();if(document.getElementById('decisions')?.classList.contains('active'))renderReconciliation();if(document.getElementById('results')?.classList.contains('active'))renderTable();}
 function renderTable(){
   const f=$('statusFilter').value,q=$('searchBox').value.toLowerCase().trim(),sort=$('sortFilter').value;
   let rows=results.filter(r=>(f==='ALL'||r.estado===f)&&JSON.stringify(r).toLowerCase().includes(q));
@@ -1000,8 +1005,31 @@ function wfFormatDate(t){if(!t)return '—';const d=new Date(t);return Number.is
 function wfStatus(s){return ({pending:'Pendiente de administración',approved:'Aprobado para comparación',rejected:'Rechazado',open:'Pendiente de operario',answered:'Reconteo recibido',closed:'Reconteo aprobado',cancelled:'Cancelado'})[s]||s;}
 function wfClass(s){return ({pending:'pending',open:'pending',approved:'approved',closed:'approved',answered:'review',rejected:'rejected',cancelled:'rejected'})[s]||'';}
 function wfNormalLocation(raw){const x=normalizeLocation(raw);return x.valid?x.value:'';}
-function wfKnown(){const locations=new Set([...masterLocations,...auditScope.mappedLocations]);for(const r of parseLines($('systemData').value,'SISTEMA'))if(r.locValid)locations.add(r.locNorm);for(const x of wfV8.sessions)locations.add(x.location);for(const t of wfV8.tasks)locations.add(t.location);return [...locations].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
-function wfCatalog(){const byCode=new Map(),byLoc=new Map();for(const row of parseLines($('systemData').value,'SISTEMA')){if(!row.locValid)continue;if(!byCode.has(row.code))byCode.set(row.code,[]);byCode.get(row.code).push(row);if(!byLoc.has(row.locNorm))byLoc.set(row.locNorm,new Set());byLoc.get(row.locNorm).add(row.code);}return{byCode,byLoc};}
+let v35LastSystemText=null,v35SystemRows=null,v35Catalog=null;
+function v35CachedSystemRows(){
+ const raw=document.getElementById('systemData')?.value||'';
+ if(raw!==v35LastSystemText||!v35SystemRows){
+  v35LastSystemText=raw;
+  v35SystemRows=raw.trim()?parseLines(raw,'SISTEMA'):[];
+  v35Catalog=null;
+ }
+ return v35SystemRows;
+}
+function v35CachedCatalog(){
+ if(v35Catalog&&v35LastSystemText===(document.getElementById('systemData')?.value||''))return v35Catalog;
+ const byCode=new Map(),byLoc=new Map();
+ for(const row of v35CachedSystemRows()){
+  if(!row.locValid)continue;
+  if(!byCode.has(row.code))byCode.set(row.code,[]);
+  byCode.get(row.code).push(row);
+  if(!byLoc.has(row.locNorm))byLoc.set(row.locNorm,new Set());
+  byLoc.get(row.locNorm).add(row.code);
+ }
+ v35Catalog={byCode,byLoc};return v35Catalog;
+}
+function wfKnown(){const locations=new Set([...masterLocations,...auditScope.mappedLocations]);for(const r of v35CachedSystemRows())if(r.locValid)locations.add(r.locNorm);for(const x of wfV8.sessions)locations.add(x.location);for(const t of wfV8.tasks)locations.add(t.location);return [...locations].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+function wfCatalog(){return v35CachedCatalog();}
+function v35UncachedCatalog(){const byCode=new Map(),byLoc=new Map();for(const row of v35CachedSystemRows()){if(!row.locValid)continue;if(!byCode.has(row.code))byCode.set(row.code,[]);byCode.get(row.code).push(row);if(!byLoc.has(row.locNorm))byLoc.set(row.locNorm,new Set());byLoc.get(row.locNorm).add(row.code);}return{byCode,byLoc};}
 function editDistanceV8(a,b){if(Math.abs(a.length-b.length)>2)return 99;let prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let cur=[i];for(let j=1;j<=b.length;j++)cur.push(Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+Number(a[i-1]!==b[j-1])));prev=cur;}return prev[b.length];}
 function auditCodeV8(code,location,catalog){if(!catalog.byCode.size)return{state:'SIN MAESTRO',note:'Carga la data del sistema para investigar códigos.',suggestions:[]};const exact=catalog.byCode.get(code)||[];if(exact.some(r=>r.locNorm===location))return{state:'COINCIDENCIA',note:'Código identificado en esta ubicación según sistema.',suggestions:[]};if(exact.length)return{state:'POSIBLE UBICACIÓN CRUZADA',note:'Código reconocido en otras ubicaciones: '+[...new Set(exact.map(r=>r.locNorm))].slice(0,5).join(' | '),suggestions:[]};let candidates=[];for(const [known,rows] of catalog.byCode){if(Math.abs(known.length-code.length)>2)continue;const d=editDistanceV8(code,known);if(d>0&&d<=2)candidates.push({code:known,d,local:rows.some(r=>r.locNorm===location),locs:[...new Set(rows.map(r=>r.locNorm))]});}candidates.sort((a,b)=>Number(b.local)-Number(a.local)||a.d-b.d||a.code.localeCompare(b.code));const suggested=candidates.slice(0,4);return{state:suggested.length?'REVISAR CÓDIGO DIGITADO':'CÓDIGO SIN COINCIDENCIA',note:suggested.length?'Posibles códigos: '+suggested.map(x=>x.code+' ('+(x.local?'misma ubicación':x.locs.join(','))+')').join(' · '):'No existe coincidencia exacta en la data del sistema. Verificar físicamente.',suggestions:suggested};}
 function setProfileV8(mode){profileV8=mode==='operator'?'operator':'admin';document.querySelectorAll('.tab').forEach(b=>{b.hidden=(profileV8==='operator'&&b.dataset.tab!=='operatorPortal')||(profileV8==='admin'&&b.dataset.tab==='operatorPortal');});$('viewAdmin').classList.toggle('on',profileV8==='admin');$('viewOperator').classList.toggle('on',profileV8==='operator');openTab(profileV8==='operator'?'operatorPortal':'adminPortal');renderWorkflowV8();}
@@ -1249,10 +1277,22 @@ function setCloudDataV9(group,docs){
  if(group==='liveCounts')lastLiveV9=docs.filter(x=>x.status==='counting'&&x.entries?.length);
  if(['operators','sessions','tasks','corrections'].includes(group)){
    if(!cloudEnabledV9){try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));}catch{}}
-   oldRenderWorkflowV9();
- }
- renderLiveMonitoringV9();renderNoveltiesV9();updateCloudStatusV9();
- cloudIngestV9=false;
+   // V35: actualiza solo lo afectado; el render final V34 protege el teclado del celular.
+   if(group==='operators'){
+     renderUserSelectorsV8();
+     if(profileV8==='operator')renderOperatorTasksV8();
+     else if(v35AdminTabVisible())renderAdminV8();
+   }else if(profileV8==='operator'){
+     if(group==='tasks'||group==='sessions')renderOperatorTasksV8();
+   }else if(v35AdminTabVisible()){
+     renderAdminV8();
+   }
+  }
+  if(adminAccessV9&&v35AdminTabVisible()&&['liveCounts','sessions','operators','corrections'].includes(group))renderLiveMonitoringV9();
+  // El antiguo buzón está oculto y sustituido por Novedades: no gastar CPU reconstruyéndolo.
+  if(adminAccessV9&&group!=='liveCounts'&&!document.getElementById('noveltyInboxV9')?.closest('.v12LegacyFields'))renderNoveltiesV9();
+  updateCloudStatusV9();
+  cloudIngestV9=false;
 }
 window.perchadoFirebaseReadyV9=function(api){
  cloudV9=api;cloudEnabledV9=true;updateCloudStatusV9();
@@ -1295,7 +1335,7 @@ function fillRecountV9(location,code,userId=''){
  openTab('results');q9('adminTaskCode').focus();q9('adminTaskLoc').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function renderNoveltiesV9(){
- const target=q9('noveltyInboxV9');if(!target)return;
+ const target=q9('noveltyInboxV9');if(!target||target.closest('.v12LegacyFields'))return;
  if(!adminAccessV9){target.innerHTML='';return;}
  const catalog=wfCatalog(),issues=[];
  for(const s of wfV8.sessions){
@@ -2073,9 +2113,14 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
                       (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):coll(group);
       unsub.push(onSnapshot(requested,{includeMetadataChanges:true},snapshot=>{
         if(stamp!==generation)return;
+        const firstSnapshot=!seen.has(group);
         seen.add(group);
         if(snapshot.metadata.fromCache)errored.set(group,group+': esperando servidor');else errored.delete(group);
-        notify();api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
+        notify();
+        // V35: no reconstruir las vistas por confirmaciones de metadatos sin cambio de documentos.
+        if(firstSnapshot||snapshot.docChanges({includeMetadataChanges:false}).length){
+          api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
+        }
       },e=>{
         if(stamp!==generation)return;
         errored.set(group,`${group}: ${e.code||e.message}`);notify();console.error('PERCHADO/Firestore',group,e);
@@ -2288,7 +2333,7 @@ function v15SyncApprovedRows(){
 const v15OriginalRenderAll=renderAll;
 renderAll=function(){v15SyncApprovedRows();v15OriginalRenderAll();v15UpdateBar();};
 const v15CloudUpdate=setCloudDataV9;
-setCloudDataV9=function(group,docs){v15CloudUpdate(group,docs);if(['tasks','corrections'].includes(group)&&hasCompared&&adminAccessV9)renderAll();};
+setCloudDataV9=function(group,docs){v15CloudUpdate(group,docs);if(['tasks','corrections'].includes(group)&&hasCompared&&adminAccessV9)v35ScheduleAnalysisRender();};
 const v15OriginalApprove=approveTaskV8;
 approveTaskV8=async function(id){await v15OriginalApprove(id);renderAll();};
 const v15OriginalLogin=loginAdministratorV9;
@@ -2560,14 +2605,14 @@ renderAll=function(){v18OriginalRender();if(!v18Loading&&v18CaptureSquares()){v1
 const v18OldCloud=setCloudDataV9;
 setCloudDataV9=function(group,docs){
  v18OldCloud(group,docs);
- if(group==='corrections'){v18CloudLocks();v18ApplyFrozen();if(hasCompared&&adminAccessV9)renderAll();renderUserSelectorsV8();}
+ if(group==='corrections'){v18CloudLocks();v18ApplyFrozen();if(hasCompared&&adminAccessV9)v35ScheduleAnalysisRender();}
 };
 function v18AvailableLocations(){
  const set=new Set();
  const saved=wfV8.corrections[V18_CATALOG_ID];
  for(const loc of saved?.locations||[])if(loc)set.add(String(loc));
  for(const r of allSystemRows)if(r.locNorm&&r.locValid)set.add(r.locNorm);
- for(const r of parseLines($('systemData').value,'SISTEMA'))if(r.locNorm&&r.locValid)set.add(r.locNorm);
+ for(const r of v35CachedSystemRows())if(r.locNorm&&r.locValid)set.add(r.locNorm);
  for(const loc of v18Squares.keys())set.add(loc);
  return [...set].filter(loc=>!v18Square(loc)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 }
@@ -2790,7 +2835,7 @@ async function v19Refresh(){
   if(v19Resync){v19Resync=false;v19Schedule();}
  }
 }
-function v19Schedule(){if(v19RefreshTimer)clearTimeout(v19RefreshTimer);v19RefreshTimer=setTimeout(()=>{v19RefreshTimer=null;v19Refresh();},500);}
+function v19Schedule(){if(v19RefreshTimer)clearTimeout(v19RefreshTimer);v19RefreshTimer=setTimeout(()=>{v19RefreshTimer=null;v19Refresh();},1800);}
 const v19OldCloudData=setCloudDataV9;
 setCloudDataV9=function(group,docs){
  v19OldCloudData(group,docs);
@@ -4196,13 +4241,23 @@ function v34ShowReservations(){
 const v34PrevAdminRender=renderAdminV8;
 renderAdminV8=function(){const out=v34PrevAdminRender.apply(this,arguments);v34ShowReservations();return out;};
 // Enviar todos los códigos con diferencia de una ubicación en una sola tarea agrupada.
-function v34CodesWithIssues(loc){
- const codes=new Set();
- for(const r of results)if(r.ubicacionNormalizada===loc&&(Math.abs(Number(remaining(r)))>0.000001||r.duplicado||!r.locValid))codes.add(String(r.codigo));
- if(typeof v12LatestEntries==='function')for(const [code] of v12LatestEntries(loc))if(!results.some(r=>r.ubicacionNormalizada===loc&&String(r.codigo)===String(code)))codes.add(String(code));
- for(const t of wfV8.tasks)if(t.location===loc&&['open','answered'].includes(t.status))codes.delete(String(t.code));
- return [...codes].filter(Boolean);
+function v35IssuesByLocation(){
+ const issues=new Map(),resultCodes=new Map();
+ const get=(map,loc)=>{if(!map.has(loc))map.set(loc,new Set());return map.get(loc);};
+ for(const r of results){
+  const loc=String(r.ubicacionNormalizada),code=String(r.codigo);
+  get(resultCodes,loc).add(code);
+  if(Math.abs(Number(remaining(r)))>0.000001||r.duplicado||!r.locValid)get(issues,loc).add(code);
+ }
+ for(const session of wfV8.sessions){
+  if(['rejected','archived'].includes(session.status))continue;
+  const known=resultCodes.get(session.location);
+  for(const entry of session.entries||[])if(!known?.has(String(entry.code)))get(issues,session.location).add(String(entry.code));
+ }
+ for(const task of wfV8.tasks)if(['open','answered'].includes(task.status))issues.get(task.location)?.delete(String(task.code));
+ return issues;
 }
+function v34CodesWithIssues(loc){return [...(v35IssuesByLocation().get(loc)||[])].filter(Boolean);}
 async function v34SendLocationIssues(loc){
  if(v34BusyAdmin||!adminAccessV9)return;
  if(!cloudWritableV9())return;
@@ -4229,9 +4284,10 @@ renderLocations=function(){
  const out=v34OldRenderLocations.apply(this,arguments);
  if(!adminAccessV9)return out;
  const box=document.getElementById('issuesLocations');
+ const issueMap=v35IssuesByLocation();
  for(const card of box?.querySelectorAll('.locCard')||[]){
   const loc=card.querySelector('.fullLoc')?.textContent.trim();if(!loc||card.querySelector('.v34BulkRow'))continue;
-  const count=v34CodesWithIssues(loc).length;
+  const count=issueMap.get(loc)?.size||0;
   const args=JSON.stringify(loc).replace(/'/g,'&#39;');
   const btn=`<div class="v34BulkRow"><button type="button" ${count?'':'disabled'} onclick='v34SendLocationIssues(${args})'>📨 Reconteo de novedades${count?' · '+count+' códigos':''}</button></div>`;
   card.querySelector('.locToggle')?.insertAdjacentHTML('afterend',btn);
@@ -4330,6 +4386,30 @@ v25LocationHint=function(){
  }
 };
 renderAdminV8();
+</script>
+
+<script id="perchado-v35-rendimiento">
+'use strict';
+/* V35: caché WMS solo en memoria, despacho selectivo y teclado móvil sin repintado. */
+function v35AdminTabVisible(){return !!(adminAccessV9&&document.getElementById('adminPortal')?.classList.contains('active'));}
+let v35AnalysisTimer=null;
+function v35ScheduleAnalysisRender(){
+ if(v35AnalysisTimer)clearTimeout(v35AnalysisTimer);
+ v35AnalysisTimer=setTimeout(()=>{
+  v35AnalysisTimer=null;
+  if(adminAccessV9&&hasCompared&&!sourceDirty&&!v19Working)renderAll();
+ },400);
+}
+const v35OldOpenTab=openTab;
+openTab=function(id){
+ v35OldOpenTab(id);
+ if(!adminAccessV9)return;
+ // El contenido se genera al abrir la pestaña, no cada vez que otra recibe un cambio.
+ if(id==='adminPortal'){renderAdminV8();renderLiveMonitoringV9();}
+ if(id==='map'&&hasCompared)renderMap();
+ if(id==='results'&&hasCompared)renderTable();
+ if(id==='decisions'&&hasCompared)renderReconciliation();
+};
 </script>
 </body>
 </html>
