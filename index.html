@@ -381,6 +381,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
 <label class="wfWide v18LocationWrap">Ubicación a revisar
 <input id="opLocation" autocomplete="off" inputmode="search" oninput="v18SearchLocation()" onfocus="v18SearchLocation()" onchange="updateDraftLocationV8()" placeholder="Buscar: 30-04, 01-30-030-04…" aria-label="Buscar ubicación disponible" aria-controls="v18LocationSuggestions" aria-autocomplete="list"/>
 <div id="v18LocationSuggestions" class="v18LocationSuggestions" role="listbox" hidden></div>
+<div id="v25ManualLocationInfo" class="v25LocationInfo" role="status" aria-live="polite"></div>
 <datalist id="wfKnownLocations"></datalist>
 </label>
 <label>Código<input autocapitalize="off" autocomplete="off" enterkeyhint="next" id="opCode" inputmode="text" onkeydown="if(event.key==='Enter')addDraftV8()" placeholder="Código de producto" spellcheck="false"/></label>
@@ -1680,7 +1681,7 @@ submitDraftV8=async function(){
  if(draftV8.some(x=>x.qty===null||!Number.isFinite(Number(x.qty))||Number(x.qty)<0))return perchadoAlert('Revisa las cantidades.');
  if(!await perchadoConfirm(`¿Finalizar conteo completo de la ubicación ${location}? Una vez finalizado, solo Administración podrá solicitar correcciones mediante reconteos.`))return;
  if(cloudEnabledV9&&!cloudWritableV9())return;
- const session={id:wfId(),userId:user,location,submittedAt:wfToday(),status:'pending',complete:true,deviceUid:cloudEnabledV9?cloudV9.getCurrentUid():undefined,
+ const session={id:wfId(),userId:user,location,manualLocation:!v18AvailableLocations().includes(location),submittedAt:wfToday(),status:'pending',complete:true,deviceUid:cloudEnabledV9?cloudV9.getCurrentUid():undefined,
   entries:draftV8.map(e=>({...e,type:Number(e.qty)===0?'MISSING':'COUNT'})),reviewedAt:null};
  v13Busy=true;
  try{
@@ -2686,7 +2687,7 @@ renderAdminV8=function(){
  if(node)node.innerHTML='<div class="v19Summary">'+(latest.length?latest.slice(0,120).map(s=>{
   const frozen=v18Square(s.location),rows=results.filter(r=>r.ubicacionNormalizada===s.location),bad=rows.some(r=>r.diferencia!==0||r.duplicado),status=frozen?'✓ Cuadrada cerrada':rows.length?(bad?'⚠ Con novedades':'✓ Sin diferencias'):'✓ Conteo recibido';
   const klass=frozen?'':bad?'warn':'neutral';
-  return `<div class="v19Loc"><div><b>📍 ${wfEsc(s.location)}</b><small>${wfEsc(personNameV8(s.userId))} · ${s.entries.length} registros · ${wfFormatDate(s.submittedAt)}</small></div><span class="v19Tag ${klass}">${status}</span></div>`;
+  return `<div class="v19Loc"><div><b>📍 ${wfEsc(s.location)}</b><small>${wfEsc(personNameV8(s.userId))} · ${s.entries.length} registros · ${wfFormatDate(s.submittedAt)}${s.manualLocation?' · ⚑ Ubicación digitada, no registrada en WMS':''}</small></div><span class="v19Tag ${klass}">${status}</span></div>`;
  }).join(''):'<div class="wfEmpty">Sin ubicaciones registradas.</div>')+'</div>'+(latest.length>120?`<div class="v19Notice">Mostrando 120 de ${latest.length} ubicaciones. Usa el buscador para filtrar.</div>`:'');
  const active=wfV8.tasks.filter(t=>['open','answered'].includes(t.status));
  const grouped=new Map();for(const t of active){if(!grouped.has(t.location))grouped.set(t.location,[]);grouped.get(t.location).push(t);}
@@ -3175,6 +3176,73 @@ async function v24ExecuteReset(){
   perchadoAlert('No se pudo completar el reinicio: '+String(e?.message||e));
  }finally{v24Busy=false;document.getElementById('v24ResetOverlay')?.remove();}
 }
+</script>
+
+<style id="perchado-v25-manual-location-style">
+.v25LocationInfo{font-size:12px;line-height:1.45;color:#37756a;margin-top:7px;min-height:0}
+.v25LocationInfo.v25Manual{color:#805708;background:#fff8e9;border:1px solid #e8cf9e;border-radius:9px;padding:8px 10px}
+.v25LocationInfo.v25Closed{color:#8b3c39;background:#fff0ee;border:1px solid #efc0bc;border-radius:9px;padding:8px 10px}
+.v25LocationInfo.v25Known{color:#166b57}
+.v25LocationManualBtn{background:#eefbf5!important;border:1px dashed #80caba!important;margin-top:5px;color:#075b50!important}
+.v25LocationManualBtn small{font-weight:600;color:#607c72}
+@media(max-width:600px){.v25LocationInfo{font-size:12px}.v25LocationManualBtn{min-height:55px}}
+</style>
+<script id="perchado-v25-manual-location">
+'use strict';
+// Autorizar ubicaciones con formato válido aunque no consten en catálogo WMS.
+// No convierte automáticamente esa captura en una ubicación confirmada por el WMS.
+function v25ManualCandidate(raw){
+ const parsed=normalizeLocation(raw);
+ return parsed.valid?parsed.value:'';
+}
+function v25LocationHint(){
+ const input=document.getElementById('opLocation'),hint=document.getElementById('v25ManualLocationInfo');
+ if(!input||!hint)return;
+ const raw=input.value.trim(),loc=v25ManualCandidate(raw),known=loc&&v18AvailableLocations().includes(loc);
+ hint.className='v25LocationInfo';hint.textContent='';
+ if(!raw)return;
+ if(!loc){hint.textContent='Escribe una ubicación con formato válido, por ejemplo 30-04 o 01-30-030-04.';return;}
+ if(v18Square(loc)){
+   hint.classList.add('v25Closed');hint.textContent='🔒 '+loc+' está cuadrada y cerrada; no permite nuevos conteos.';return;
+ }
+ if(known){hint.classList.add('v25Known');hint.textContent='✓ Ubicación disponible: '+loc;return;}
+ hint.classList.add('v25Manual');
+ hint.textContent='📍 '+loc+' no figura en el WMS cargado. Puedes registrarla manualmente; Administración verá esta novedad.';
+}
+v18ResolveLocation=function(raw){
+ const text=String(raw||'').trim();if(!text)return '';
+ const options=v18AvailableLocations(),norm=v25ManualCandidate(text);
+ if(norm)return norm; // incluye posiciones aún no presentes en las datas del sistema
+ const exact=options.filter(loc=>v18Alias(loc).toLowerCase()===text.toLowerCase());
+ return exact.length===1?exact[0]:'';
+};
+v18SelectLocation=function(raw){
+ const loc=v18ResolveLocation(raw);
+ if(!loc)return perchadoAlert('Ubicación no válida. Utiliza por ejemplo 30-04 o 01-30-030-04.');
+ if(v18Square(loc))return perchadoAlert('Esa ubicación ya está cuadrada y cerrada.');
+ const inp=document.getElementById('opLocation');inp.value=loc;
+ v18HideSuggestions();updateDraftLocationV8();v25LocationHint();document.getElementById('opCode')?.focus();
+};
+v18SearchLocation=function(){
+ const inp=document.getElementById('opLocation'),box=document.getElementById('v18LocationSuggestions');
+ if(!inp||!box)return;
+ v25LocationHint();
+ if(draftV8.length){v18HideSuggestions();return;}
+ const q=inp.value.trim(),matches=v18MatchLocations(q),manual=v25ManualCandidate(q);
+ const options=matches.map(loc=>`<button type="button" class="v18LocOption" role="option" onclick='v18SelectLocation(${escapeHtml(JSON.stringify(loc))})'><span>📍 ${escapeHtml(loc)}</span><small>${escapeHtml(shortLoc(loc))}</small></button>`).join('');
+ let manualAction='';
+ if(q&&manual&&!v18AvailableLocations().includes(manual)&&!v18Square(manual)){
+  manualAction=`<button type="button" class="v18LocOption v25LocationManualBtn" role="option" onclick='v18SelectLocation(${escapeHtml(JSON.stringify(manual))})'><span>＋ Usar ${escapeHtml(manual)}</span><small>Ubicación manual</small></button>`;
+ }
+ box.innerHTML=options+manualAction||`<div class="v18NoLoc">${q?'Escribe una ubicación válida, por ejemplo 30-04.':'Busca una ubicación o escríbela manualmente.'}</div>`;
+ box.hidden=false;
+};
+const v25OldUpdateDraft=updateDraftLocationV8;
+updateDraftLocationV8=function(){const result=v25OldUpdateDraft();v25LocationHint();return result;};
+const v25OldRenderDraft=renderOperatorDraftV8;
+renderOperatorDraftV8=function(){const result=v25OldRenderDraft();v25LocationHint();return result;};
+// Tras sincronización no forzar al operario a elegir solo ubicaciones que existen en WMS.
+v25LocationHint();
 </script>
 </body>
 </html>
