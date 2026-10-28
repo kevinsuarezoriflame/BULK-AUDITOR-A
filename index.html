@@ -662,8 +662,8 @@ async function compareData(){
     results.push({estado:status,codigo:base.code,ubicacionOperador:a?a.locOriginal:'',ubicacionNormalizada:base.locNorm,ubicacionSistema:b?b.locNorm:'',qtyOperador:a?a.qty:null,qtySistema:b?b.qty:null,diferencia:delta,observacion:obs,lineaOperador:a?a.lines.join(', '):'',lineaSistema:b?b.lines.join(', '):'',locValid:base.locValid,duplicado:!!(a&&a.count>1),hasOperator:!!a});
   }
   results.sort((a,b)=>a.ubicacionNormalizada.localeCompare(b.ubicacionNormalizada,undefined,{numeric:true})||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}));
-  hasCompared=true;sourceDirty=false;masterLocations=parseMasterLocations($('masterData').value);currentSignature=decisionKey();openLocations=new Set();closeDrawer();
-  restoreDecisions();savePaste();renderAll();openTab(auditScope.mappedLocations.some(l=>locationKind(l)==='novedad')?'results':'squared');toast('Auditoría lista · mapa y decisiones locales disponibles');
+  hasCompared=true;sourceDirty=false;masterLocations=parseMasterLocations($('masterData').value);currentSignature=decisionKey();if(!window.perchadoSilentSyncV29){openLocations=new Set();closeDrawer();}
+  restoreDecisions();savePaste();renderAll();if(!window.perchadoSilentSyncV29){openTab(auditScope.mappedLocations.some(l=>locationKind(l)==='novedad')?'results':'squared');toast('Auditoría lista · mapa y decisiones locales disponibles');}
 }
 function baseEligible(r){return r.locValid&&!r.duplicado&&(r.hasOperator||confirmations.has(r.ubicacionNormalizada)||verifiedMissing.has(reviewKey(r)));}
 function remaining(r){
@@ -1267,7 +1267,7 @@ function renderLiveMonitoringV9(){
  if(!adminAccessV9){box.innerHTML='';return;}
  const live=cloudEnabledV9?lastLiveV9:(draftV8.length?[{userId:draftContextV8.user,location:draftContextV8.location,entries:draftV8,updatedAt:wfToday()}]:[]);
  const completed=wfV8.sessions.filter(x=>x.status==='pending').length;
- box.innerHTML=`<div class="wfPane"><h3>📡 Monitoreo de conteos en vivo · ${live.length} en proceso · ${completed} por revisar</h3><div class="wfRows">${live.length?live.map(r=>`<div class="wfEntry"><div><b>${enc9(personNameV8(r.userId))}</b> · ${enc9(r.location||'Ubicación por definir')}<div class="wfMini">${r.entries?.length||0} códigos capturados · ${wfFormatDate(r.updatedAt)}</div><div class="wfMini">${(r.entries||[]).slice(-4).map(x=>enc9(x.code)+' × '+fmtQty(x.qty)).join(' · ')}</div><details style="margin-top:7px"><summary style="cursor:pointer">Ver todos los ${r.entries?.length||0} códigos</summary><div style="max-height:260px;overflow:auto">${(r.entries||[]).map(e=>`<div class="wfMini">${enc9(e.code)} · ${fmtQty(e.qty)} u</div>`).join('')}</div></details></div><span class="wfStatus review">Contando</span></div>`).join(''):'<div class="wfEmpty">Sin conteos activos en este momento.</div>'}</div></div>`;
+ box.innerHTML=`<div class="wfPane"><h3>📡 Monitoreo de conteos en vivo · ${live.length} en proceso · ${completed} por revisar</h3><div class="wfRows">${live.length?live.map(r=>`<div class="wfEntry"><div><b>${enc9(personNameV8(r.userId))}</b> · ${enc9(r.location||'Ubicación por definir')}<div class="wfMini">${(r.entries||[]).filter(e=>!v29IsRemoved(e.id)).length} códigos capturados · ${wfFormatDate(r.updatedAt)}</div><div class="wfMini">${(r.entries||[]).slice(-4).map(x=>enc9(x.code)+' × '+fmtQty(x.qty)).join(' · ')}</div><details style="margin-top:7px"><summary style="cursor:pointer">Ver todos los ${r.entries?.length||0} códigos</summary><div style="max-height:260px;overflow:auto">${(r.entries||[]).filter(e=>!wfV8.corrections['v29_void_'+e.id]?.removed).map(e=>`<div class="wfMini v29EntryLine">${enc9(e.code)} · ${fmtQty(e.qty)} u <button type="button" class="v29Trash" title="Retirar este código del conteo activo" aria-label="Retirar código ${enc9(e.code)}" onclick='v29RemoveLive(${JSON.stringify(e.id)})'>🗑️</button></div>`).join('')}</div></details></div><span class="wfStatus review">Contando</span></div>`).join(''):'<div class="wfEmpty">Sin conteos activos en este momento.</div>'}</div></div>`;
 }
 
 // Reconteos desde administración en la bandeja de códigos y desde Novedades.
@@ -2523,7 +2523,7 @@ compareData=async function(){
  renderAll();
  saveDecisions();
  savePaste();
- toast('Stock WMS actualizado. Las cuadradas conservan su cierre; las novedades requieren revisión.');
+ if(!window.perchadoSilentSyncV29)toast('Stock WMS actualizado. Las cuadradas conservan su cierre; las novedades requieren revisión.');
 };
 const v18OriginalSync=v15SyncApprovedRows;
 v15SyncApprovedRows=function(){v18OriginalSync();v18ApplyFrozen();};
@@ -2650,7 +2650,7 @@ v18CountedFromSessions=function(){
  const byLoc=new Map();
  for(const s of sessions){
   if(v18Square(s.location))continue;
-  byLoc.set(s.location,(s.entries||[]).map(e=>{
+  byLoc.set(s.location,(s.entries||[]).filter(e=>!wfV8.corrections['v29_void_'+e.id]?.removed).map(e=>{
    const corrected=wfV8.corrections[e.id]||e;
    return {code:String(corrected.code??e.code),qty:Number(corrected.qty??e.qty)};
   }));
@@ -2678,7 +2678,7 @@ renderAdminV8=function(){
  const filter=String(document.getElementById('wfSessionSearch')?.value||'').toLowerCase().trim();
  const byLoc=new Map();
  for(const session of wfV8.sessions){
-  if(session.status==='rejected')continue;
+  if(['rejected','archived'].includes(session.status))continue;
   const previous=byLoc.get(session.location);
   if(!previous||String(session.submittedAt||'')>=String(previous.submittedAt||''))byLoc.set(session.location,session);
  }
@@ -2688,7 +2688,7 @@ renderAdminV8=function(){
  if(node)node.innerHTML='<div class="v19Summary">'+(latest.length?latest.slice(0,120).map(s=>{
   const frozen=v18Square(s.location),rows=results.filter(r=>r.ubicacionNormalizada===s.location),bad=rows.some(r=>r.diferencia!==0||r.duplicado),status=frozen?'✓ Cuadrada cerrada':rows.length?(bad?'⚠ Con novedades':'✓ Sin diferencias'):'✓ Conteo recibido';
   const klass=frozen?'':bad?'warn':'neutral';
-  return `<div class="v19Loc"><div><b>📍 ${wfEsc(s.location)}</b><small>${wfEsc(personNameV8(s.userId))} · ${s.entries.length} registros · ${wfFormatDate(s.submittedAt)}${s.manualLocation?' · ⚑ Ubicación digitada, no registrada en WMS':''}</small></div><span class="v19Tag ${klass}">${status}</span></div>`;
+  return `<div class="v19Loc"><div><b>📍 ${wfEsc(s.location)}</b><small>${wfEsc(personNameV8(s.userId))} · ${s.entries.filter(e=>!wfV8.corrections['v29_void_'+e.id]?.removed).length} registros · ${wfFormatDate(s.submittedAt)}${s.manualLocation?' · ⚑ Ubicación digitada, no registrada en WMS':''}</small>${typeof v29SessionActions==='function'?v29SessionActions(s):''}</div><span class="v19Tag ${klass}">${status}</span></div>`;
  }).join(''):'<div class="wfEmpty">Sin ubicaciones registradas.</div>')+'</div>'+(latest.length>120?`<div class="v19Notice">Mostrando 120 de ${latest.length} ubicaciones. Usa el buscador para filtrar.</div>`:'');
  const active=wfV8.tasks.filter(t=>['open','answered'].includes(t.status));
  const grouped=new Map();for(const t of active){if(!grouped.has(t.location))grouped.set(t.location,[]);grouped.get(t.location).push(t);}
@@ -2757,8 +2757,8 @@ async function v19Refresh(){
  if(v19Working){v19Resync=true;return;}
  if(!adminAccessV9||sourceDirty||!String($('systemData').value).trim()||!wfV8.sessions.length)return;
  v19Working=true;
- try{await compareData();renderAdminV8();}catch(e){console.warn('Actualización de conteos',e);}finally{
-  v19Working=false;
+ try{window.perchadoSilentSyncV29=true;await compareData();renderAdminV8();}catch(e){console.warn('Actualización de conteos',e);}finally{
+  window.perchadoSilentSyncV29=false;v19Working=false;
   if(v19Resync){v19Resync=false;v19Schedule();}
  }
 }
@@ -3422,6 +3422,104 @@ v26RenderCatalogAdmin();v26OperatorLocationStatus();
     }).slice(0,35);
   };
 })();
+</script>
+<style id="perchado-v29-styles">
+.v29RowTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.v29RowTools button{min-height:34px;border:1px solid #b7d9d1;background:#f0fbf8;color:#076657;border-radius:9px;font-size:12px;padding:6px 10px;font-weight:700}
+.v29RowTools .v29Danger,.v29Trash{border:1px solid #f4cdc8!important;background:#fff6f5!important;color:#a43f35!important}
+.v29Trash{padding:5px 9px;border-radius:8px;cursor:pointer;font-size:14px}
+.v29EntryLine{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid #edf6f3}
+.v29Records{margin:7px 0;background:#f5fcf9;border-radius:10px;padding:8px;max-height:250px;overflow:auto}
+.v29Records .wfMini{font-size:12px}
+.v29Deleted{font-size:11px;color:#a43f35}
+</style>
+<script id="perchado-v29-stability-and-delete">
+'use strict';
+// Controles administrativos sin borrar la evidencia de Firebase.
+// Un documento de corrección registra la exclusión de una línea y el motivo.
+window.perchadoSilentSyncV29=false;
+let v29Removing=false;
+function v29IsRemoved(id){return !!wfV8.corrections['v29_void_'+String(id)]?.removed;}
+function v29SessionActions(s){
+ if(!adminAccessV9)return '';
+ const valid=(s.entries||[]).filter(e=>!v29IsRemoved(e.id));
+ const isClosed=typeof v18Square==='function'&&v18Square(s.location);
+ return `<div class="v29RowTools"><details class="v29CountDetails" data-sid="${wfEsc(s.id)}"><summary style="cursor:pointer">🔎 ${valid.length} códigos</summary><div class="v29Records">${valid.map(e=>`<div class="v29EntryLine"><span class="wfMini"><b>${wfEsc(e.code)}</b> · ${fmtQty(e.qty)} u</span>${isClosed?'<span class="v29Deleted">Ubicación cerrada</span>':`<button type="button" class="v29Trash" title="Retirar código mal digitado" aria-label="Retirar ${wfEsc(e.code)}" onclick='v29RemoveCompleted(${JSON.stringify(s.id)},${JSON.stringify(e.id)})'>🗑️</button>`}</div>`).join('')||'<span class="wfMini">Sin códigos activos</span>'}</div></details><button type="button" class="v29Danger" ${isClosed?'disabled title="La ubicación está cuadrada y cerrada"':''} onclick='v29ArchiveCount(${JSON.stringify(s.id)})' title="Retirar solo este conteo">🗑️ Conteo</button></div>`;
+}
+async function v29RemoveEntry(entry,loc,sessionId){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v29Removing)return;
+ if(typeof v18Square==='function'&&v18Square(loc))return perchadoAlert('Ubicación cuadrada y cerrada. Se conserva como evidencia histórica.');
+ if(v29IsRemoved(entry.id))return;
+ if(!await perchadoConfirm(`¿Retirar el código ${entry.code} (${fmtQty(entry.qty)} unidades) de ${loc}?\n\nEste registro dejará de participar en el análisis, pero conservará su evidencia original. No se borrará el resto del conteo.`))return;
+ v29Removing=true;
+ const mark={id:'v29_void_'+entry.id,kind:'admin_removed_entry',entryId:String(entry.id),sessionId:String(sessionId||''),location:String(loc),code:String(entry.code),qty:Number(entry.qty),removed:true,by:adminIdentityV9,at:new Date().toISOString()};
+ try{
+  if(cloudEnabledV9){if(!cloudWritableV9())return;await cloudV9.persist('corrections',mark);}
+  wfV8.corrections[mark.id]=mark;
+  if(!cloudEnabledV9)wfStore('CODIGO_RETIRADO',`${mark.code} · ${loc}`);
+  renderLiveMonitoringV9();renderAdminV8();
+  if(!cloudEnabledV9){v19Schedule();}else v19Schedule();
+  toast('Código retirado de la operación activa. Evidencia conservada.');
+ }catch(e){perchadoAlert('No se pudo retirar el código: '+(e?.message||e));}
+ finally{v29Removing=false;}
+}
+async function v29RemoveLive(id){
+ const record=lastLiveV9.flatMap(x=>(x.entries||[]).map(e=>({entry:e,location:x.location}))).find(x=>x.entry.id===id);
+ if(!record)return perchadoAlert('Este código ya no está en un conteo activo. Recarga la vista.');
+ return v29RemoveEntry(record.entry,record.location,'');
+}
+async function v29RemoveCompleted(sessionId,entryId){
+ const s=wfV8.sessions.find(x=>x.id===sessionId),entry=s?.entries.find(e=>e.id===entryId);
+ if(!s||!entry)return perchadoAlert('No se encontró el registro seleccionado.');
+ return v29RemoveEntry(entry,s.location,s.id);
+}
+async function v29ArchiveCount(id){
+ if(!adminAccessV9||v29Removing)return;
+ const s=wfV8.sessions.find(x=>x.id===id);
+ if(!s)return perchadoAlert('El conteo ya no está disponible.');
+ if(typeof v18Square==='function'&&v18Square(s.location))return perchadoAlert('No se puede retirar un conteo de una ubicación cuadrada y cerrada.');
+ const otherTasks=wfV8.tasks.filter(t=>t.sessionId===id&&['open','answered'].includes(t.status));
+ if(otherTasks.length)return perchadoAlert('Primero resuelve los reconteos pendientes de esta ubicación.');
+ if(!await perchadoConfirm(`¿Retirar el conteo completo de ${s.location} realizado por ${personNameV8(s.userId)}?\n\nDesaparecerá de la auditoría activa, sin borrar otras ubicaciones ni el WMS. Se archivará en Firebase.`))return;
+ v29Removing=true;
+ try{
+  if(cloudEnabledV9){if(!cloudWritableV9())return;await cloudV9.archiveAuditRecords({sessions:[id],tasks:[],corrections:[]},adminIdentityV9);}
+  s.status='archived';s.reviewedAt=new Date().toISOString();
+  if(!cloudEnabledV9)wfStore('CONTEO_ARCHIVADO',`${s.location} / ${s.id}`);
+  renderAdminV8();v19Schedule();toast('Conteo retirado. Los demás registros permanecen intactos.');
+ }catch(e){perchadoAlert('No se pudo archivar el conteo: '+(e?.message||e));}
+ finally{v29Removing=false;}
+}
+// El operador recibe en vivo las correcciones. Solo se excluye la línea indicada.
+const v29PrevCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const out=v29PrevCloudData(group,docs);
+ if(group==='corrections'){
+  if(profileV8==='operator'&&draftV8.length){
+   const n=draftV8.length;draftV8=draftV8.filter(x=>!v29IsRemoved(x.id));
+   if(draftV8.length!==n){if(!draftV8.length)draftContextV8={user:'',location:''};rebuildDraftV9();renderOperatorDraftV8();toast('Administración retiró un registro incorrecto del conteo.');}
+  }
+  if(adminAccessV9&&hasCompared&&!sourceDirty)v19Schedule();
+ }
+ return out;
+};
+// Preservar el panel desplegado mientras ingresan nuevos códigos desde otro dispositivo.
+const v29PreviousRenderLive=renderLiveMonitoringV9;
+renderLiveMonitoringV9=function(){
+ const node=document.getElementById('liveMonitoringV9');
+ const expanded=node?[...node.querySelectorAll('details')].map((d,i)=>({i,open:d.open,scroll:d.querySelector('div')?.scrollTop||0})):[];
+ v29PreviousRenderLive();
+ const current=[...(node?.querySelectorAll('details')||[])];
+ for(const x of expanded){if(current[x.i]){current[x.i].open=x.open;const div=current[x.i].querySelector('div');if(div)div.scrollTop=x.scroll;}}
+};
+// Los cambios en Firebase no deben cerrar una lista de códigos que estás revisando.
+const v29OldAdminRender=renderAdminV8;
+renderAdminV8=function(){
+ const expanded=[...document.querySelectorAll('.v29CountDetails[open]')].map(d=>d.dataset.sid);
+ v29OldAdminRender();
+ for(const id of expanded){const d=[...document.querySelectorAll('.v29CountDetails')].find(x=>x.dataset.sid===id);if(d)d.open=true;}
+};
 </script>
 </body>
 </html>
