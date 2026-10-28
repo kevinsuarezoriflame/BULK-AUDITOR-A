@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V32 · Control de inventario</title>
+<title>PERCHADO V33 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -1996,6 +1996,34 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         for(const pointer of refs)tx.update(pointer,{claimedBy:userId,claimedUid:uid,claimedAt:new Date().toISOString()});
       });
     },
+    // V34: Administración libera/cancela reservas de reconteo en lote sin borrar evidencias.
+    async releaseRecountLocation(ids,actor){
+      await ensureAnonymous();if(!api.admin)throw Error('Solo Administración puede liberar reconteos.');
+      if(!Array.isArray(ids)||!ids.length)return 0;
+      await runTransaction(db,async tx=>{
+        const pointers=ids.map(id=>ref('tasks',String(id))),docs=[];
+        for(const pointer of pointers)docs.push(await tx.get(pointer));
+        for(let i=0;i<pointers.length;i++)if(docs[i].exists()&&docs[i].data().status==='open'){
+          tx.update(pointers[i],{claimedBy:'',claimedUid:'',claimedAt:null,releasedAt:new Date().toISOString(),releasedBy:String(actor||'Administración')});
+        }
+      });return ids.length;
+    },
+    async cancelRecountLocation(ids,actor){
+      await ensureAnonymous();if(!api.admin)throw Error('Solo Administración puede cancelar reconteos.');
+      const now=new Date().toISOString(),items=[...new Set((ids||[]).map(String))];
+      for(let i=0;i<items.length;i+=180){
+        const batch=writeBatch(db);for(const id of items.slice(i,i+180))batch.update(ref('tasks',id),{status:'cancelled',closedAt:now,cancelledBy:String(actor||'Administración')});
+        await batch.commit();
+      }return items.length;
+    },
+    async createLocationRecounts(tasks){
+      await ensureAnonymous();if(!api.admin)throw Error('Solo Administración puede solicitar reconteos.');
+      if(!Array.isArray(tasks)||!tasks.length)return 0;
+      for(let i=0;i<tasks.length;i+=180){
+        const batch=writeBatch(db);for(const task of tasks.slice(i,i+180))batch.set(ref('tasks',task.id),task);
+        await batch.commit();
+      }return tasks.length;
+    },
     async finishRecount(answers,userId){
       await ensureAnonymous();
       if(!Array.isArray(answers)||!answers.length)throw Error('No hay cantidades para enviar.');
@@ -3875,6 +3903,433 @@ renderLocations=function(){
   return result;
 };
 if(typeof adminAccessV9!=='undefined'&&adminAccessV9)v32CompactVisibleActions();
+</script>
+
+<style id="perchado-v33-style">
+.v33History{margin-top:14px;border:1px solid #b7ddd3;border-radius:13px;padding:13px;background:#fbfffd}
+.v33History h3{font-size:15px;margin:0 0 7px;color:#075e56}
+.v33History .v33Note{font-size:12px;color:#486c64;margin:0 0 10px}
+.v33History .tableWrap{overflow-x:auto}
+.v33History table{width:100%;min-width:740px;border-collapse:collapse;font-size:12px}
+.v33History th,.v33History td{text-align:left;padding:9px 8px;border-bottom:1px solid #e1eee9}
+.v33History th{background:#e5f7f2;color:#155c51}
+.v33Pill{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:800;font-size:11px}
+.v33Pill.done{background:#d9f8e8;color:#0a6848}.v33Pill.warn{background:#fff0d2;color:#835400}.v33Pill.open{background:#e5f7f4;color:#196759}
+.v33History button{min-height:29px;padding:4px 9px;font-size:11px}
+</style>
+<script id="perchado-v33-wms-auto-reconciliation">
+'use strict';
+// Conciliación conservadora por comparación de snapshots del WMS.
+// La coincidencia de saldos constituye evidencia, no certificación de una transacción.
+const V33_LEDGER_KEY='perchado_v33_wms_ledger';
+let v33Ledger=[];
+let v33InCompare=false;
+function v33Read(){
+ try{const a=JSON.parse(localStorage.getItem(V33_LEDGER_KEY)||'[]');v33Ledger=Array.isArray(a)?a.filter(x=>x&&x.id&&x.code):[];}
+ catch(e){v33Ledger=[];console.warn('Historial de movimientos V33 no disponible',e);}
+}
+function v33Write(){
+ try{localStorage.setItem(V33_LEDGER_KEY,JSON.stringify(v33Ledger.slice(-2000)));}
+ catch(e){console.warn('No se pudo guardar historial V33',e);toast('No hay espacio para guardar el historial de ajustes');}
+}
+function v33StockSignature(rows){
+ return checksum((rows||[]).map(r=>[String(r.code),String(r.locNorm),Number(r.qty||0)].join('|')).sort().join('\n'));
+}
+function v33PositionSnapshot(rows,code,location){
+ return (rows||[]).filter(r=>String(r.code)===String(code)&&String(r.locNorm)===String(location))
+  .reduce((n,r)=>n+Number(r.qty||0),0);
+}
+function v33MovementList(){
+ return [
+  ...approvedMatches.map(m=>({kind:'match',m,from:m.from,to:m.to,qty:Number(m.qty)})),
+  ...manualTransfersV9.map(m=>({kind:'transfer',m,from:m.from,to:m.to,qty:Number(m.qty)})),
+  ...resolutions.map(m=>({kind:'resolution',m,from:m.type==='FALTANTE'?m.location:'',to:m.type==='FALTANTE'?(m.target||PROCESS_LOCATION):m.location,qty:Number(m.qty)}))
+ ].filter(x=>x.qty>0&&x.m.code&&x.to);
+}
+function v33Capture(){
+ if(!hasCompared||!allSystemRows.length)return;
+ const snapHash=v33StockSignature(allSystemRows);
+ let changed=false;
+ for(const {kind,m,from,to,qty} of v33MovementList()){
+  if(!m.v33Id){m.v33Id='wms33_'+wfId();changed=true;}
+  const already=v33Ledger.find(x=>x.id===m.v33Id);
+  if(already){if(m.executedAt&&!already.executedAt){already.executedAt=m.executedAt;already.status='manual';changed=true;}continue;}
+  v33Ledger.push({id:m.v33Id,kind,operation:m.type==='SOBRANTE'?'SOBRANTE':'TRASLADO',code:String(m.code),from:String(from||''),to:String(to),qty,baselineSource:from?v33PositionSnapshot(allSystemRows,m.code,from):null,
+    baselineDestination:v33PositionSnapshot(allSystemRows,m.code,to),baselineHash:snapHash,createdAt:m.createdAt||m.at||wfToday(),executedAt:m.executedAt||null,status:m.executedAt?'manual':'pending',reflectedAt:null,comment:''});
+  changed=true;
+ }
+ if(changed)v33Write();
+}
+function v33SameMove(m,entry){return !!m&&m.v33Id===entry.id;}
+function v33StatusText(entry){
+ return entry.status==='regularizado'?(entry.reflectedAt?'Regularizado en WMS · detectado':'Ejecutado WMS · confirmado'):entry.status==='manual'?'Ejecutado informado · validar stock':entry.status==='review'?'Cambio en WMS · revisar':entry.status==='discarded'?'Propuesta descartada':'Pendiente WMS';
+}
+function v33NumEq(a,b){return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<0.00001;}
+function v33CheckOnNewWms(){
+ const currentHash=v33StockSignature(allSystemRows);
+ let changed=false;
+ const overlapping=(p)=>v33Ledger.filter(x=>x.id!==p.id&&x.code===p.code&&x.baselineHash===p.baselineHash&&!['regularizado','discarded'].includes(x.status)&&
+   [p.from,p.to].filter(Boolean).some(loc=>loc===x.from||loc===x.to));
+ for(const entry of v33Ledger){
+  if(['regularizado','discarded'].includes(entry.status)||entry.baselineHash===currentHash)continue;
+  const beforeFrom=Number(entry.baselineSource),beforeTo=Number(entry.baselineDestination);
+  const nowFrom=entry.from?v33PositionSnapshot(allSystemRows,entry.code,entry.from):null;
+  const nowTo=v33PositionSnapshot(allSystemRows,entry.code,entry.to);
+  const sourceChange=entry.from?beforeFrom-nowFrom:null;
+  const targetChange=nowTo-beforeTo;
+  const both=entry.from&&entry.from!==entry.to;
+  const matched=both?v33NumEq(sourceChange,entry.qty)&&v33NumEq(targetChange,entry.qty):false;
+  const collision=overlapping(entry).length>0;
+  if(matched&&!collision){
+   entry.status='regularizado';entry.reflectedAt=wfToday();
+   entry.comment='Origen -'+fmtQty(entry.qty)+' y destino +'+fmtQty(entry.qty)+' reflejados en nueva foto WMS.';
+  }else if((entry.status==='pending'||entry.status==='manual')&&
+     !(both&&v33NumEq(sourceChange,0)&&v33NumEq(targetChange,0))){
+   // Una regularización positiva no tiene columna de origen real: no inferir ejecución por una sola diferencia.
+   entry.status='review';entry.comment=!both?'Regularización positiva: confirmar el ingreso en WMS; no existe origen de traslado.':
+     collision?'Varias propuestas afectan al mismo código y ubicación. Verificar antes de volver a ejecutar.':
+     'Cambios del WMS no coinciden exactamente en origen y destino con el movimiento propuesto.';
+  }
+  changed=true;
+ }
+ if(changed)v33Write();
+}
+function v33DropReflectedFromActive(){
+ const cleared=new Set(v33Ledger.filter(x=>x.status==='regularizado'||x.status==='discarded'||x.status==='review').map(x=>x.id));
+ approvedMatches=approvedMatches.filter(m=>!cleared.has(m.v33Id));
+ resolutions=resolutions.filter(m=>!cleared.has(m.v33Id));
+ manualTransfersV9=manualTransfersV9.filter(m=>!cleared.has(m.v33Id));
+ window.perchadoV9Moves=manualTransfersV9;
+}
+function v33PendingRows() {
+ // Mantener exportables las propuestas que siguen pendientes si NO se movió ni origen ni destino.
+ // Las parcialmente reflejadas o ambiguas permanecen para revisión, NO se exportan otra vez.
+ return v33Ledger.filter(x=>x.status==='pending'&&x.from&&x.to&&x.from!==x.to&&
+   v33NumEq(x.baselineSource,v33PositionSnapshot(allSystemRows,x.code,x.from))&&
+   v33NumEq(x.baselineDestination,v33PositionSnapshot(allSystemRows,x.code,x.to))&&
+   v13ValidLocation(x.from)&&v13ValidLocation(x.to)).map(x=>[x.code,x.from,x.to,x.qty]);
+}
+const v33BaseRows=v13Rows;
+v13Rows=function(){
+ const rows=v33BaseRows(),seen=new Set(rows.map(x=>x.join('|')));
+ for(const row of v33PendingRows())if(!seen.has(row.join('|'))){rows.push(row);seen.add(row.join('|'));}
+ return rows;
+};
+const v33BaseSaveDecisions=saveDecisions;
+saveDecisions=function(){
+ if(!v33InCompare)v33Capture();
+ return v33BaseSaveDecisions.apply(this,arguments);
+};
+const v33BaseCompare=compareData;
+compareData=async function(){
+ if(v33InCompare)return v33BaseCompare.apply(this,arguments);
+ v33Capture();
+ const oldSignature=v33StockSignature(allSystemRows);
+ const before=hasCompared;
+ v33InCompare=true;
+ try{
+  await v33BaseCompare.apply(this,arguments);
+  if(!hasCompared)return;
+  v33Capture(); // Captura también movimientos previos después de la primera comparación de V33.
+  const afterSignature=v33StockSignature(allSystemRows);
+  const olderPending=v33Ledger.some(x=>!['regularizado','discarded'].includes(x.status)&&x.baselineHash!==v33StockSignature(allSystemRows));
+  if((before&&oldSignature!==afterSignature)||olderPending){
+   v33CheckOnNewWms();v33DropReflectedFromActive();
+  }
+  v33BaseSaveDecisions();
+  renderReconciliation();
+ }finally{v33InCompare=false;}
+};
+// Si se registra un movimiento, persistir inmediatamente su saldo WMS de referencia.
+// El historial se mantiene separado de las decisiones ligadas a una firma de data.
+function v33HistoryHtml(){
+ const records=v33Ledger.filter(x=>x.status!=='discarded').slice(-150).reverse();
+ return `<section class="v33History"><h3>📋 Seguimiento de ajustes al actualizar WMS</h3>
+   <p class="v33Note">El sistema compara los saldos antes y después de cada movimiento. Solo marca «Regularizado» si origen y destino cambian exactamente lo esperado. No acredita por sí solo la ejecución en el WMS.</p>
+   <div class="tableWrap"><table><thead><tr><th>Código</th><th>Origen</th><th>Destino</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${records.map(x=>{
+    const css=x.status==='regularizado'?'done':x.status==='review'?'warn':'open';
+    const actions=x.status==='review'?`<button class="secondary mini" onclick="v33Manual('${escapeHtml(x.id)}')">✅ Ejecutado WMS</button> <button class="secondary mini" onclick="v33Discard('${escapeHtml(x.id)}')">Descartar</button>`:'';
+    return `<tr><td><b>${escapeHtml(x.code)}</b></td><td>${escapeHtml(x.from||'Ingreso positivo')}</td><td>${escapeHtml(x.to)}</td><td>${fmtQty(x.qty)}</td><td><span class="v33Pill ${css}">${escapeHtml(v33StatusText(x))}</span>${x.comment?`<div class="muted" style="font-size:11px">${escapeHtml(x.comment)}</div>`:''}</td><td>${actions}</td></tr>`;
+   }).join('')||'<tr><td colspan="6">Todavía no hay movimientos registrados.</td></tr>'}</tbody></table></div></section>`;
+}
+const v33BaseRenderReconciliation=renderReconciliation;
+renderReconciliation=function(){
+ v33BaseRenderReconciliation.apply(this,arguments);
+ const target=$('reconciliationPanel');
+ if(target&&hasCompared&&adminAccessV9)target.insertAdjacentHTML('beforeend',v33HistoryHtml());
+};
+async function v33Manual(id){
+ if(!adminAccessV9)return;
+ const x=v33Ledger.find(x=>x.id===id);if(!x||x.status!=='review')return;
+ if(!await perchadoConfirm('Marca este movimiento como ejecutado SOLO si comprobaste su ejecución en el WMS. La nueva foto de stock no permite identificarlo automáticamente. ¿Confirmar?'))return;
+ x.status='regularizado';x.executedAt=wfToday();x.reflectedAt=null;x.comment='Ejecución confirmada manualmente por '+(adminIdentityV9||'Administración')+'.';
+ v33Write();v33DropReflectedFromActive();v33BaseSaveDecisions();renderAll();
+}
+async function v33Discard(id){
+ if(!adminAccessV9)return;
+ const x=v33Ledger.find(x=>x.id===id);if(!x||x.status!=='review')return;
+ if(!await perchadoConfirm('¿Descartar esta propuesta anterior? Solo se retira del seguimiento activo; se conserva evidencia del movimiento histórico.'))return;
+ x.status='discarded';x.comment='Descartado por '+(adminIdentityV9||'Administración')+' el '+wfToday();v33Write();renderAll();
+}
+const v33OldMissing=v19SendMissing;
+v19SendMissing=async function(loc,code){
+ if(v33Ledger.some(x=>x.code===String(code)&&x.from===String(loc)&&x.to===PROCESS_LOCATION&&['pending','review','manual'].includes(x.status)))
+  return perchadoAlert('Ya existe un movimiento previo pendiente o por revisar de este código y origen. Revisa el historial de Ajustes antes de proponer otro.');
+ return v33OldMissing.apply(this,arguments);
+};
+// Permitir reiniciar completamente la auditoría desde el control específico de Administración.
+function v33ClearLedger(){v33Ledger=[];try{localStorage.removeItem(V33_LEDGER_KEY);}catch(e){}}
+const v33OldClearLocal=v24ClearLocal;
+v24ClearLocal=function(){v33ClearLedger();return v33OldClearLocal.apply(this,arguments);};
+v33Read();
+</script>
+
+<style id="perchado-v34-mobile-fixes">
+/* El teclado de la captura móvil se conserva: no reemplazar nodos activos mientras se digita. */
+#opTasks .v13QtyInput{font-size:16px!important;min-height:52px;touch-action:manipulation;}
+.v34TaskAdmin{border:1px solid #b6ded6;background:#f7fefa;border-radius:10px;padding:10px 12px;margin:9px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.v34TaskAdmin strong{font-size:13px;color:#075b51}.v34TaskAdmin small{display:block;color:#4b746c;font-size:11px;margin-top:4px}
+.v34TaskActions{display:flex;gap:7px;flex-wrap:wrap}.v34TaskActions button{min-height:34px;padding:5px 10px;font-size:12px}
+.v34BulkRow{display:flex;justify-content:flex-end;padding:5px 12px 9px;border-top:1px solid #e4f3ef;background:#fbfffd}
+.v34BulkRow button{border:1px solid #a4d9e4!important;background:#e5f8fc!important;color:#176979!important;border-radius:8px;padding:7px 11px;font-size:11px;font-weight:750;min-height:32px}
+.v34BulkRow button:disabled{opacity:.55;cursor:not-allowed}
+.v34LiveNote{color:#227567;font-size:11px}
+@media(max-width:650px){.v34BulkRow button{min-height:42px}.v34TaskActions button{min-height:42px}}
+</style>
+<script id="perchado-v34-mobile-recount-stability">
+'use strict';
+/* V34: estabilidad del teclado móvil, reservas liberables, reconteos por ubicación y continuidad de captura. */
+let v34BusyAdmin=false,v34RecountTaskIds='',v34LastQtyUser='';
+function v34ActiveIds(loc){return v13TasksAt(loc).map(t=>String(t.id)).sort().join('|');}
+function v34UpdateProgress(){
+ const progress=document.querySelector('#opTasks .v13Progress');if(!progress||!v13ActiveLocation)return;
+ const tasks=v13TasksAt(v13ActiveLocation),saved=v13ReadQty(v13ActiveLocation),done=tasks.filter(t=>String(saved[t.id]??'').trim()!=='').length;
+ progress.textContent=`${done} de ${tasks.length} códigos completados`;
+}
+// Las escuchas onSnapshot llegan al digitar. Si el formulario es el mismo, no volver a dibujarlo.
+const v34OriginalRenderTasks=renderOperatorTasksV8;
+renderOperatorTasksV8=function(){
+ const panel=document.getElementById('opTasks');
+ if(v13ActiveLocation&&v13ActiveUser===document.getElementById('opUser')?.value&&panel?.querySelector('.v13RecountDetail')){
+  const open=v13TasksAt(v13ActiveLocation),sameIds=v34ActiveIds(v13ActiveLocation)===v34RecountTaskIds;
+  const uid=cloudV9?.getCurrentUid?.();
+  const stillOwned=open.length&&open.every(t=>t.claimedBy===v13ActiveUser&&(!uid||!t.claimedUid||t.claimedUid===uid));
+  if(stillOwned&&sameIds){v34UpdateProgress();return;}
+  if(!stillOwned){
+   // La reserva fue retirada o cerrada por Administración; conservar avance local.
+   v13ActiveLocation='';v13ActiveUser='';v34RecountTaskIds='';document.getElementById('opUser').disabled=false;
+   const input=document.activeElement;if(input?.classList?.contains('v13QtyInput'))input.blur();
+  }
+ }
+ const result=v34OriginalRenderTasks.apply(this,arguments);
+ if(v13ActiveLocation&&panel?.querySelector('.v13RecountDetail')){v34RecountTaskIds=v34ActiveIds(v13ActiveLocation);v34UpdateProgress();}
+ return result;
+};
+// Registrar cada tecla localmente de inmediato; no refrescar la tarjeta ni desplazar el foco.
+v13SaveQty=function(taskId,value){
+ const loc=v13ActiveLocation;if(!loc)return;
+ const key=v13DraftKey(loc);
+ try{const data=JSON.parse(localStorage.getItem(key)||'{}');data[taskId]=value;localStorage.setItem(key,JSON.stringify(data));}
+ catch(e){console.warn('No se pudo guardar borrador de reconteo',e);}
+ v34UpdateProgress();
+ if(v13LiveTimer)clearTimeout(v13LiveTimer);
+ v13LiveTimer=setTimeout(async()=>{
+  v13LiveTimer=null;
+  if(!cloudEnabledV9||!cloudV9?.ready||v13ActiveLocation!==loc)return;
+  const values=v13ReadQty(loc),entries=v13TasksAt(loc).filter(t=>String(values[t.id]??'').trim()!==''&&v13Amount(values[t.id])!==null).map(t=>({id:t.id,code:t.code,qty:v13Amount(values[t.id])}));
+  if(!entries.length)return;
+  try{await cloudV9.saveLive({userId:v13ActiveUser,location:loc,entries,status:'counting',mode:'recount',updatedAt:wfToday()});}
+  catch(e){console.warn('Reconteo pendiente en Firebase; borrador local conservado',e);}
+ },2500);
+};
+const v34OriginalOpenRecount=v13OpenRecount;
+v13OpenRecount=async function(loc){
+ await v34OriginalOpenRecount(loc);
+ if(v13ActiveLocation===loc){v34RecountTaskIds=v34ActiveIds(loc);}
+};
+const v34OriginalCloseRecount=v13CloseRecountView;
+v13CloseRecountView=function(){v34RecountTaskIds='';return v34OriginalCloseRecount.apply(this,arguments);};
+// La reserva pertenece a una tarea, pero no debe impedir que Admin libere el trabajo.
+async function v34ReleaseLocation(loc){
+ if(v34BusyAdmin||!adminAccessV9)return;
+ const list=wfV8.tasks.filter(t=>t.location===loc&&t.status==='open'&&(t.claimedBy||t.claimedUid));
+ if(!list.length)return perchadoAlert('Esta ubicación no está reservada.');
+ if(!await perchadoConfirm('¿Liberar el reconteo de '+loc+'? Otro operario podrá elegir esta ubicación. Los avances previos no se aprobarán automáticamente.'))return;
+ v34BusyAdmin=true;
+ try{
+  if(cloudEnabledV9){if(!cloudWritableV9())return;await cloudV9.releaseRecountLocation(list.map(t=>t.id),adminIdentityV9);}
+  for(const t of list){t.claimedBy='';t.claimedUid='';t.claimedAt=null;t.releasedAt=wfToday();}
+  if(!cloudEnabledV9)wfStore('RECONTEO_LIBERADO',loc);
+  renderAdminV8();toast('Reconteo liberado. Disponible para otro operario.');
+ }catch(e){perchadoAlert('No se pudo liberar la ubicación: '+(e?.message||e));}
+ finally{v34BusyAdmin=false;}
+}
+async function v34CancelLocation(loc){
+ if(v34BusyAdmin||!adminAccessV9)return;
+ const list=wfV8.tasks.filter(t=>t.location===loc&&t.status==='open');
+ if(!list.length)return perchadoAlert('No hay reconteos pendientes en esa ubicación.');
+ if(!await perchadoConfirm('¿Retirar las '+list.length+' solicitudes de reconteo de '+loc+'? La evidencia previa se conserva, pero estas tareas dejarán de aparecer en Operarios.'))return;
+ v34BusyAdmin=true;
+ try{
+  if(cloudEnabledV9){if(!cloudWritableV9())return;await cloudV9.cancelRecountLocation(list.map(t=>t.id),adminIdentityV9);}
+  for(const t of list){t.status='cancelled';t.closedAt=wfToday();}
+  if(!cloudEnabledV9)wfStore('RECONTEO_CANCELADO_POR_UBICACION',loc);
+  renderWorkflowV8();if(hasCompared)renderLocations();toast('Solicitudes retiradas de Operarios.');
+ }catch(e){perchadoAlert('No se pudieron retirar las solicitudes: '+(e?.message||e));}
+ finally{v34BusyAdmin=false;}
+}
+function v34ShowReservations(){
+ if(!adminAccessV9)return;
+ const parent=document.getElementById('wfTasksAdmin');if(!parent)return;
+ const current=[...parent.querySelectorAll('.v34TaskAdmin')];current.forEach(x=>x.remove());
+ const grouped=new Map();for(const t of wfV8.tasks)if(t.status==='open'){
+  if(!grouped.has(t.location))grouped.set(t.location,[]);grouped.get(t.location).push(t);
+ }
+ if(!grouped.size)return;
+ parent.insertAdjacentHTML('beforeend',[...grouped].sort(([a],[b])=>a.localeCompare(b)).map(([loc,list])=>{
+  const owners=[...new Set(list.filter(t=>t.claimedBy).map(t=>personNameV8(t.claimedBy)))];
+  const owner=owners.length?owners.join(', '):'Disponible';
+  const id=JSON.stringify(loc).replace(/'/g,'&#39;');
+  return `<div class="v34TaskAdmin"><div><strong>📍 ${escapeHtml(loc)}</strong><small>${list.length} códigos · ${escapeHtml(owner)}</small></div><div class="v34TaskActions">${owners.length?`<button class="secondary mini" onclick='v34ReleaseLocation(${id})'>🔓 Liberar</button>`:''}<button class="secondary mini" onclick='v34CancelLocation(${id})'>✕ Retirar</button></div></div>`;
+ }).join(''));
+}
+const v34PrevAdminRender=renderAdminV8;
+renderAdminV8=function(){const out=v34PrevAdminRender.apply(this,arguments);v34ShowReservations();return out;};
+// Enviar todos los códigos con diferencia de una ubicación en una sola tarea agrupada.
+function v34CodesWithIssues(loc){
+ const codes=new Set();
+ for(const r of results)if(r.ubicacionNormalizada===loc&&(Math.abs(Number(remaining(r)))>0.000001||r.duplicado||!r.locValid))codes.add(String(r.codigo));
+ if(typeof v12LatestEntries==='function')for(const [code] of v12LatestEntries(loc))if(!results.some(r=>r.ubicacionNormalizada===loc&&String(r.codigo)===String(code)))codes.add(String(code));
+ for(const t of wfV8.tasks)if(t.location===loc&&['open','answered'].includes(t.status))codes.delete(String(t.code));
+ return [...codes].filter(Boolean);
+}
+async function v34SendLocationIssues(loc){
+ if(v34BusyAdmin||!adminAccessV9)return;
+ if(!cloudWritableV9())return;
+ const codes=v34CodesWithIssues(loc);
+ if(!codes.length)return perchadoAlert('No hay novedades nuevas para enviar. Revisa los reconteos pendientes o recibidos.');
+ if(wfV8.tasks.some(t=>t.location===loc&&t.status==='open'&&t.claimedBy))return perchadoAlert('Esta ubicación tiene una reserva activa. Primero libera la reserva desde Gestión de conteos.');
+ if(!await perchadoConfirm(`¿Enviar ${codes.length} códigos con novedades de ${loc} a un solo reconteo por ubicación?`))return;
+ const at=wfToday();const tasks=codes.map(code=>{
+  const session=[...wfV8.sessions].reverse().find(s=>s.location===loc&&s.status!=='rejected'&&s.status!=='archived'&&s.entries?.some(e=>String(e.code)===code));
+  const entry=session?.entries?.find(e=>String(e.code)===code);
+  return {id:wfId(),location:loc,code,userId:'',reason:'Verificar novedades de ubicación',sessionId:session?.id||'',entryId:entry?.id||'',status:'open',createdAt:at,response:null,closedAt:null,claimedBy:'',claimedUid:''};
+ });
+ v34BusyAdmin=true;
+ try{
+  if(cloudEnabledV9)await cloudV9.createLocationRecounts(tasks);
+  wfV8.tasks.push(...tasks);
+  if(!cloudEnabledV9)wfStore('RECONTEO_NOVEDADES_UBICACION',`${loc} · ${tasks.length}`);
+  renderWorkflowV8();if(hasCompared)renderLocations();toast(`${tasks.length} códigos enviados juntos a reconteo de ${loc}.`);
+ }catch(e){perchadoAlert('No se pudieron enviar todas las novedades: '+(e?.message||e));}
+ finally{v34BusyAdmin=false;}
+}
+const v34OldRenderLocations=renderLocations;
+renderLocations=function(){
+ const out=v34OldRenderLocations.apply(this,arguments);
+ if(!adminAccessV9)return out;
+ const box=document.getElementById('issuesLocations');
+ for(const card of box?.querySelectorAll('.locCard')||[]){
+  const loc=card.querySelector('.fullLoc')?.textContent.trim();if(!loc||card.querySelector('.v34BulkRow'))continue;
+  const count=v34CodesWithIssues(loc).length;
+  const args=JSON.stringify(loc).replace(/'/g,'&#39;');
+  const btn=`<div class="v34BulkRow"><button type="button" ${count?'':'disabled'} onclick='v34SendLocationIssues(${args})'>📨 Reconteo de novedades${count?' · '+count+' códigos':''}</button></div>`;
+  card.querySelector('.locToggle')?.insertAdjacentHTML('afterend',btn);
+ }
+ return out;
+};
+// Continuación: una ubicación ya registrada puede recibir códigos adicionales.
+// El primer conteo permanece intacto y la nueva captura es una sesión complementaria.
+addDraftV8=function(){
+ if(draftV8.length>=250)return perchadoAlert('Máximo 250 códigos por registro. Envía los capturados y continúa.');
+ const user=document.getElementById('opUser')?.value,raw=document.getElementById('opLocation')?.value;
+ const loc=v18ResolveLocation(raw),code=normalizeCode(document.getElementById('opCode')?.value||'');
+ const qty=parseQuantity(document.getElementById('opQty')?.value||'');
+ if(!wfV8.users.some(x=>x.id===user&&x.enabled))return perchadoAlert('Selecciona un operario habilitado.');
+ if(!loc)return perchadoAlert('Escribe una ubicación válida. Ejemplo: 30-04.');
+ if(!code)return perchadoAlert('Digita un código.');
+ if(qty===null||qty<0)return perchadoAlert('Digita una cantidad válida, incluido 0.');
+ if(draftV8.length&&(draftContextV8.user!==user||draftContextV8.location!==loc))return perchadoAlert('Termina primero el registro actual antes de cambiar de ubicación.');
+ draftContextV8={user,location:loc};draftV8.push({id:wfId(),code,qty,type:qty===0?'MISSING':'COUNT',originalCode:code,recordedAt:wfToday()});
+ document.getElementById('opLocation').value=loc;
+ document.getElementById('opCode').value='';document.getElementById('opQty').value='';
+ renderOperatorDraftV8();rebuildDraftV9();document.getElementById('opCode').focus();
+};
+submitDraftV8=async function(){
+ if(v13Busy)return;
+ if(!draftV8.length)return perchadoAlert('Agrega códigos antes de registrar.');
+ const user=draftContextV8.user,loc=draftContextV8.location;
+ if(!wfV8.users.some(x=>x.id===user&&x.enabled)||!wfNormalLocation(loc))return perchadoAlert('Selecciona nombre y ubicación válida.');
+ if(!await perchadoConfirm(`¿Registrar ${draftV8.length} líneas de ${loc}? Si ya hay un conteo finalizado, estas líneas se agregan como continuación y no borran las anteriores.`))return;
+ if(!cloudWritableV9())return;
+ const previous=wfV8.sessions.some(s=>s.location===loc&&!['rejected','archived'].includes(s.status));
+ const square=typeof v18Square==='function'&&v18Square(loc);
+ const session={id:wfId(),userId:user,location:loc,manualLocation:!v18AvailableLocations().includes(loc),submittedAt:wfToday(),status:'pending',complete:true,continuation:previous,squareAddendum:square,deviceUid:cloudEnabledV9?cloudV9.getCurrentUid():undefined,entries:draftV8.map(e=>({...e})),reviewedAt:null};
+ v13Busy=true;
+ try{
+  if(cloudEnabledV9)await cloudV9.persist('sessions',session);
+  if(!wfV8.sessions.some(s=>s.id===session.id))wfV8.sessions.push(session);
+  if(!cloudEnabledV9)wfStore('CONTEO_ENVIADO',session.id);
+  draftV8=[];draftContextV8={user:'',location:''};
+  for(const id of ['opLocation','opCode','opQty'])document.getElementById(id).value='';
+  rebuildDraftV9();
+  if(cloudEnabledV9)await cloudV9.saveLive({userId:user,location:loc,entries:[],status:'completed',updatedAt:wfToday()});
+  renderWorkflowV8();
+  toast(square?'Registro adicional guardado. La auditoría cuadrada histórica no se modifica hasta revisión.':previous?'Códigos adicionales registrados en la misma ubicación.':'Ubicación registrada. Puedes elegir otra.');
+ }catch(e){perchadoAlert('No se pudo registrar. Tus códigos siguen guardados en el dispositivo: '+(e?.message||e));}
+ finally{v13Busy=false;}
+};
+// En ubicaciones NO congeladas, consolidar todas las sesiones en orden, no solo la última.
+v18CountedFromSessions=function(){
+ const byLoc=new Map(),ss=[...wfV8.sessions].filter(s=>!['rejected','archived'].includes(s.status)&&s.complete!==false&&Array.isArray(s.entries)&&s.entries.length).sort((a,b)=>String(a.submittedAt||'').localeCompare(String(b.submittedAt||'')));
+ for(const s of ss){if(v18Square(s.location))continue;
+  if(!byLoc.has(s.location))byLoc.set(s.location,[]);
+  for(const e of s.entries){if(wfV8.corrections['v29_void_'+e.id]?.removed)continue;
+   const corrected=wfV8.corrections[e.id]||e;
+   byLoc.get(s.location).push({code:String(corrected.code??e.code),qty:Number(corrected.qty??e.qty)});
+  }
+ }
+ for(const c of Object.values(wfV8.corrections)){
+  if(c?.kind!=='physical_verified'||!c.approved||!byLoc.has(c.location)||!v17Verified(c.location,c.code))continue;
+  const keep=byLoc.get(c.location).filter(e=>e.code!==String(c.code));
+  keep.push({code:String(c.code),qty:Number(c.qty)});byLoc.set(c.location,keep);
+ }
+ return [...byLoc].flatMap(([loc,lines])=>lines.filter(x=>Number.isFinite(x.qty)&&x.qty>=0).map(x=>[loc,x.code,x.qty].join('\t')));
+};
+// Ubicaciones ya finalizadas: permitir capturar una continuación, sin reabrir el cierre histórico.
+updateDraftLocationV8=function(){
+ const input=document.getElementById('opLocation'),loc=v18ResolveLocation(input?.value||'');
+ if(!loc)return;
+ if(draftV8.length&&draftContextV8.location&&loc!==draftContextV8.location){
+  input.value=draftContextV8.location;return perchadoAlert('Primero registra los códigos que estás contando antes de cambiar de ubicación.');
+ }
+ input.value=loc;v18HideSuggestions();v25LocationHint();
+};
+v18SelectLocation=function(raw){
+ const loc=v18ResolveLocation(raw);if(!loc)return perchadoAlert('Ubicación no válida. Escribe 30-04 o su código completo.');
+ document.getElementById('opLocation').value=loc;v18HideSuggestions();updateDraftLocationV8();
+ document.getElementById('opCode')?.focus();
+};
+const v34PrevSearchLocation=v18SearchLocation;
+v18SearchLocation=function(){
+ const out=v34PrevSearchLocation.apply(this,arguments);
+ const raw=document.getElementById('opLocation')?.value||'',loc=v18ResolveLocation(raw);
+ if(loc&&v18Square(loc)&&!draftV8.length){
+  const box=document.getElementById('v18LocationSuggestions');
+  if(box){box.insertAdjacentHTML('beforeend',`<button type="button" class="v18LocOption v25LocationManualBtn" onclick='v18SelectLocation(${JSON.stringify(loc)})'>＋ Continuar en ${escapeHtml(loc)} <small>Captura adicional a un cierre histórico</small></button>`);box.hidden=false;}
+ }
+ return out;
+};
+const v34PrevLocationHint=v25LocationHint;
+v25LocationHint=function(){
+ v34PrevLocationHint();
+ const raw=document.getElementById('opLocation')?.value||'',loc=v18ResolveLocation(raw);
+ if(loc&&v18Square(loc)){
+  const hint=document.getElementById('v25ManualLocationInfo');
+  if(hint){hint.className='v25LocationInfo v25Known';hint.textContent='ℹ Ubicación cuadrada histórica. Puedes registrar códigos adicionales; el cierre original se conserva y Administración revisará esta nueva evidencia.';}
+ }
+};
+renderAdminV8();
 </script>
 </body>
 </html>
