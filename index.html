@@ -409,8 +409,9 @@ window.PERCHADO_FIREBASE_CONFIG = {
 
 
 <div class="wfPane v16ResetBox" style="margin-top:18px">
- <div class="v16ResetRow"><div><h3>🗑️ Limpieza de datos</h3><p class="v16Help">Borra las datas pegadas, la comparación y los ajustes guardados <strong>en este navegador</strong>. No elimina los conteos, reconteos ni las ubicaciones cuadradas cerradas guardadas en Firebase.</p></div>
- <button type="button" class="secondary v16ResetButton" onclick="v16BeginReset()">🗑️ Limpiar data</button></div>
+ <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Reinicia la auditoría completa: stock WMS, conteos, reconteos, novedades, ajustes y ubicaciones cerradas. Los registros de Firebase se archivan y se dejan de mostrar en la operación activa. Se conservan las cuentas y el chat.</p></div>
+ <button type="button" class="secondary v16ResetButton" onclick="v24BeginReset()">🗑️ Eliminar data</button></div>
+ <div id="v24ResetStatus" class="v23DeleteStatus" role="status" aria-live="polite"></div>
 </div>
 <div class="wfPane v19Guide"><b>✓ Los conteos finalizados se comparan automáticamente con el WMS.</b><p>Las ubicaciones cuadradas se cierran. Las diferencias se resuelven desde Novedades; aquí no necesitas aprobar ni integrar registros.</p><button class="secondary mini" onclick="backupWorkflowV8()" title="Exportar respaldo JSON">💾 Respaldo</button></div>
 <div class="wfPane" id="adminAccountsV9" style="margin-top:16px"><h3>🔐 Cuentas de Administración</h3><div class="wfFields" id="adminCreateFieldsV10"><label id="adminCreateFieldsLabelV10">Nuevo usuario administrador<input autocomplete="off" id="newAdminV9" placeholder="Ej. supervisor.bodega"/></label><label>Contraseña inicial<input autocomplete="new-password" id="newAdminPasswordV9" placeholder="Mínimo 8 caracteres" type="password"/></label></div><div class="wfActions"><button class="primary" id="adminCreateButtonV10" onclick="createAdministratorV9()">＋ Crear administrador</button><button class="secondary" onclick="logoutAdministratorV9()">Cerrar sesión</button></div><div id="adminListV9"></div></div></section>
@@ -2004,6 +2005,24 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         answers.forEach((a,i)=>{const qty=Number(a.response?.qty);if(!Number.isFinite(qty)||qty<0)throw Error('Cantidad inválida.');tx.update(pointers[i],{status:'answered',userId,response:a.response,answeredAt:new Date().toISOString()});});
       });
     },
+    async archiveAuditRecords(groups,actor){
+      if(!api.admin)throw Error('Debes ingresar a Administración.');
+      await ensureAnonymous();
+      if(!groups||!Array.isArray(groups.sessions)||!Array.isArray(groups.tasks)||!Array.isArray(groups.corrections))throw Error('Selección de registros inválida.');
+      const now=new Date().toISOString(),items=[];
+      const unique=(arr)=>[...new Set(arr.map(v=>String(v||'').trim()).filter(Boolean))];
+      for(const id of unique(groups.sessions))items.push({group:'sessions',id,data:{status:'archived',reviewedAt:now}});
+      for(const id of unique(groups.tasks))items.push({group:'tasks',id,data:{status:'archived',archivedAt:now,archivedBy:String(actor||'Administración')}});
+      for(const id of unique(groups.corrections))items.push({group:'corrections',id,data:{archived:true,archivedAt:now,archivedBy:String(actor||'Administración')}});
+      // Actualizar en lotes pequeños. No se borran documentos ni se amplían las reglas de Firestore.
+      let done=0;
+      for(let i=0;i<items.length;i+=150){
+        const batch=writeBatch(db);for(const item of items.slice(i,i+150))batch.update(ref(item.group,item.id),item.data);
+        try{await batch.commit();}catch(e){e.message=`Se archivaron ${done} de ${items.length} documentos. ${e.message}`;throw e;}
+        done+=Math.min(150,items.length-i);
+      }
+      return done;
+    },
     getCurrentUid(){return auth.currentUser?.uid||'';}
  };
  function validateUsername(u){const x=String(u||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(x))throw Error('Usuario inválido: 3–35 caracteres, sin tildes ni espacios.');return x;}
@@ -2939,6 +2958,223 @@ cancelAdminLoginV9=async function(){const result=await v20OldCancelGate();v20Cha
 v20El('opUser')?.addEventListener('change',()=>v20ChatSync());
 v20ChatSync();
 
+</script>
+<style id="perchado-v23-deletion-styles">
+.v23DeletePane{background:#f7fffc;border:1px solid #a8e2d6}
+.v23DeletePane h3{margin:0 0 6px;color:#075c53}
+.v23DeletePane .v16Help{margin:0 0 14px;color:#386b62;line-height:1.55;font-size:13px}
+.v23Buttons{display:flex;flex-wrap:wrap;gap:10px}
+.v23Buttons button{min-height:42px;border-radius:11px;font-weight:750}
+.v23Danger{background:#fff1ef;color:#973d35;border:1px solid #edb6ae;padding:10px 14px}
+.v23Danger:hover{background:#ffe6e2}
+.v23DangerOutline{color:#9b493c;border-color:#eab6ab;background:#fff9f7}
+.v23DeleteStatus{font-size:12px;color:#376c64;margin-top:8px;min-height:1em}
+.v23Overlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,47,41,.58)}
+.v23Dialog{width:min(510px,100%);background:#f8fffc;border:1px solid #8bdac8;border-radius:20px;padding:23px;box-shadow:0 22px 85px rgba(0,44,39,.25);color:#073f3a;max-height:calc(100dvh - 40px);overflow:auto}
+.v23Dialog h3{margin:0 0 10px;color:#064e47;font-size:19px}
+.v23Dialog p{font-size:14px;color:#386960;line-height:1.55;margin:9px 0}
+.v23Dialog .v23Notice{padding:10px 12px;border:1px solid #ffd5b4;border-radius:11px;background:#fff7ec;color:#925320;font-size:13px}
+.v23Dialog label{display:block;font-size:13px;font-weight:750;margin-top:14px}
+.v23Dialog input{width:100%;min-height:44px;border:1px solid #a4dbd1;border-radius:10px;margin-top:6px;padding:9px 12px;font-size:15px;background:white;color:#123b35}
+.v23DialogActions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px;flex-wrap:wrap}
+.v23DialogActions button{min-height:42px;border-radius:10px}
+.v23DialogActions .v23Confirm{background:#087b69;color:white;border:0;padding:10px 16px}
+.v23DialogActions .v23Confirm:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:520px){.v23Dialog{padding:17px}.v23Buttons button{width:100%}.v23DialogActions button{flex:1}}
+</style>
+<script id="perchado-v23-delete-counts-recounts">
+'use strict';
+// Se archivan registros de conteos/reconteos en Firebase, sin reglas públicas de borrado.
+// Así desaparecen de la operación activa y se conserva la posibilidad de auditoría/recuperación.
+let v23Deleting=false;
+const v23PreviousSetCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+  if(group==='sessions'||group==='tasks')docs=(docs||[]).filter(d=>d.status!=='archived');
+  if(group==='corrections')docs=(docs||[]).filter(d=>d.archived!==true);
+  return v23PreviousSetCloudData(group,docs);
+};
+function v23Status(message){const node=document.getElementById('v23DeleteStatus');if(node)node.textContent=message||'';}
+function v23DeletePlan(kind){
+ const sessions=wfV8.sessions||[],tasks=wfV8.tasks||[],corrections=Object.values(wfV8.corrections||{});
+ const isCount=kind==='counts';
+ const affected=isCount?corrections.filter(x=>x?.id&&x.kind!=='v18_square_closed'&&x.kind!=='v18_location_catalog'):
+   corrections.filter(x=>{
+     if(!x?.id||x.kind==='v18_square_closed'||x.kind==='v18_location_catalog')return false;
+     if(x.taskId||String(x.source||'').startsWith('task:'))return true;
+     if(x.kind==='confirmed_surplus'){
+       const v=wfV8.corrections[x.verificationId];return Boolean(v?.taskId||String(v?.source||'').startsWith('task:'));
+     }
+     return false;
+   });
+ return {sessions:isCount?sessions.map(x=>x.id):[],tasks:tasks.map(x=>x.id),corrections:affected.map(x=>x.id)};
+}
+function v23CloseDelete(){const overlay=document.getElementById('v23Overlay');if(overlay&&!v23Deleting)overlay.remove();}
+function v23OpenDelete(kind){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v23Deleting)return;
+ const counts=kind==='counts',plan=v23DeletePlan(kind),n=plan.sessions.length+plan.tasks.length;
+ if(!n){return perchadoAlert(counts?'No hay conteos ni reconteos activos para retirar.':'No hay reconteos activos para retirar.');}
+ document.getElementById('v23Overlay')?.remove();
+ const overlay=document.createElement('div');overlay.id='v23Overlay';overlay.className='v23Overlay';
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label',counts?'Eliminar conteos':'Eliminar reconteos');
+ const label=counts?'ELIMINAR CONTEOS':'ELIMINAR RECONTEOS';
+ overlay.innerHTML=`<div class="v23Dialog"><h3>🗑️ ${counts?'Eliminar conteos':'Eliminar reconteos'}</h3>
+ <p>${counts?`Se retirarán <b>${plan.sessions.length} conteos</b> y <b>${plan.tasks.length} reconteos</b> para no dejar tareas huérfanas.`:`Se retirarán <b>${plan.tasks.length} reconteos</b>. Los conteos originales seguirán visibles.`}</p>
+ <div class="v23Notice">Los registros quedarán archivados en Firebase y desaparecerán de la auditoría activa. No se eliminarán el stock WMS, el chat, los usuarios ni las ubicaciones cuadradas cerradas. Se reiniciará la comparación y se descartarán propuestas locales dependientes.</div>
+ <p>Para evitar errores, escribe exactamente <strong>${label}</strong>:</p>
+ <label>Confirmación<input id="v23DeletePhrase" autocomplete="off" spellcheck="false" aria-label="Escribir confirmación de eliminación"></label>
+ <div class="v23DialogActions"><button class="secondary" type="button" onclick="v23CloseDelete()">Cancelar</button><button id="v23RunDeleteButton" class="v23Confirm" type="button" disabled onclick="v23RunDelete('${kind}')">Confirmar</button></div></div>`;
+ document.body.appendChild(overlay);
+ const field=document.getElementById('v23DeletePhrase'),btn=document.getElementById('v23RunDeleteButton');
+ field.addEventListener('input',()=>btn.disabled=field.value.trim()!==label);
+ overlay.addEventListener('click',e=>{if(e.target===overlay)v23CloseDelete();});
+ overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();v23CloseDelete();}});
+ field.focus();
+}
+async function v23RunDelete(kind){
+ const counts=kind==='counts',phrase=counts?'ELIMINAR CONTEOS':'ELIMINAR RECONTEOS';
+ if(!adminAccessV9||v23Deleting||document.getElementById('v23DeletePhrase')?.value.trim()!==phrase)return;
+ const plan=v23DeletePlan(kind),total=plan.sessions.length+plan.tasks.length+plan.corrections.length;
+ if(!total)return v23CloseDelete();
+ if(cloudEnabledV9&&(!cloudV9?.ready||!cloudV9.connected))return perchadoAlert('Conecta Firebase antes de eliminar registros compartidos. No se efectuaron cambios.');
+ if(cloudEnabledV9&&typeof cloudV9.archiveAuditRecords!=='function')return perchadoAlert('El módulo de limpieza no está disponible. Actualiza el HTML en todos los equipos.');
+ v23Deleting=true;
+ const btn=document.getElementById('v23RunDeleteButton'),cancel=document.getElementById('v23Overlay')?.querySelector('button.secondary');
+ if(btn){btn.disabled=true;btn.textContent='Archivando…';}if(cancel)cancel.disabled=true;
+ v23Status('Procesando eliminación de '+(counts?'conteos y reconteos…':'reconteos…'));
+ try{
+  // Los snapshots ya filtrarán el estado archived; NO ampliamos permisos delete a clientes anónimos.
+  if(cloudEnabledV9)await cloudV9.archiveAuditRecords(plan,adminIdentityV9||'Administración');
+  const sIds=new Set(plan.sessions),tIds=new Set(plan.tasks),cIds=new Set(plan.corrections);
+  wfV8.sessions=wfV8.sessions.filter(x=>!sIds.has(x.id));
+  wfV8.tasks=wfV8.tasks.filter(x=>!tIds.has(x.id));
+  for(const id of cIds)delete wfV8.corrections[id];
+  if(!cloudEnabledV9)wfStore(counts?'CONTEOS_ARCHIVADOS':'RECONTEOS_ARCHIVADOS',String(total));
+  // El catálogo de ubicaciones y las cuadradas históricas permanecen intactos.
+  resolutions=[];approvedMatches=[];proposals=[];reviews=new Set();verifiedMissing=new Set();confirmations=new Set(v18Squares.keys());
+  currentSignature='';sourceDirty=false;results=[];hasCompared=false;openLocations=new Set();
+  auditScope={mappedLocations:[],operatorTotal:0,systemTotal:0,systemFiltered:0,invalidOperatorLocations:0};
+  document.getElementById('operatorData').value='';
+  try{localStorage.removeItem('perchadoAuditOperator');localStorage.removeItem('perchadoAuditDecisionsV7');localStorage.removeItem('perchadoAuditDecisionsV6');localStorage.removeItem('perchadoAuditDecisionsV5');}catch{}
+  document.getElementById('v23Overlay')?.remove();
+  if(document.getElementById('systemData')?.value.trim() && (wfV8.sessions.length||v18Squares.size)){
+   await compareData();
+  }else{
+   renderAll();
+   updateMappedBadge(v18Squares.size);
+  }
+  renderWorkflowV8();
+  v23Status(`Retirados de la auditoría: ${plan.sessions.length} conteos y ${plan.tasks.length} reconteos. WMS y cuadradas conservados.`);
+  toast('Registros retirados de la auditoría activa.');
+ }catch(e){
+  perchadoAlert('No se completó la eliminación. '+(e?.message||e));
+  v23Status('No se completó la operación. Verifica tu conexión Firebase y vuelve a intentarlo.');
+ }finally{v23Deleting=false;const still=document.getElementById('v23Overlay');if(still){still.remove();}}
+}
+</script>
+<script id="perchado-v24-reset-unificado">
+'use strict';
+/* Restablecimiento de datos activos. NO autoriza eliminación remota irrestricta:
+   Firebase usa identidad anónima, por lo tanto los documentos se archivan. */
+let v24Busy=false;
+const v24SeenKey='perchado_v24_last_seen_reset';
+const v24ResetKey='v24_reset_marker';
+let v24ResetTime=Number(localStorage.getItem('perchado_v24_reset_time')||0);
+function v24Status(value){const node=document.getElementById('v24ResetStatus');if(node)node.textContent=value||'';}
+function v24Plan(){
+  const valid=x=>x&&x.id&&x.status!=='archived';
+  return {
+    sessions:(wfV8.sessions||[]).filter(valid).map(x=>String(x.id)),
+    tasks:(wfV8.tasks||[]).filter(valid).map(x=>String(x.id)),
+    corrections:Object.values(wfV8.corrections||{}).filter(x=>x?.id&&x.archived!==true&&x.id!==v24ResetKey).map(x=>String(x.id))
+  };
+}
+function v24BeginReset(){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v24Busy)return;
+ document.getElementById('v24ResetOverlay')?.remove();
+ const plan=v24Plan(),overlay=document.createElement('div');
+ overlay.id='v24ResetOverlay';overlay.className='v23Overlay';
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Confirmar reinicio completo de Perchado');
+ overlay.innerHTML=`<div class="v23Dialog">
+ <h3>🗑️ Eliminar toda la data de auditoría</h3>
+ <p>Esta acción reiniciará las <b>datas WMS</b>, comparaciones, novedades, ajustes, cierres de ubicaciones, borradores y todos los registros de conteos y reconteos activos.</p>
+ <p>Registros compartidos identificados: <b>${plan.sessions.length} conteos</b>, <b>${plan.tasks.length} reconteos</b> y <b>${plan.corrections.length} documentos de auditoría</b>.</p>
+ <div class="v23Notice"><b>Atención:</b> los registros en Firebase se <b>archivan</b> (no se borran físicamente) y desaparecen de la operación activa. Se conservan los usuarios y las conversaciones del chat, así como las cuentas de Administración. El reinicio afectará a los dispositivos sincronizados.</div>
+ <p>Si necesitas un respaldo, utiliza antes el botón <b>Respaldo</b> de Gestión de conteos.</p>
+ <label>Escribe <b>ELIMINAR TODO</b> para confirmar
+ <input id="v24ResetPhrase" autocomplete="off" spellcheck="false" placeholder="ELIMINAR TODO" aria-label="Escribe ELIMINAR TODO"></label>
+ <div class="v23DialogActions"><button class="secondary" type="button" onclick="v24CloseReset()">Cancelar</button><button class="v23Confirm" type="button" id="v24ResetConfirm" disabled onclick="v24ExecuteReset()">Eliminar data</button></div>
+ </div>`;
+ document.body.appendChild(overlay);
+ const input=document.getElementById('v24ResetPhrase');
+ input.addEventListener('input',()=>document.getElementById('v24ResetConfirm').disabled=input.value.trim()!=='ELIMINAR TODO');
+ overlay.addEventListener('click',e=>{if(e.target===overlay)v24CloseReset();});
+ overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();v24CloseReset();}});
+ input.focus();
+}
+function v24CloseReset(){if(!v24Busy)document.getElementById('v24ResetOverlay')?.remove();}
+function v24ClearLocal(stamp){
+ // No se borran las credenciales, los nombres de operarios ni los mensajes.
+ try{
+  const remove=['perchadoAuditOperator','perchadoAuditSystem','perchadoAuditMaster','perchadoAuditDecisionsV5','perchadoAuditDecisionsV6','perchadoAuditDecisionsV7',
+  'perchado_v9_draft','perchado_v18_prior_decisions','perchado_v18_catalog',V18_LOCKS_KEY];
+  for(const key of Object.keys(localStorage))if(/^perchado_v13_(?:recuento|draft|recount)|^perchado_recount_/i.test(key))remove.push(key);
+  for(const key of remove)localStorage.removeItem(key);
+  localStorage.setItem(v24SeenKey,String(stamp));localStorage.setItem('perchado_v24_reset_time',String(stamp));
+ }catch(e){console.warn('No se pudo limpiar todo el respaldo local',e);}
+ v24ResetTime=stamp;
+ wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};wfV8.events=[];
+ draftV8=[];draftContextV8={user:'',location:''};
+ v18Squares.clear();v18WriteLocks();
+ masterLocations=[];results=[];allSystemRows=[];parsedErrors=[];hasCompared=false;sourceDirty=false;currentSignature='';
+ auditScope={mappedLocations:[],operatorTotal:0,systemTotal:0,systemFiltered:0,invalidOperatorLocations:0};
+ approvedMatches=[];resolutions=[];proposals=[];reviews=new Set();verifiedMissing=new Set();confirmations=new Set();openLocations=new Set();
+ manualTransfersV9=[];lastLiveV9=[];v12Panel={loc:'',code:'',kind:''};
+ v13ActiveLocation='';v13ActiveUser='';
+ for(const id of ['operatorData','systemData','masterData','opLocation','opCode','opQty']){const node=document.getElementById(id);if(node)node.value='';}
+ try{const node=document.getElementById('opUser');if(node)node.disabled=false;}catch{}
+ try{closeDrawer();}catch{}
+ try{v15ClearSearch();}catch{}
+ try{localStorage.setItem(WF_V8_KEY,JSON.stringify({version:8,users:wfV8.users,sessions:[],tasks:[],corrections:{},events:[]}));}catch{}
+ try{renderUserSelectorsV8();renderWorkflowV8();renderAll();updateMappedBadge(0);}catch(e){console.error('Actualizar interfaz luego de reset',e);}
+}
+const v24BeforeCloud=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ if(group==='corrections'){
+  const marker=(docs||[]).find(x=>x?.id===v24ResetKey&&x.kind==='v24_reset_marker');
+  const stamp=Number(marker?.resetTime||0);
+  const seen=Number(localStorage.getItem(v24SeenKey)||0);
+  if(stamp>seen){v24ClearLocal(stamp);v24Status('La auditoría fue reiniciada desde Administración.');}
+ }
+ if(group==='liveCounts'&&v24ResetTime){
+  docs=(docs||[]).filter(x=>{const t=Date.parse(x.updatedAt||'');return Number.isFinite(t)&&t>v24ResetTime;});
+ }
+ return v24BeforeCloud(group,docs);
+};
+async function v24ExecuteReset(){
+ if(!adminAccessV9||v24Busy||document.getElementById('v24ResetPhrase')?.value.trim()!=='ELIMINAR TODO')return;
+ if(cloudEnabledV9&&(!cloudV9?.ready||!cloudV9.connected))return perchadoAlert('Firebase no está sincronizado. No se eliminó información: revisa la conexión.');
+ if(cloudEnabledV9&&typeof cloudV9?.archiveAuditRecords!=='function')return perchadoAlert('Actualiza la web antes de reiniciar los datos compartidos.');
+ v24Busy=true;
+ const button=document.getElementById('v24ResetConfirm'),cancel=document.getElementById('v24ResetOverlay')?.querySelector('button.secondary');
+ if(button){button.disabled=true;button.textContent='Reiniciando…';}if(cancel)cancel.disabled=true;
+ const plan=v24Plan(),now=Date.now();
+ try{
+  v24Status('Archivando conteos, reconteos y cierres…');
+  if(cloudEnabledV9){
+   await cloudV9.archiveAuditRecords(plan,adminIdentityV9||'Administración');
+   await cloudV9.persist('corrections',{id:v24ResetKey,kind:'v24_reset_marker',resetTime:now,resetBy:adminIdentityV9||'Administración',resetAt:new Date(now).toISOString()});
+  }
+  v24ClearLocal(now);
+  document.getElementById('v24ResetOverlay')?.remove();
+  v24Status(`Auditoría reiniciada: ${plan.sessions.length} conteos, ${plan.tasks.length} reconteos y ${plan.corrections.length} registros archivados. Usuarios y chat conservados.`);
+  toast('Data de auditoría reiniciada. Puedes cargar un nuevo WMS.');
+ }catch(e){
+  v24Status('Reinicio incompleto. Es posible que algunos documentos se hayan archivado. Vuelve a conectarte y revisa antes de repetir.');
+  perchadoAlert('No se pudo completar el reinicio: '+String(e?.message||e));
+ }finally{v24Busy=false;document.getElementById('v24ResetOverlay')?.remove();}
+}
 </script>
 </body>
 </html>
