@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V79</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V80</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9043,6 +9043,174 @@ renderLiveMonitoringV9=function(){
  return v79PrevMonitor.apply(this,arguments);
 };
 // Se reutilizan las escuchas existentes; no se crean consultas nuevas.
+</script>
+
+
+<style id="perchado-v80-surplus-guard-css">
+.v80Investigate{border:1px solid #a7dacf;background:#f1fffb;padding:11px 13px;border-radius:10px;color:#15554c;font-size:12px;line-height:1.5}
+.v80OriginList{display:grid;gap:6px;max-height:270px;overflow:auto;padding:4px 0}
+.v80OriginRow{display:grid;grid-template-columns:minmax(135px,1fr) minmax(110px,1fr);gap:8px;padding:9px 10px;background:#fff;border:1px solid #d6e8e2;border-radius:9px;font-size:12px}
+.v80OriginRow strong{color:#0b6557}.v80OriginRow small{display:block;color:#586d69;margin-top:3px}
+.v80FinalArea{border:1px solid #e8c394;background:#fff9ee;border-radius:11px;padding:13px;margin-top:10px}
+.v80FinalArea label{display:flex;flex-direction:row;align-items:flex-start;gap:10px;font-size:12px;line-height:1.5;color:#694618;font-weight:750}
+.v80FinalArea input[type=checkbox]{width:19px;min-width:19px;height:19px;margin:0;accent-color:#068975}
+.v80FinalArea .primary{margin-top:10px;min-height:41px}
+.v80FinalArea .primary:disabled{opacity:.5;cursor:not-allowed}
+.v80Reopen{border:1px solid #cae8df;padding:12px;border-radius:11px;margin:14px 0;background:#f8fffc;font-size:12px}
+.v80Reopen summary{cursor:pointer;font-weight:800;color:#095d53}
+.v80ReopenFields{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.v80ReopenFields input{width:170px;max-width:100%;font-size:13px;min-height:39px}
+.v80ReopenFields button{min-height:38px}
+@media(max-width:640px){.v80OriginRow{grid-template-columns:1fr}.v80ReopenFields input{flex:1 1 140px}}
+</style>
+<script id="perchado-v80-surplus-investigation">
+'use strict';
+/* V80: primera acción = INVESTIGAR las ubicaciones del código, sin escrituras.
+   Registrar un sobrante real solo después de la confirmación explícita adicional.
+   No altera cantidades, WMS, ERI, conteos/reconteos, cierres ni tandas. */
+const v80ReviewOpen = new Map();
+const v80CommitBusy = new Set();
+const v80OriginalInline = v12Inline;
+const v80OriginalRowAction = v12RowAction;
+const v80OriginalRegister = v19RegisterSurplus;
+const v80OriginalRegisterRecount = v36RegisterRecountSurplus;
+function v80Key(loc,code){return String(loc)+'\u0000'+String(code);}
+function v80AllOrigins(code,loc){
+ const items = new Map();
+ for(const r of allSystemRows||[]){
+  if(String(r.code)!==String(code)||String(r.locNorm)===String(loc)||!r.locNorm)continue;
+  items.set(r.locNorm,(items.get(r.locNorm)||0)+Number(r.qty||0));
+ }
+ const options=v38Sources(code,loc);
+ const byLoc=new Map(options.map(r=>[String(r.loc),r]));
+ return [...items].map(([origin,qty])=>{
+  const source=byLoc.get(origin),physical=v13LatestVerified(origin,code);
+  return {loc:origin,qty,physical,source,available:Number(source?.available||0),
+   status:source?.status||(physical===null?'Sin conteo físico':'Sin saldo disponible para transferir')};
+ }).sort((a,b)=>Number(b.available>0)-Number(a.available>0)||Number(b.loc===PROCESS_LOCATION)-Number(a.loc===PROCESS_LOCATION)||a.loc.localeCompare(b.loc,undefined,{numeric:true}));
+}
+function v80EnterReview(loc,code){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(!hasCompared||sourceDirty)return perchadoAlert('Comprueba la comparación con el WMS vigente antes de revisar el sobrante.');
+ if(v18Square(loc))return perchadoAlert('Esta ubicación ya está cerrada y protegida.');
+ const r=v13Row(loc,code);
+ if(!r||Number(remaining(r))<=0)return perchadoAlert('No existe sobrante positivo pendiente para este código y ubicación en el WMS vigente.');
+ if(v12Panel.kind==='move'&&v12Panel.loc===loc&&String(v12Panel.code)===String(code)){
+  renderLocations();return;
+ }
+ v12Choose('move',loc,code); // solo abre el análisis; NO escribe aprobaciones.
+}
+// Cualquier acceso antiguo a «Registrar sobrante» se dirige al análisis anterior.
+// Las funciones originales siguen disponibles solo desde la segunda confirmación.
+v19RegisterSurplus=function(loc,code){return v80EnterReview(loc,code);};
+v15RegisterSurplus=function(loc,code){return v80EnterReview(loc,code);};
+v36RegisterRecountSurplus=function(loc,code){return v80EnterReview(loc,code);};
+v38Positive=function(loc,code){return v80EnterReview(loc,code);};
+v15PositiveAction=function(loc,code){return v80EnterReview(loc,code);};
+// Incluye botones de reconteos cerrados de versiones previas: nunca aprobación directa.
+v12RowAction=function(idx,loc,code,delta,latest){
+ const html=v80OriginalRowAction.apply(this,arguments);
+ const args=JSON.stringify(String(loc))+','+JSON.stringify(String(code));
+ return html.replace(/onclick='(?:v19RegisterSurplus|v15RegisterSurplus|v36RegisterRecountSurplus|v38Positive|v15PositiveAction)\([^']+\)'/g,
+  `onclick='v80EnterReview(${args})'`);
+};
+v12Inline=function(loc,code){
+ if(v12Panel.loc!==loc||String(v12Panel.code)!==String(code)||!['move','positive'].includes(v12Panel.kind))return v80OriginalInline.apply(this,arguments);
+ const r=v13Row(loc,code),pending=r?Math.max(0,Number(remaining(r))):0,
+   verified=v17Verified(loc,code),confirmed=v15Confirmed(loc,code),sources=v38Sources(code,loc),all=v80AllOrigins(code,loc);
+ const args=JSON.stringify(String(loc))+','+JSON.stringify(String(code));
+ const origins=all.length?all.map(o=>`<div class="v80OriginRow"><div><strong>${wfEsc(o.loc)}</strong><small>${wfEsc(o.status)}</small></div><div>WMS: <b>${fmtQty(o.qty)}</b> u · Disponible: <b>${fmtQty(o.available)}</b> u<small>Físico: ${o.physical==null?'Sin contar':fmtQty(o.physical)+' u'}</small></div></div>`).join(''):
+  '<div class="v80Investigate">No hay otras ubicaciones con stock registrado para este código en la base WMS vigente.</div>';
+ const selected=v46OriginState(loc,code,sources);
+ const sourceSelect=sources.length?`<div class="v47MovementGrid" style="margin-top:9px"><section class="v47SourceArea"><div class="v47FieldName">Origen para traslado (si corresponde)</div><div class="v46Origins v47OriginList">${sources.map(s=>`<label class="v46OriginChoice"><input type="radio" name="v46Origin" value="${wfEsc(s.loc)}" ${selected.src?.loc===s.loc?'checked':''} onchange='v46ChooseOrigin(${args})'/><span class="v46OriginCopy"><strong>${s.isCW?'♻ ':'📍 '}${wfEsc(s.loc)} · ${fmtQty(s.available)} u</strong><small>${wfEsc(s.status)}</small></span></label>`).join('')}</div></section><label class="v47Dest">Destino físico<input value="${wfEsc(loc)}" readonly/></label><label class="v47Qty">Cantidad<input id="v38Qty" type="number" min="1" step="any" inputmode="decimal" max="${selected.limit}" value="${wfEsc(selected.qty)}" oninput='v46RememberQty(${args})'/></label><button type="button" class="primary mini v47Submit" onclick='v38SaveTransfer(${args})'>↔ Registrar traslado en Ajustes</button></div><span id="v38SourceInfo" class="v47SrHint" role="status"></span>`:'';
+ const key=v80Key(loc,code),oldReview=v80ReviewOpen.get(key);
+ const showFinal=oldReview&&oldReview.wms===v13ForCode(code,loc)&&Math.abs(oldReview.physical-Number(verified?.qty))<.000001;
+ // El primer clic solo informa. El registro físico exige una segunda acción, separada.
+ const finalSection=`<div class="v80FinalArea" id="v80Final-${v78Hash(key)}" ${showFinal?'':'hidden'}><b>Segunda confirmación · sobrante real</b><p style="font-size:12px">Usa esta opción solamente después de descartar que las unidades provengan de otra ubicación. No registra un traslado ni modifica el WMS.</p><label><input type="checkbox" id="v80Checked-${v78Hash(key)}" onchange='v80ToggleFinal(${args})'>Revisé las otras ubicaciones y confirmo que estas ${fmtQty(pending)} unidades son un sobrante físico real.</label><button type="button" class="primary mini" id="v80Confirm-${v78Hash(key)}" disabled onclick='v80CommitSurplus(${args})'>✓ Confirmar sobrante real</button></div>`;
+ return `<tr class="v12ActionRow v47ActionRow"><td colspan="7"><div class="v12InlinePanel v47CompactPanel"><div class="v47PanelHead"><b>🔎 1. Investigar origen · ${wfEsc(code)}</b><span>📍 ${wfEsc(loc)}</span><span class="v47Balance">+${fmtQty(pending)} u</span><button class="v47Close" type="button" onclick="v12CancelPanel()">×</button></div>
+ <div class="v80Investigate">Antes de aprobar un sobrante debes revisar TODAS las ubicaciones del mismo código en el WMS. Esta pantalla no registra ninguna aprobación. ${all.length} ubicación(es) de origen identificadas.</div>
+ <div class="v80OriginList">${origins}</div>
+ ${verified?sourceSelect:'<div class="v38Banner">La cantidad física todavía no está verificada. Primero termina el reconteo o valida el físico.</div>'}
+ ${verified&&pending>0&&!confirmed?`<button type="button" class="secondary mini" onclick='v80ShowFinal(${args})'>2. Ninguna ubicación corresponde · revisar como sobrante real</button>${finalSection}`:confirmed?'<span class="v15StatusLabel">Sobrante físico ya registrado. No se duplicará.</span>':''}
+ </div></td></tr>`;
+};
+function v80ShowFinal(loc,code){
+ const r=v13Row(loc,code),verified=v17Verified(loc,code);
+ if(!r||!verified||!(Number(remaining(r))>0)||v13HasPendingRecount(loc,code))return perchadoAlert('Primero concluye y verifica el reconteo y la cantidad física.');
+ const key=v80Key(loc,code),block=document.getElementById('v80Final-'+v78Hash(key));
+ if(!block)return;
+ v80ReviewOpen.set(key,{wms:v13ForCode(code,loc),physical:Number(verified.qty),remaining:Number(remaining(r)),at:Date.now()});
+ block.hidden=false;block.querySelector('input[type=checkbox]').checked=false;
+ const btn=document.getElementById('v80Confirm-'+v78Hash(key));if(btn)btn.disabled=true;
+}
+function v80ToggleFinal(loc,code){
+ const id=v78Hash(v80Key(loc,code)),c=document.getElementById('v80Checked-'+id),b=document.getElementById('v80Confirm-'+id);
+ if(b)b.disabled=!c?.checked;
+}
+async function v80CommitSurplus(loc,code){
+ const key=v80Key(loc,code);
+ if(v80CommitBusy.has(key)||!adminAccessV9||sourceDirty||!hasCompared)return;
+ const record=v80ReviewOpen.get(key),verified=v17Verified(loc,code),r=v13Row(loc,code),check=document.getElementById('v80Checked-'+v78Hash(key));
+ if(!record||!check?.checked||!verified||!r||v13HasPendingRecount(loc,code)||
+   record.wms!==v13ForCode(code,loc)||Math.abs(record.physical-Number(verified.qty))>.000001||
+   Math.abs(record.remaining-Number(remaining(r)))>.000001){
+  return perchadoAlert('La comparación o el reconteo cambió. Vuelve a investigar las otras ubicaciones antes de confirmar.');
+ }
+ if(!cloudEnabledV9||!cloudV9?.connected||!cloudV9?.ready||!cloudWritableV9())return perchadoAlert('Firebase no ha confirmado la conexión. No se registrará un sobrante solo localmente.');
+ if(v15Confirmed(loc,code)||v79SurplusApproved(loc,code))return perchadoAlert('Este sobrante ya está aprobado. No se creó otro registro.');
+ const origins=v80AllOrigins(code,loc),withQty=origins.filter(x=>x.available>0);
+ const note=withQty.length?`\nATENCIÓN: existen ${withQty.length} ubicación(es) con stock de este código. Confirma solamente si ya las investigaste y descartaste su origen.`:'';
+ if(!await perchadoConfirm(`SEGUNDA CONFIRMACIÓN: sobrante físico real\nCódigo: ${code}\nUbicación: ${loc}\nCantidad: +${fmtQty(record.remaining)} unidades.${note}\n\n¿Registrar como sobrante real sin crear movimiento ni modificar stock WMS?`))return;
+ // Revalidar después del diálogo para impedir aprobaciones obsoletas.
+ const fresh=v13Row(loc,code),freshVerified=v17Verified(loc,code);
+ if(!fresh||!freshVerified||Math.abs(Number(remaining(fresh))-record.remaining)>.000001||
+   Math.abs(Number(freshVerified.qty)-record.physical)>.000001||v13ForCode(code,loc)!==record.wms){
+  return perchadoAlert('Los datos cambiaron mientras confirmabas. No se registró el sobrante.');
+ }
+ v80CommitBusy.add(key);
+ try{
+  // El registro original conserva compatibilidad con el historial existente.
+  const before=wfV8.corrections?.[v15SurplusKey(loc,code)];
+  const answered=v36RecountState(loc,code);
+  if(answered?.answered&&answered.surplus&&!answered.open){
+   await v80OriginalRegisterRecount(loc,code);
+  }else{
+   await v80OriginalRegister(loc,code);
+  }
+  const after=wfV8.corrections?.[v15SurplusKey(loc,code)];
+  if(after?.status==='confirmed' && (after!==before || Number(after.qty)===record.remaining)){
+   v80ReviewOpen.delete(key);
+   if(typeof toast==='function')toast('✓ Sobrante registrado tras revisar orígenes.');
+  }
+ }finally{v80CommitBusy.delete(key);}
+}
+// Recuperación no destructiva de aprobaciones que se registraron sin revisión.
+// No modifica el conteo físico ni stock WMS; conserva el documento original y la trazabilidad.
+async function v80ReopenApproval(){
+ if(!adminAccessV9)return showAdminGateV9();
+ const loc=document.getElementById('v80ReopenLoc')?.value.trim(),code=document.getElementById('v80ReopenCode')?.value.trim();
+ if(!loc||!code)return perchadoAlert('Introduce el código y la ubicación de la aprobación que deseas revisar.');
+ const id=v15SurplusKey(loc,code),old=wfV8.corrections?.[id];
+ if(!old||old.kind!=='confirmed_surplus'||old.status!=='confirmed')return perchadoAlert('No se encontró una aprobación activa de ese código y ubicación. No se modificó nada.');
+ if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected||!cloudWritableV9())return perchadoAlert('Firebase debe estar conectado para reabrir una aprobación.');
+ if(!await perchadoConfirm(`¿Reabrir para investigar el sobrante aprobado?\nCódigo: ${code}\nUbicación: ${loc}\nCantidad aprobada: ${fmtQty(old.qty)} u\n\nNo borra el registro histórico ni modifica el WMS. La novedad podrá revisarse nuevamente.`))return;
+ const changed={...old,status:'reopened',reopenedAt:new Date().toISOString(),reopenedBy:adminIdentityV9||'Administración',
+  history:[...(Array.isArray(old.history)?old.history:[]),{action:'REOPEN_FOR_ORIGIN_REVIEW',qty:Number(old.qty),at:new Date().toISOString(),by:adminIdentityV9||'Administración'}].slice(-30)};
+ try{
+  await cloudV9.persist('corrections',changed);
+  wfV8.corrections[id]=changed;
+  v80ReviewOpen.delete(v80Key(loc,code));
+  if(hasCompared){renderAll();}
+  if(typeof toast==='function')toast('✓ Aprobación reabierta para investigación. Evidencia conservada.');
+ }catch(e){perchadoAlert('No se reabrió: '+String(e?.message||e));}
+}
+(function v80InstallReopen(){
+ const section=document.getElementById('surplusLedger');if(!section)return;
+ const details=document.createElement('details');details.className='v80Reopen';
+ details.innerHTML=`<summary>🔎 Revisar una aprobación de sobrante anterior</summary><p>Para corregir una aprobación hecha sin revisar otras ubicaciones. No se borrará evidencia ni se modificará el WMS.</p><div class="v80ReopenFields"><input id="v80ReopenCode" type="text" placeholder="Código" aria-label="Código aprobado"><input id="v80ReopenLoc" type="text" placeholder="Ubicación completa" aria-label="Ubicación aprobada"><button class="secondary mini" type="button" onclick="v80ReopenApproval()">Reabrir para investigar</button></div>`;
+ const panel=document.getElementById('v78PositivePanel');
+ if(panel)panel.parentNode.insertBefore(details,panel);else section.appendChild(details);
+})();
 </script>
 
 </body>
