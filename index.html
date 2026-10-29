@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V75 · Tandas con archivo Firestore compatible</title>
+<title>PERCHADO V76 · Copia directa sin bloqueo por ajustes no exportables</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V75</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V76</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -7247,7 +7247,7 @@ renderReconciliation=function(){
  const moves=v57GroupedMovements(),dupes=moves.filter(x=>x.v57Count>1).length,risks=moves.filter(x=>x.v57Review).length;
  if(dupes||risks){
   const div=document.createElement('div');div.className='v57SafeNotice'+(risks?'':' ok');
-  div.textContent=risks?`⚠ ${risks} movimiento(s) ambiguo(s): bloqueada la exportación WMS hasta verificar. ${dupes} grupo(s) con registros repetidos. Se conservó toda la evidencia.`:
+  div.textContent=risks?`⚠ ${risks} movimiento(s) ambiguo(s) omitidos del portapapeles; puedes copiar los pases válidos. ${dupes} grupo(s) con registros repetidos. Se conservó toda la evidencia.`:
    `✓ ${dupes} grupo(s) con registros repetidos agrupados en pantalla y exportación: solo una instrucción por operación. Los registros originales se conservan para auditoría.`;
   panel.prepend(div);
  }
@@ -8315,7 +8315,7 @@ setCloudDataV9=function(group,docs){
 'use strict';
 /* Copiar NO equivale a ejecutar en el WMS. El cierre registra la tanda como
    COPIADA y conserva sus filas exactas para poder auditar o recuperar la orden.
-   Nunca limpiar datos si el portapapeles o Firebase reportan un error. */
+   Nunca limpiar datos si falla Firebase. Copiar no requiere que cierre la tanda. */
 let v72CopyInFlight=false;
 let v72LastCopiedText='';
 function v72CopiedFollowups(rows){
@@ -8364,55 +8364,81 @@ async function v72WriteClipboard(txt){
  }
 }
 async function v72CopyPendingAndNewBatch(){
- if(v72CopyInFlight||v62RoundBusy)return;
+ // V76: copiar es una acción inmediata e independiente del archivado.
+ // Ninguna novedad no exportable, conexión o confirmación bloquea los pases válidos.
+ if(v72CopyInFlight)return;
  if(!adminAccessV9)return showAdminGateV9();
- if(v49Scope!=='pending')return perchadoAlert('Selecciona Pendientes WMS para copiar una nueva tanda. El historial no se exporta.');
- if(sourceDirty||!hasCompared)return perchadoAlert('Primero completa la comparación con el WMS vigente.');
- const err=v68CanCloseAdjustments();if(err)return perchadoAlert(err);
- if(v52Draft||v52Conflict)return perchadoAlert('Hay ajustes locales sin sincronizar o en conflicto; verifica Firebase antes de copiar.');
+ if(v49Scope!=='pending'){
+  toast('Para copiar pases al WMS utiliza la vista Pendientes WMS; el historial no es una orden nueva.');
+  return;
+ }
  const rows=v49SelectedRows();
- if(!rows.length)return perchadoAlert('No hay pases pendientes para copiar.');
- const missing=v72ValidateCoverage(rows);
- if(missing)return perchadoAlert(missing);
- // Tomar la huella ANTES de escribir en el portapapeles. No cerrar si otra
- // pestaña cambia el contenido mientras se termina la copia.
- const snapshot=v68CurrentBatchFingerprint(),revision=v37Audit.stateRevision;
+ if(!rows.length){toast('No hay pases de cuatro columnas disponibles para copiar.');return;}
+ const revisionBefore=v37Audit.stateRevision;
+ const rowSignature=rows.map(r=>v57Key(r[0],r[1],r[2],r[3])).join('\n');
  const text=rows.map(r=>r.map(v=>String(v??'').replace(/[\r\n\t]+/g,' ')).join('\t')).join('\n');
- const followups=v72CopiedFollowups(rows);
- let copied=false,cloudCommitted=false;
  v72CopyInFlight=true;
- const buttons=[...document.querySelectorAll('#reconciliationPanel .v49Controls button')];
- const oldButtons=buttons.map(b=>({button:b,disabled:b.disabled,text:b.textContent}));
- for(const x of buttons){x.disabled=true;x.classList.add('v72BatchBusy');}
+ const copyButtons=[...document.querySelectorAll('#reconciliationPanel .v49Controls button')]
+   .filter(b=>/Copiar/i.test(b.textContent));
+ const oldButtons=copyButtons.map(b=>({button:b,disabled:b.disabled,text:b.textContent}));
+ for(const b of copyButtons){b.disabled=true;b.classList.add('v72BatchBusy');}
  try{
-  await v72WriteClipboard(text); // únicamente las filas, sin encabezados
-  copied=true;v72LastCopiedText=text;
-  if(snapshot!==v68CurrentBatchFingerprint()||revision!==v37Audit.stateRevision)
-   throw Error('La tanda cambió mientras se copiaba. Los pases sí quedaron en el portapapeles, pero NO se abrió otra tanda. Revisa Firebase antes de repetir.');
-  const closed=await cloudV9.closeAdjustmentsBatch(
-    revision,adminIdentityV9||'Administración',followups,'copied',
-    {rows:rows.map(r=>[String(r[0]),String(r[1]),String(r[2]),Number(r[3])])});
-  cloudCommitted=true;
-  v37Audit.stateRevision=closed.revision;
-  v37Audit.remote={revision:closed.revision,payload:closed.payload};
-  for(const item of followups){
-   if(item.status!=='ENVIADO_WMS')continue;
-   const next={...item,updatedAt:new Date(closed.stamp).toISOString()};
-   v70KnownDocs.set(item.id,next);
-   v70PendingUi.set(item.id,next);
+  // El portapapeles siempre va PRIMERO. Sin títulos ni preguntas de confirmación.
+  await v72WriteClipboard(text);
+  v72LastCopiedText=text;
+  // La copia funciona aun con un ajuste positivo, ambiguo o no exportable.
+  // Esos registros NO se borran: una tanda solo puede archivarse completa.
+  const uncovered=v72ValidateCoverage(rows);
+  if(uncovered){
+   toast('✓ '+rows.length+' pases copiados. Los otros ajustes siguen pendientes, sin bloquearte.');
+   return;
   }
-  await v64ClearAdjustmentsOnly(closed.stamp);
-  v49Scope='pending';
-  toast('✓ '+rows.length+' pases copiados sin títulos. Nueva tanda activa. Pendientes de ejecutar en WMS.');
- }catch(error){
-  perchadoAlert((cloudCommitted?'La tanda SÍ se archivó en Firebase, pero no se pudo actualizar la pantalla.\n':'No se pudo iniciar automáticamente otra tanda.\n')+
-    String(error?.message||error)+'\n\n'+
-    (copied?'Los pases permanecen en el portapapeles. ':'')+
-    (cloudCommitted?'Recarga para obtener la tanda nueva; NO vuelvas a copiar sin comprobarlo.':
-     'La lista no se ha vaciado en este navegador. Verifica la nube y el historial antes de volver a copiar.'));
+  // Firebase puede estar ocupado o desconectado. Eso jamás anula la copia.
+  const cloudProblem=v62RoundBusy||sourceDirty||!hasCompared||v52Draft||v52Conflict
+   ?'Sincronización pendiente':v68CanCloseAdjustments();
+  if(cloudProblem){
+   toast('✓ '+rows.length+' pases copiados. La tanda queda abierta hasta confirmar Firebase.');
+   return;
+  }
+  // Si alguien cambió los pases al copiar, mantener la tanda para evitar pérdida.
+  const freshSignature=v49SelectedRows().map(r=>v57Key(r[0],r[1],r[2],r[3])).join('\n');
+  if(revisionBefore!==v37Audit.stateRevision||rowSignature!==freshSignature){
+   toast('✓ '+rows.length+' pases copiados. La lista cambió: no se cerró automáticamente.');
+   return;
+  }
+  const followups=v72CopiedFollowups(rows);
+  let cloudCommitted=false;
+  try{
+   const closed=await cloudV9.closeAdjustmentsBatch(
+    revisionBefore,adminIdentityV9||'Administración',followups,'copied',
+    {rows:rows.map(r=>[String(r[0]),String(r[1]),String(r[2]),Number(r[3])])}
+   );
+   cloudCommitted=true;
+   v37Audit.stateRevision=closed.revision;
+   v37Audit.remote={revision:closed.revision,payload:closed.payload};
+   for(const item of followups){
+    if(item.status!=='ENVIADO_WMS')continue;
+    const next={...item,updatedAt:new Date(closed.stamp).toISOString()};
+    v70KnownDocs.set(item.id,next);
+    v70PendingUi.set(item.id,next);
+   }
+   await v64ClearAdjustmentsOnly(closed.stamp);
+   v49Scope='pending';
+   toast('✓ '+rows.length+' pases copiados sin títulos. Nueva tanda disponible.');
+  }catch(e){
+   // No mostrar modal: la copia ya se completó. Nunca limpiar sin archivado.
+   if(cloudCommitted)toast('✓ Pases copiados y tanda archivada. Recarga si todavía ves registros anteriores.');
+   else toast('✓ Pases copiados. Firebase no cerró la tanda; sigue disponible para revisión.');
+   console.warn('PERCHADO V76: archivado posterior a copia',e);
+  }
+ }catch(e){
+  // Solamente un fallo real del portapapeles impide copiar.
+  perchadoAlert('El navegador no permitió copiar: '+String(e?.message||e));
  }finally{
   v72CopyInFlight=false;
-  for(const x of oldButtons){if(x.button.isConnected){x.button.disabled=x.disabled;x.button.textContent=x.text;x.button.classList.remove('v72BatchBusy');}}
+  for(const x of oldButtons){
+   if(x.button.isConnected){x.button.disabled=x.disabled;x.button.textContent=x.text;x.button.classList.remove('v72BatchBusy');}
+  }
  }
 }
 // Todas las rutas operativas de «Copiar pendientes» pasan por este punto.
