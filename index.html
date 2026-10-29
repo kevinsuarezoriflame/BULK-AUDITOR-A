@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V57 · Control de inventario</title>
+<title>PERCHADO V59 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V57</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V59</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -575,13 +575,13 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <div class="workflowGrid">
 <div class="wfPane"><h3>👥 Operarios habilitados</h3><div class="wfActions"><input id="newOpName" onkeydown="if(event.key==='Enter')addOperatorV8()" placeholder="Nombre y apellido" style="flex:1;min-width:180px"/><button class="primary" onclick="addOperatorV8()">＋ Habilitar</button></div><div id="wfUsers"></div></div>
 </div>
-<h3 class="wfSectionTitle">📍 Avance de ubicaciones</h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar ubicación, código u operario"/></div><div id="wfSessions"></div>
-<h3 class="wfSectionTitle">🔎 Reconteos · resumen</h3><div id="wfTasksAdmin"></div>
+<h3 class="wfSectionTitle">📍 Avance de ubicaciones <small class="v58BoundedNote">(50 más recientes; usa el buscador para registros anteriores)</small></h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar ubicación, código u operario"/></div><div id="wfSessions"></div>
+<h3 class="wfSectionTitle">🔎 Reconteos · resumen <small class="v58BoundedNote">(40 más recientes; buscar para ver anteriores)</small></h3><div id="wfTasksAdmin"></div>
 
 
 <div class="wfPane v16ResetBox" style="margin-top:18px">
- <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Reinicia la auditoría completa: stock WMS, conteos, reconteos, novedades, ajustes y ubicaciones cerradas. Los registros de Firebase se archivan y se dejan de mostrar en la operación activa. Se conservan las cuentas y el chat.</p></div>
- <button type="button" class="secondary v16ResetButton" onclick="v24BeginReset()">🗑️ Eliminar data</button></div>
+ <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Reinicia WMS, ajustes, movimientos y estados administrativos. <strong>Conserva conteos, reconteos, cantidades validadas, borradores y usuarios.</strong> Requiere respaldo y confirmación.</p></div>
+ <button type="button" class="secondary v16ResetButton" onclick="v58BeginReset()">🧹 Reiniciar ajustes y WMS</button></div>
  <div id="v24ResetStatus" class="v23DeleteStatus" role="status" aria-live="polite"></div>
 </div>
 <div class="wfPane v19Guide"><b>✓ Los conteos finalizados se comparan automáticamente con el WMS.</b><p>Las ubicaciones cuadradas se cierran. Las diferencias se resuelven desde Novedades; aquí no necesitas aprobar ni integrar registros.</p><button class="secondary mini" onclick="backupWorkflowV8()" title="Exportar respaldo JSON">💾 Respaldo</button></div>
@@ -1220,7 +1220,7 @@ async function approveTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||t.
 async function cancelTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||!['open','answered'].includes(t.status))return;if(!await perchadoConfirm('¿Cancelar esta solicitud? El historial se conservará.'))return;t.status='cancelled';t.closedAt=wfToday();wfStore('RECONTEO_CANCELADO',id);renderWorkflowV8();}
 async function setSessionStatusV8(id,status){const s=wfV8.sessions.find(x=>x.id===id);if(!s||!['pending','approved','rejected'].includes(s.status))return;if(status==='approved'&&wfV8.tasks.some(t=>t.sessionId===id&&['open','answered'].includes(t.status)))return perchadoAlert('Este conteo tiene reconteos aún pendientes de cerrar.');if(status==='approved'&&!$('systemData').value.trim()&&!await perchadoConfirm('Aún no existe data del sistema para auditar los códigos. ¿Aprobar de todas formas?'))return;if(!await perchadoConfirm(`¿${status==='approved'?'Aprobar este conteo para comparación':'Rechazar este conteo'}? Se conservará el historial.`))return;s.status=status;s.reviewedAt=wfToday();wfStore(status==='approved'?'CONTEO_APROBADO':'CONTEO_RECHAZADO',id);renderWorkflowV8();}
 function wfSessionView(s,catalog){const pending=wfV8.tasks.some(t=>t.sessionId===s.id&&['open','answered'].includes(t.status)),classes=wfClass(s.status),rows=s.entries.map(e=>{const correction=wfV8.corrections[e.id],audit=auditCodeV8(correction?.code||e.code,s.location,catalog);const tag=e.type==='MISSING'?'<span class="wfTag alert">Posible faltante</span>':'';const modified=correction?`<div class="wfMini">✅ Validado en reconteo: ${wfEsc(correction.code)} · ${fmtQty(correction.qty)} u</div>`:'';return `<tr><td class="wfMonospace">${wfEsc(e.code)}</td><td>${fmtQty(e.qty)}</td><td>${tag}${wfEsc(e.type==='MISSING'?'No encontrado':'Encontrado')}</td><td><span class="wfTag ${audit.state!=='COINCIDENCIA'?'alert':''}">${wfEsc(audit.state)}</span><div class="wfMini">${wfEsc(audit.note)}</div>${modified}</td><td><button class="secondary wfActionSmall" onclick="taskFromEntryV8('${s.id}','${e.id}')">🔎 Revisar / reconteo</button></td></tr>`;}).join('');return `<div class="wfSession"><div class="wfSessionHead"><strong>📍 ${wfEsc(s.location)} · ${wfEsc(personNameV8(s.userId))}</strong><span class="wfStatus ${classes}">${wfEsc(wfStatus(s.status))}</span></div><div class="wfMini">Enviado: ${wfFormatDate(s.submittedAt)} · ${s.entries.length} códigos ${pending?'· ⚠️ Hay reconteos pendientes':''}</div><div class="tableWrap compactTable"><table class="wfTable"><thead><tr><th>Código original</th><th>Físico original</th><th>Resultado</th><th>Auditoría del código</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div><div class="wfActions"><button class="primary wfActionSmall" onclick="setSessionStatusV8('${s.id}','approved')" ${pending?'disabled':''}>✓ Aprobar para comparación</button><button class="danger wfActionSmall" onclick="setSessionStatusV8('${s.id}','rejected')">Rechazar conteo</button></div></div>`;}
-function renderAdminV8(){const enabled=wfV8.users.filter(u=>u.enabled).length,pending=wfV8.sessions.filter(s=>s.status==='pending').length,openTasks=wfV8.tasks.filter(t=>t.status==='open'||t.status==='answered').length,approved=wfV8.sessions.filter(s=>s.status==='approved').length;const cards=[['Habilitados',enabled],['Conteos por revisar',pending],['Reconteos pendientes',openTasks],['Conteos aprobados',approved]];$('wfOverview').innerHTML=cards.map(([label,n])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');$('wfUsers').innerHTML=wfV8.users.length?wfV8.users.map(u=>`<div class="wfEntry"><div><b>${wfEsc(u.name)}</b> <span class="wfTag ${u.enabled?'':'alert'}">${u.enabled?'Habilitado':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick="toggleOperatorV8('${u.id}')">${u.enabled?'Deshabilitar':'Habilitar'}</button></div>`).join(''):'<div class="wfEmpty">Sin operarios registrados. Habilita nombres para iniciar conteos.</div>';const search=$('wfSessionSearch').value.trim().toLowerCase(),catalog=wfCatalog();const records=[...wfV8.sessions].reverse().filter(s=>!search||[personNameV8(s.userId),s.location,s.status,...s.entries.map(e=>e.code)].join(' ').toLowerCase().includes(search));$('wfSessions').innerHTML=records.length?records.map(s=>wfSessionView(s,catalog)).join(''):'<div class="wfEmpty">No hay conteos para este filtro.</div>';const tasks=[...wfV8.tasks].reverse();$('wfTasksAdmin').innerHTML=tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>${wfEsc(t.code)} · ${wfEsc(t.location)}</strong><span class="wfStatus ${wfClass(t.status)}">${wfEsc(wfStatus(t.status))}</span></div><div class="wfMini">Operario: ${wfEsc(personNameV8(t.userId))} · ${wfFormatDate(t.createdAt)}<div>Motivo: ${wfEsc(t.reason)}</div>${t.response?`<div>Respuesta: código ${wfEsc(t.response.code)} · ${fmtQty(t.response.qty)} u · ${wfEsc(t.response.type==='MISSING'?'No encontrado':'Encontrado')} · ${wfFormatDate(t.response.at)}</div>`:''}</div><div class="wfActions">${t.status==='answered'?`<button class="primary wfActionSmall" onclick="approveTaskV8('${t.id}')">🔍 Verificar conteos</button>`:''}${['open','answered'].includes(t.status)?`<button class="danger wfActionSmall" onclick="cancelTaskV8('${t.id}')">Cancelar</button>`:''}</div></div>`).join(''):'<div class="wfEmpty">Sin solicitudes de reconteo.</div>';}
+function renderAdminV8(){const enabled=wfV8.users.filter(u=>u.enabled).length,pending=wfV8.sessions.filter(s=>s.status==='pending').length,openTasks=wfV8.tasks.filter(t=>t.status==='open'||t.status==='answered').length,approved=wfV8.sessions.filter(s=>s.status==='approved').length;const cards=[['Habilitados',enabled],['Conteos por revisar',pending],['Reconteos pendientes',openTasks],['Conteos aprobados',approved]];$('wfOverview').innerHTML=cards.map(([label,n])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');$('wfUsers').innerHTML=wfV8.users.length?wfV8.users.map(u=>`<div class="wfEntry"><div><b>${wfEsc(u.name)}</b> <span class="wfTag ${u.enabled?'':'alert'}">${u.enabled?'Habilitado':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick="toggleOperatorV8('${u.id}')">${u.enabled?'Deshabilitar':'Habilitar'}</button></div>`).join(''):'<div class="wfEmpty">Sin operarios registrados. Habilita nombres para iniciar conteos.</div>';const search=$('wfSessionSearch').value.trim().toLowerCase(),catalog=wfCatalog();const records=[...wfV8.sessions].reverse().filter(s=>!search||[personNameV8(s.userId),s.location,s.status,...(s.entries||[]).map(e=>e.code)].join(' ').toLowerCase().includes(search)).slice(0,50);$('wfSessions').innerHTML=records.length?records.map(s=>wfSessionView(s,catalog)).join(''):'<div class="wfEmpty">No hay conteos para este filtro.</div>';const tasks=[...wfV8.tasks].reverse().filter(t=>!search||[t.code,t.location,t.reason,personNameV8(t.userId)].join(' ').toLowerCase().includes(search)).slice(0,40);$('wfTasksAdmin').innerHTML=tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>${wfEsc(t.code)} · ${wfEsc(t.location)}</strong><span class="wfStatus ${wfClass(t.status)}">${wfEsc(wfStatus(t.status))}</span></div><div class="wfMini">Operario: ${wfEsc(personNameV8(t.userId))} · ${wfFormatDate(t.createdAt)}<div>Motivo: ${wfEsc(t.reason)}</div>${t.response?`<div>Respuesta: código ${wfEsc(t.response.code)} · ${fmtQty(t.response.qty)} u · ${wfEsc(t.response.type==='MISSING'?'No encontrado':'Encontrado')} · ${wfFormatDate(t.response.at)}</div>`:''}</div><div class="wfActions">${t.status==='answered'?`<button class="primary wfActionSmall" onclick="approveTaskV8('${t.id}')">🔍 Verificar conteos</button>`:''}${['open','answered'].includes(t.status)?`<button class="danger wfActionSmall" onclick="cancelTaskV8('${t.id}')">Cancelar</button>`:''}</div></div>`).join(''):'<div class="wfEmpty">Sin solicitudes de reconteo.</div>';}
 function renderOperatorTasksV8(){const id=$('opUser').value;const tasks=wfV8.tasks.filter(t=>t.userId===id&&t.status==='open');$('opTasks').innerHTML=!id?'<div class="wfEmpty">Elige tu nombre para consultar los reconteos.</div>':tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>📍 ${wfEsc(t.location)} · ${wfEsc(t.code)}</strong><span class="wfStatus pending">Pendiente</span></div><div class="wfMini">${wfEsc(t.reason)} · Asignado ${wfFormatDate(t.createdAt)}</div><div class="wfFields" style="margin-top:10px"><label>Código observado<input id="taskCode_${t.id}" type="text" inputmode="numeric" autocapitalize="off" autocomplete="off" spellcheck="false" value="${wfEsc(t.code)}"/></label><label>Cantidad encontrada<input id="taskQty_${t.id}" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false"/></label><label class="wfWide">Resultado<select id="taskType_${t.id}"><option value="COUNT">Encontrado físicamente</option><option value="MISSING">No encontrado físicamente</option></select></label></div><div class="wfActions"><button class="primary wfActionSmall" onclick="answerTaskV8('${t.id}')">📨 Enviar reconteo</button></div></div>`).join(''):'<div class="wfEmpty">No tienes reconteos pendientes.</div>';const sessions=wfV8.sessions.filter(s=>s.userId===id).slice(-10).reverse();$('opMySessions').innerHTML=sessions.length?sessions.map(s=>`<div class="wfEntry"><div>📍 <strong>${wfEsc(s.location)}</strong><div class="wfMini">${s.entries.length} códigos · ${wfFormatDate(s.submittedAt)}</div></div><span class="wfStatus ${wfClass(s.status)}">${wfEsc(wfStatus(s.status))}</span></div>`).join(''):'<div class="wfEmpty">No hay conteos enviados por este operario.</div>';}
 function renderWorkflowV8(){renderUserSelectorsV8();renderOperatorDraftV8();renderAdminV8();renderOperatorTasksV8();}
 async function applyApprovedToComparisonV8(){const approved=wfV8.sessions.filter(s=>s.status==='approved');if(!approved.length)return perchadoAlert('No hay conteos aprobados.');if(!$('systemData').value.trim())return perchadoAlert('Carga la data del sistema en «Pegar datas» antes de comparar.');const current=new Map();for(const s of approved){const previous=current.get(s.location);if(!previous||new Date(s.reviewedAt||s.submittedAt)>=new Date(previous.reviewedAt||previous.submittedAt))current.set(s.location,s);}const rows=[];for(const s of current.values()){for(const e of s.entries){const corrected=wfV8.corrections[e.id]||e;rows.push([s.location,corrected.code,corrected.type==='MISSING'?0:corrected.qty].join('\t'));}}if(!rows.length)return perchadoAlert('No se encontraron registros en los conteos aprobados.');if(!await perchadoConfirm(`Integrar ${rows.length} líneas de ${current.size} ubicaciones aprobadas. Esto REEMPLAZARÁ el cuadro «Data operador» del análisis actual, sin borrar los originales de la bandeja. ¿Continuar?`))return;$('operatorData').value='Ubicación\tCódigo\tCantidad\n'+rows.join('\n');savePaste();compareData();wfStore('APROBADOS_INTEGRADOS',`${rows.length} líneas / ${current.size} ubicaciones`);renderWorkflowV8();openTab('results');toast('Conteos aprobados integrados al cruce (no modifica WMS)');}
@@ -2168,6 +2168,13 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const coll=group=>collection(db,...space,group);
  const ref=(group,id)=>doc(db,...space,group,String(id));
  let unsub=[],generation=0,seen=new Set(),errored=new Map(),listening=[];
+ let v58ScopedAudit=false;
+ async function v58CheckScope(){
+   try{const snap=await getDoc(ref('sharedAdmin','current'));
+     v58ScopedAudit=!!(snap.exists()&&Number(snap.data()?.v58ResetAt)>0);
+   }catch(e){v58ScopedAudit=false;console.warn('PERCHADO V59: consultas de compatibilidad activadas',e);}
+ }
+
  // V21: compartir una sola inicialización de Firebase Auth para que el chat
  // nunca inicie sus escuchas antes de recuperar o crear la sesión anónima.
  let anonymousLoginPromise=null;
@@ -2185,10 +2192,10 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  }
  const api={ready:true,connected:false,admin:false,lastError:'',onData:null,onStatus:null,
     async enterOperator(){
-      clearSubscriptions();await ensureAnonymous();api.admin=false;subscribe(false);return auth.currentUser;
+      clearSubscriptions();await ensureAnonymous();api.admin=false;await v58CheckScope();subscribe(false);return auth.currentUser;
     },
     async enterAdminView(){
-      clearSubscriptions();await ensureAnonymous();api.admin=true;subscribe(true);return auth.currentUser;
+      clearSubscriptions();await ensureAnonymous();api.admin=true;await v58CheckScope();subscribe(true);return auth.currentUser;
     },
     async getWebAdmin(username){
       await ensureAnonymous();const normalized=validateUsername(username);
@@ -2222,6 +2229,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         await updateDoc(ref(group,clean.id),{status:'answered',response:clean.response});return;
       }
       if(['operators','corrections'].includes(group)&&!api.admin)throw Error('Acción exclusiva de Administración.');
+      if(group==='corrections'&&v58ScopedAudit)clean.archived=false;
       await setDoc(ref(group,clean.id),clean);
     },
     async saveLive(data){
@@ -2356,7 +2364,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
      const rev=Number(old?.revision||0);
      if(rev!==Number(expectedRevision||0))throw Error('Otra computadora actualizó el WMS. Recarga antes de publicar para evitar sobreescribirlo.');
      const item={version,hash:String(wmsHash),length:data.length,chunks:total,revision:rev+1,
-       updatedAt:new Date().toISOString()};
+       updatedAt:new Date().toISOString(),...(Number(old?.v58ResetAt)>0?{v58ResetAt:old.v58ResetAt,v58ResetBy:old.v58ResetBy||''}:{})};
      tx.set(docRef,item);return item;
    });
    return published;
@@ -2369,8 +2377,37 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
    return runTransaction(db,async tx=>{
      const snap=await tx.get(docRef),rev=Number(snap.exists()?snap.data().revision:0)||0;
      if(rev!==Number(expectedRevision||0))throw Error('Otro administrador actualizó Ajustes. Actualiza la vista y revisa los movimientos antes de guardar.');
-     const newState={revision:rev+1,updatedAt:new Date().toISOString(),payload};
+     const previous=snap.exists()?snap.data():{};const newState={revision:rev+1,updatedAt:new Date().toISOString(),payload,...(Number(previous.v58ResetAt)>0?{v58ResetAt:previous.v58ResetAt,v58ResetBy:previous.v58ResetBy||''}:{})};
      tx.set(docRef,newState);return newState;
+   });
+ };
+ api.retainRecountEvidence=async function(ids){
+   await ensureAnonymous();if(!api.admin)throw Error('Requiere Administración.');
+   if(!Array.isArray(ids)||ids.some(id=>!id||typeof id!=='string'))throw Error('Referencias de reconteo inválidas.');
+   const distinct=[...new Set(ids)];
+   // No se reescriben datos del reconteo ni del conteo, sólo su marca de visibilidad.
+   let done=0;
+   for(let i=0;i<distinct.length;i+=150){
+     const batch=writeBatch(db);
+     for(const id of distinct.slice(i,i+150))batch.update(ref('corrections',id),{archived:false,v59KeepRecount:true});
+     await batch.commit();done+=Math.min(150,distinct.length-i);
+   }
+   return done;
+ };
+ api.resetAdministrativeWorkspace=async function(expectedAdminRev,expectedWmsRev,actor){
+   await ensureAnonymous();if(!api.admin)throw Error('Acceso administrativo requerido.');
+   const adminRef=ref('sharedAdmin','current'),wmsRef=ref('sharedWms','current');
+   return runTransaction(db,async tx=>{
+     const a=await tx.get(adminRef),w=await tx.get(wmsRef);
+     const aRev=Number(a.exists()?a.data().revision:0)||0;
+     const wRev=Number(w.exists()?w.data().revision:0)||0;
+     if(aRev!==Number(expectedAdminRev||0)||wRev!==Number(expectedWmsRev||0))
+       throw Error('Otro equipo actualizó Ajustes o WMS. No se reinició nada de estos documentos; actualiza y comprueba antes de reintentar.');
+     const now=Date.now(),by=String(actor||'Administración').slice(0,90);
+     const stamp={v58ResetAt:now,v58ResetBy:by};
+     tx.set(adminRef,{revision:aRev+1,updatedAt:new Date(now).toISOString(),payload:null,...stamp});
+     tx.set(wmsRef,{revision:wRev+1,version:'',hash:'',length:0,chunks:0,updatedAt:new Date(now).toISOString(),...stamp});
+     return {...stamp,adminRevision:aRev+1,wmsRevision:wRev+1};
    });
  };
  function validateUsername(u){const x=String(u||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9._-]{2,34}$/.test(x))throw Error('Usuario inválido: 3–35 caracteres, sin tildes ni espacios.');return x;}
@@ -2389,7 +2426,11 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     for(const group of listening){
       const requested=(group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
                       (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):
-                      (group==='liveCounts'&&admin)?query(coll(group),where('status','==','counting')):coll(group);
+                      (group==='liveCounts'&&admin)?query(coll(group),where('status','==','counting')):
+                      (admin&&group==='sessions')?query(coll(group),where('status','in',['pending','approved','rejected'])):
+                      (admin&&group==='tasks')?query(coll(group),where('status','in',['open','answered','closed','cancelled'])):
+                      (v58ScopedAudit&&group==='corrections')?query(coll(group),where('archived','==',false)):
+                      coll(group);
       unsub.push(onSnapshot(requested,{includeMetadataChanges:true},snapshot=>{
         if(stamp!==generation)return;
         const firstSnapshot=!seen.has(group);
@@ -3501,7 +3542,7 @@ const v24BeforeCloud=setCloudDataV9;
 setCloudDataV9=function(group,docs){
  if(group==='corrections'){
   const marker=(docs||[]).find(x=>x?.id===v24ResetKey&&x.kind==='v24_reset_marker');
-  const stamp=Number(marker?.resetTime||0);
+  const stamp=marker?.archived===true?0:Number(marker?.resetTime||0);
   const seen=Number(localStorage.getItem(v24SeenKey)||0);
   if(stamp>seen){v24ClearLocal(stamp);v24Status('La auditoría fue reiniciada desde Administración.');}
  }
@@ -6995,6 +7036,206 @@ v47SaveMissing=v57GuardCreate(v57PreviousSaveMissing,(loc,code)=>({
  code,from:loc,to:document.querySelector('input[name="v47MissingDest"]:checked')?.value||v47MissingDrafts.get(v47MissingKey(loc,code))?.to,
  qty:v13Amount(document.getElementById('v47MissingQty')?.value)
 }));
+</script>
+
+<!-- PERCHADO V59 · reinicio selectivo y preservación de conteos -->
+<style id="perchado-v58-css">
+.v58BoundedNote{font-size:11px;font-weight:500;color:#647b75}
+#v58Overlay[hidden]{display:none!important}
+#v58Overlay{z-index:140000}
+#v58Overlay .v23Dialog{max-width:635px}
+.v58Summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}
+.v58Summary>div{background:#effbf7;border:1px solid #bde4d9;border-radius:11px;padding:10px}
+.v58Summary strong{display:block;font-size:23px;color:#075a4e}
+.v58Summary small{display:block;font-size:11px;color:#56756c}
+.v58Keep{background:#e9fcf2;border:1px solid #a7ddc7;border-radius:10px;padding:11px;margin:10px 0;color:#075a42;line-height:1.45;font-size:13px}
+.v58Remove{background:#fff6e8;border:1px solid #efca98;border-radius:10px;padding:11px;margin:10px 0;color:#80500b;line-height:1.45;font-size:13px}
+.v58Notice{color:#526c65;font-size:12px;line-height:1.5;margin:10px 0}
+.v58BackupBtn{border:1px solid #84cdb9;background:#e5f9ef;color:#006c53}
+#v58Overlay .v58Check{display:flex;align-items:center;gap:9px;font-size:12px;margin:12px 0;line-height:1.45}
+#v58Overlay .v58Check input{width:19px;min-height:19px;height:19px;flex:none;margin:0}
+#v58ResetStatus{font-size:12px;font-weight:750;color:#95520c;margin-top:10px;line-height:1.5}
+@media(max-width:530px){.v58Summary{grid-template-columns:1fr 1fr}}
+</style>
+<script id="perchado-v58-selective-reset">
+'use strict';
+/* Este reinicio jamás archiva ni borra `sessions` o `liveCounts`. Guardar copia previamente.
+   Firebase permite escrituras anónimas según reglas actuales: esto NO es autorización de servidor. */
+const V58_LOCAL_KEY='perchado_v59_last_selective_reset';
+let v58Busy=false,v58LastApplied=Number(localStorage.getItem(V58_LOCAL_KEY)||0),v58BackupRequested=false;
+function v59KeepCorrection(x){
+ if(!x||!x.id||x.archived===true)return false;
+ // La evidencia del reconteo se relaciona por taskId, source o entryId.
+ const taskIds=new Set((wfV8.tasks||[]).map(t=>String(t.id)));
+ const entryIds=new Set((wfV8.tasks||[]).map(t=>String(t.entryId||'')).filter(Boolean));
+ if(entryIds.has(String(x.id)))return true;
+ if(x.taskId&&taskIds.has(String(x.taskId)))return true;
+ if(String(x.source||'').startsWith('task:')&&taskIds.has(String(x.source).slice(5)))return true;
+ // Las líneas retiradas por administración siguen siendo parte de la evidencia del conteo original.
+ if(x.kind==='admin_removed_entry'||String(x.id).startsWith('v29_void_'))return true;
+ // Los sobrantes y ajustes de ubicación NO se conservan: deben recalcularse con el WMS nuevo.
+ return false;
+}
+function v58Plan(){
+ const valid=x=>x&&x.id&&x.status!=='archived';
+ const corrections=Object.values(wfV8.corrections||{}).filter(x=>x?.id&&x.archived!==true);
+ return {sessions:(wfV8.sessions||[]).filter(valid).length,
+   sessionLines:(wfV8.sessions||[]).filter(valid).reduce((n,s)=>n+(s.entries||[]).length,0),
+   live:(lastLiveV9||[]).filter(x=>x.status==='counting').length,
+   tasks:(wfV8.tasks||[]).filter(valid).map(x=>String(x.id)),
+   keepCorrections:corrections.filter(v59KeepCorrection).map(x=>String(x.id)),
+   corrections:corrections.filter(x=>!v59KeepCorrection(x)).map(x=>String(x.id))};
+}
+function v58Status(message){const node=document.getElementById('v58ResetStatus');if(node)node.textContent=String(message||'');const admin=document.getElementById('v24ResetStatus');if(admin)admin.textContent=String(message||'');}
+function v58BeginReset(){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v58Busy)return;
+ if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9.connected){
+  return perchadoAlert('El reinicio global requiere Firebase confirmado. No se ha modificado ningún dato.');
+ }
+ if(!v37Audit.stateReady||v37Audit.wmsLoading||v52Sending||v54Booting||v54PendingOps){
+  return perchadoAlert('Hay sincronización o guardado en proceso. Comprueba los cambios pendientes y reintenta antes de reiniciar.');
+ }
+ if(v52Draft||v52Conflict||v52Error){
+  return perchadoAlert('Hay ajustes pendientes o un conflicto de Firebase. Descarga un respaldo de Ajustes y resuelve la sincronización antes de reiniciar.');
+ }
+ if(typeof cloudV9.resetAdministrativeWorkspace!=='function'||typeof cloudV9.archiveAuditRecords!=='function'||typeof cloudV9.retainRecountEvidence!=='function'){
+  return perchadoAlert('El módulo de reinicio selectivo no está listo en esta computadora.');
+ }
+ const plan=v58Plan();v58BackupRequested=false;
+ document.getElementById('v58Overlay')?.remove();
+ const overlay=document.createElement('div');overlay.id='v58Overlay';overlay.className='v23Overlay';
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+ overlay.setAttribute('aria-label','Reiniciar ajustes conservando conteos y reconteos');
+ overlay.innerHTML=`<div class="v23Dialog">
+  <h3>🧹 Reiniciar ajustes y WMS sin borrar conteos ni reconteos</h3>
+  <div class="v58Summary"><div><strong>${plan.sessions}</strong><small>Conteos guardados</small></div><div><strong>${plan.sessionLines}</strong><small>Líneas de operarios</small></div><div><strong>${plan.tasks.length}</strong><small>Reconteos conservados</small></div></div>
+  <div class="v58Keep"><b>SE CONSERVAN:</b> todos los conteos originales, <b>todos los reconteos</b> (abiertos, asignados, respondidos, aprobados, cerrados y cancelados), sus respuestas y correcciones validadas, capturas en curso, operarios, cuentas de Administración y chat.</div>
+  <div class="v58Remove"><b>SE REINICIAN:</b> base WMS compartida, ajustes y movimientos (incluidos duplicados), decisiones, novedades, cierres de ubicaciones, catálogo anterior y <b>${plan.corrections.length} registros administrativos</b> de la operación activa. Los reconteos <b>NO se archivan</b>. En Firebase se <b>archivan</b> los registros; no se destruye la evidencia histórica.</div>
+  <p class="v58Notice">Los conteos y reconteos permanecen disponibles para volver a comparar con un WMS nuevo. Todos deben utilizar esta versión: una pestaña antigua puede producir datos inconsistentes. Detén nuevos ajustes durante el reinicio.</p>
+  <button type="button" class="v58BackupBtn" id="v58BackupButton" onclick="v58DownloadBackup()">⬇️ Descargar respaldo completo antes del reinicio</button>
+  <label class="v58Check"><input type="checkbox" id="v58BackupOk" onchange="v58Validate()"> Ya descargué y guardé el archivo de respaldo.</label>
+  <label>Escribe <b>CONSERVAR CONTEOS Y RECONTEOS</b> para habilitar el reinicio
+    <input id="v58ResetPhrase" placeholder="CONSERVAR CONTEOS Y RECONTEOS" autocomplete="off" spellcheck="false" oninput="v58Validate()"></label>
+  <div id="v58ResetStatus" role="status" aria-live="polite"></div>
+  <div class="v23DialogActions"><button type="button" class="secondary" onclick="v58CloseReset()">Cancelar</button>
+   <button id="v58ResetConfirm" class="v23Confirm" type="button" onclick="v58ExecuteReset()" disabled>Reiniciar sin borrar conteos/reconteos</button></div>
+ </div>`;
+ document.body.appendChild(overlay);
+ overlay.addEventListener('click',e=>{if(e.target===overlay)v58CloseReset();});
+ document.getElementById('v58ResetPhrase')?.focus();
+}
+function v58CloseReset(){if(!v58Busy)document.getElementById('v58Overlay')?.remove();}
+function v58Validate(){const node=document.getElementById('v58ResetConfirm');if(node)node.disabled=!(v58BackupRequested&&document.getElementById('v58BackupOk')?.checked&&document.getElementById('v58ResetPhrase')?.value.trim()==='CONSERVAR CONTEOS Y RECONTEOS');}
+function v58DownloadBackup(){
+ if(!adminAccessV9)return;
+ const backup={app:'PERCHADO',version:59,type:'respaldo_previo_reinicio_selectivo',createdAt:new Date().toISOString(),
+  project:'oriflame-picking',users:wfV8.users,sessions:wfV8.sessions,tasks:wfV8.tasks,
+  corrections:wfV8.corrections,events:wfV8.events,
+  operatorDraft:{items:draftV8,context:draftContextV8},
+  localDraftStored:(()=>{try{return JSON.parse(localStorage.getItem('perchado_v9_draft')||'null');}catch{return null;}})(),
+  liveCounts:lastLiveV9,
+  wms:document.getElementById('systemData')?.value||'',
+  operatorData:document.getElementById('operatorData')?.value||'',
+  adminDecisions:v52BackupContents(),
+  locationClosures:[...v18Squares.entries()],
+  remoteRevisions:{admin:v37Audit.stateRevision,wms:v37Audit.manifest?.revision||0}};
+ try{
+  const data=JSON.stringify(backup);
+  const blob=new Blob([data],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');anchor.href=url;anchor.download='PERCHADO_RESPALDO_TOTAL_ANTES_REINICIO_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
+  document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  v58BackupRequested=true;v58Status('Respaldo descargado ('+(blob.size/1024/1024).toFixed(2)+' MB). Verifica el archivo antes de continuar.');v58Validate();
+ }catch(e){v58Status('No se pudo generar el respaldo: '+(e.message||e));}
+}
+async function v58ClearAdminLocal(stamp,remoteRevision){
+ if(!stamp||stamp<=v58LastApplied)return;
+ v58LastApplied=stamp;
+ // Eliminar temporizadores para que NO se republiquen borradores previos al reinicio.
+ for(const t of [v37Audit.timer,v52Timer,v19RefreshTimer,v51PassiveTimer,v51AnalysisTimer])if(t)clearTimeout(t);
+ v37Audit.timer=null;v52Timer=null;
+ v52Draft=null;v52ColdPending=false;v52Conflict=false;v52Error='';v52RecentSaved=false;
+ v52RetryDelay=1500;v37Audit.applying=true;
+ try{
+  // Sólo claves administrativas. Se dejan intocadas perchado_v9_draft,
+  // WF_V8_KEY y los campos de captura parcial del operario.
+  const adminKeys=['perchadoAuditOperator','perchadoAuditSystem','perchadoAuditMaster',
+    'perchadoAuditDecisionsV5','perchadoAuditDecisionsV6','perchadoAuditDecisionsV7',
+    'perchado_v18_prior_decisions','perchado_v18_catalog','perchado_v18_closed_squares',
+    'perchado_v33_wms_ledger','perchado_v52_pending_admin_v1','perchado_v52_previo_v51',
+    'perchado_v26_pending_catalog'];
+  for(const key of adminKeys){try{localStorage.removeItem(key);}catch(e){console.warn('Respaldo antiguo no borrado',key,e);}}
+  try{await v54PersistTail.catch(()=>{});await v54DbAction(V52_DRAFT_KEY,null,'delete');}catch(e){console.warn('No se limpió borrador IDB',e);}
+  try{localStorage.setItem(V58_LOCAL_KEY,String(stamp));}catch(e){console.warn('No se guardó marca de reinicio',e);}
+  // Preservar íntegramente sessions, tasks, sus correcciones y las evidencias locales.
+  wfV8.corrections=Object.fromEntries(Object.entries(wfV8.corrections||{}).filter(([,x])=>v59KeepCorrection(x)));
+  wfV8.events=(wfV8.events||[]).filter(e=>/^(CONTEO_|RECONTEO_)/.test(String(e.event||'')));
+  try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));}catch(e){console.warn('La caché local está llena; Firebase mantiene los conteos y reconteos',e);}
+  for(const id of ['operatorData','systemData','masterData']){const node=document.getElementById(id);if(node)node.value='';}
+  allSystemRows=[];results=[];parsedErrors=[];hasCompared=false;sourceDirty=false;currentSignature='';
+  auditScope={mappedLocations:[],operatorTotal:0,systemTotal:0,systemFiltered:0,invalidOperatorLocations:0};
+  confirmations=new Set();approvedMatches=[];resolutions=[];proposals=[];
+  reviews=new Set();verifiedMissing=new Set();masterLocations=[];openLocations=new Set();
+  manualTransfersV9=[];window.perchadoV9Moves=manualTransfersV9;
+  v18Squares.clear();v33Ledger=[];v12Panel={kind:'',loc:'',code:''};
+  v37Audit.manifest=null;v37Audit.loadedWms='';v37Audit.wmsLoading=false;v37Audit.localEdit=false;
+  v37Audit.remote=null;v37Audit.lastStateText='';v37Audit.stateReady=true;
+  if(remoteRevision!=null)v37Audit.stateRevision=Number(remoteRevision);
+  v35LastSystemText=null;v35SystemRows=null;v35Catalog=null;
+  if(typeof v56InvalidateSearch==='function')v56InvalidateSearch();
+  if(typeof v57GroupMemo!=='undefined')v57GroupMemo=null;
+  try{closeDrawer();}catch(e){}
+  try{renderUserSelectorsV8();renderWorkflowV8();renderAll();updateMappedBadge(0);}catch(e){console.error('Actualización visual tras reinicio',e);}
+ }finally{v37Audit.applying=false;v52Status();}
+}
+async function v58ExecuteReset(){
+ if(!adminAccessV9||v58Busy||!v58BackupRequested||!document.getElementById('v58BackupOk')?.checked||document.getElementById('v58ResetPhrase')?.value.trim()!=='CONSERVAR CONTEOS Y RECONTEOS')return;
+ if(!cloudV9?.ready||!cloudV9?.connected||v52Draft||v52Sending||v52Conflict||v54PendingOps){
+  return v58Status('Firebase no está confirmado o existe un ajuste sin sincronizar. No se inició el reinicio.');
+ }
+ v58Busy=true;const plan=v58Plan(),btn=document.getElementById('v58ResetConfirm');
+ if(btn){btn.disabled=true;btn.textContent='Reiniciando…';}
+ try{
+  v58Status('Protegiendo correcciones de reconteos y evidencia de conteos…');
+  await cloudV9.retainRecountEvidence(plan.keepCorrections);
+  v58Status('Archivando sólo correcciones administrativas. Conteos y reconteos no se tocan…');
+  // Requisito incondicional: ni una sesión ni una tarea de reconteo se archivan.
+  await cloudV9.archiveAuditRecords({sessions:[],tasks:[],corrections:plan.corrections},adminIdentityV9||'Administración');
+  v58Status('Reiniciando ajustes y base WMS compartida…');
+  const outcome=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración');
+  await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
+  document.getElementById('v58Overlay')?.remove();
+  v58Status('Reinicio administrativo finalizado. '+plan.sessions+' conteos, '+plan.tasks.length+' reconteos y '+plan.sessionLines+' líneas conservados. Carga y publica un nuevo WMS.');
+  perchadoAlert('Reinicio finalizado. Los conteos, reconteos y capturas de los operarios permanecen. Las propuestas WMS anteriores ya no son activas. Publica una nueva base WMS para comenzar.');
+  // Tras el reinicio, la escucha de correcciones seleccionará sólo documentos NO archivados.
+  if(adminAccessV9&&cloudV9?.ready){try{await cloudV9.enterAdminView();}catch(e){v58Status('Reiniciado, pero no se pudo refrescar la consulta: '+e.message);}}
+ }catch(e){v58Status('Reinicio incompleto: '+String(e?.message||e)+'. No repitas la acción sin comprobar el respaldo y la nube. Los conteos y reconteos no fueron archivados por este procedimiento.');perchadoAlert('No se completó el reinicio selectivo: '+String(e?.message||e));}
+ finally{v58Busy=false;if(btn)btn.textContent='Reiniciar sin borrar conteos/reconteos';}
+}
+// El reinicio global antiguo queda bloqueado para proteger evidencias de los operarios.
+v24BeginReset=function(){v58BeginReset();};
+v24ExecuteReset=async function(){perchadoAlert('Reinicio anterior deshabilitado. Usa Reiniciar ajustes y WMS para conservar los conteos y reconteos.');};
+// El reinicio compartido se propaga a otros equipos V59 sin tocar capturas, conteos ni reconteos.
+const v58PriorOnWms=v37OnWms;
+v37OnWms=async function(manifest){
+ if(Number(manifest?.v58ResetAt)>0&&!manifest?.version){
+  await v58ClearAdminLocal(Number(manifest.v58ResetAt));
+  v37Audit.manifest=null;
+  v37Status('☁ Auditoría reiniciada: carga un nuevo WMS; conteos y reconteos conservados.');
+  return;
+ }
+ return v58PriorOnWms.call(this,manifest);
+};
+const v58PriorOnState=v37OnSharedState;
+v37OnSharedState=function(doc){
+ if(Number(doc?.v58ResetAt)>0&&!doc?.payload){
+  void v58ClearAdminLocal(Number(doc.v58ResetAt),doc.revision);
+  v37Audit.stateRevision=Number(doc.revision||0);
+  v37Audit.remote=doc;v37Audit.stateReady=true;
+  return;
+ }
+ return v58PriorOnState.call(this,doc);
+};
 </script>
 
 </body>
