@@ -422,9 +422,55 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 .v46OriginHint{font-size:12px;color:#476f66;margin:5px 0 0}
 @media(max-width:700px){.v46Origins{grid-template-columns:1fr}.v46OriginChoice{padding:11px}}
 </style>
+<style id="perchado-v47-panel-compacto">
+/* V47: panel junto al código, menor altura. Sin mover la página ni duplicar información. */
+#issuesLocations tr.v47ActionRow>td,#settledLocations tr.v47ActionRow>td{padding:0 5px!important}
+#issuesLocations .v47CompactPanel,#settledLocations .v47CompactPanel{
+  display:block;min-width:0;margin:3px 1px 8px;padding:9px 11px;
+  background:#f7fffd;border:1px solid #a6dcd0;border-left:3px solid #09a38c;
+  border-radius:10px;box-shadow:0 2px 10px rgba(20,105,89,.05);
+}
+.v47PanelHead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:9px;font-size:12px;color:#215e53}
+.v47PanelHead>b{font-size:13px;color:#075d52}
+.v47PanelHead>span:not(.v47Balance){color:#557b71}
+.v47Balance{border-radius:7px;padding:3px 7px;font-weight:750;color:#126b59;background:#e2f8ee}
+.v47Close{margin-left:auto!important;padding:2px 8px!important;width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;line-height:1!important;font-size:20px!important;border:1px solid #cde5df!important;border-radius:7px!important;color:#52736a!important;background:#fff!important}
+.v47MovementGrid{display:grid;grid-template-columns:minmax(260px,1.7fr) minmax(135px,.82fr) minmax(94px,.43fr) auto;gap:10px;align-items:end;min-width:0}
+.v47FieldName{font-size:11px;font-weight:750;color:#26675a;margin-bottom:4px}
+.v47MovementGrid label.v47Dest,.v47MovementGrid label.v47Qty{display:flex;flex-direction:column;gap:4px;min-width:0;margin:0!important;font-size:11px!important;font-weight:750;color:#26675a}
+.v47MovementGrid .v47Dest input,.v47MovementGrid .v47Qty input{margin:0!important;min-width:0;height:36px!important;min-height:36px!important;padding:5px 8px!important;font-size:13px!important;border-radius:8px!important}
+.v47MovementGrid .v47Dest input{background:#eef8f5!important;color:#195e53}
+.v47OriginList{margin:0!important;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,175px),1fr));gap:5px;max-height:112px;overflow-y:auto;overscroll-behavior:contain;padding:1px 2px 1px 1px}
+.v47OriginList .v46OriginChoice{min-width:0;padding:7px 9px!important;align-items:center;gap:7px;border-radius:8px}
+.v47OriginList .v46OriginCopy{gap:1px}
+.v47OriginList .v46OriginCopy strong{font-size:11px}
+.v47OriginList .v46OriginCopy small{font-size:10px;line-height:1.3}
+.v47Submit{margin:0!important;min-height:36px!important;height:36px;padding:5px 11px!important;white-space:nowrap;font-size:12px!important;align-self:end}
+#issuesLocations .v47CompactPanel .v47SourceInfo,#settledLocations .v47CompactPanel .v47SourceInfo{margin:6px 0 0;padding:5px 8px;font-size:10px;line-height:1.4;border-radius:7px}
+.v47Fallback{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.v47Fallback .v38Banner{flex:1 1 250px}
+@media(max-width:1080px){.v47MovementGrid{grid-template-columns:minmax(210px,1.4fr) minmax(130px,1fr) minmax(85px,.5fr)}.v47Submit{grid-column:1/-1;justify-self:start}.v47OriginList{max-height:105px}}
+@media(max-width:660px){.v47MovementGrid{grid-template-columns:minmax(0,1fr) minmax(88px,.48fr);gap:8px}.v47SourceArea{grid-column:1/-1}.v47Submit{grid-column:1/-1;justify-self:stretch}.v47PanelHead{gap:5px}.v47OriginList{max-height:134px}.v47CompactPanel{padding:8px!important}}
+</style>
+<style id="perchado-v47-final-compact-missing">
+/* Solo avisos operativos relevantes. La explicación extensa se muestra al confirmar. */
+.v47SrHint{display:none!important}
+.v47MissingDestChoices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:5px;max-height:108px;overflow:auto;min-width:0;overscroll-behavior:contain}
+.v47MissingChoice{display:flex;gap:7px;align-items:center;padding:6px 8px;border:1px solid #c7e7df;background:#fff;border-radius:8px;cursor:pointer;min-width:0;line-height:1.25;color:#195b50}
+.v47MissingChoice:has(input:checked){border-color:#0a9886;background:#def7f0;box-shadow:inset 3px 0 #0a9886}
+.v47MissingChoice input{width:16px;height:16px;flex:0 0 auto;accent-color:#088b77;margin:0}
+.v47MissingChoice span{font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.v47MissingChoice small{font-size:10px;font-weight:500;color:#628178;display:block}
+.v47MissingChoice.cw{background:#f3f7fa}
+.v47MissingChoice.cw:has(input:checked){background:#e5f5f3}
+.v47MissingPanel .v47PanelHead{margin-bottom:7px}
+.v47MissingPanel .v47MovementGrid{grid-template-columns:minmax(240px,1.7fr) minmax(135px,.83fr) minmax(90px,.4fr) auto}
+.v47MissingPanel .v47SourceArea{min-width:0}
+@media(max-width:1080px){.v47MissingPanel .v47MovementGrid{grid-template-columns:minmax(210px,1.5fr) minmax(120px,1fr) minmax(86px,.45fr)}.v47MissingPanel .v47Submit{grid-column:1/-1}}
+@media(max-width:660px){.v47MissingPanel .v47MovementGrid{grid-template-columns:minmax(0,1fr) minmax(88px,.5fr)}.v47MissingPanel .v47SourceArea{grid-column:1/-1}.v47MissingPanel .v47Submit{grid-column:1/-1}}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V46</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V47</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -5155,17 +5201,20 @@ v12Inline=function(loc,code){
  const r=v13Row(loc,code),qty=r?Math.max(0,remaining(r)):0;
  const args=v15Arg(loc)+','+v15Arg(code),sources=v38Sources(code,loc),confirmed=v15Confirmed(loc,code),verified=v17Verified(loc,code);
  const v46Selection=v46OriginState(loc,code,sources);
- const close=`<div class="v12Actions"><button type="button" class="secondary mini" onclick="v12CancelPanel()">Cerrar</button></div>`;
- const content=(!confirmed&&!verified)?`<div class="v38Banner">Primero valida el reconteo y registra el sobrante físico antes de proponer movimientos.</div><button class="secondary mini" onclick='v17OpenVerification(${args})'>✓ Verificar cantidad</button>`:
- `<div class="v38Panel"><b>↔ Regularizar sobrante · ${wfEsc(code)}</b><p style="font-size:12px">Ubicación con sobrante: <b>${wfEsc(loc)}</b> · Pendiente: <b>+${fmtQty(qty)} u</b></p>`+
- (sources.length?`<div><span style="font-size:12px;font-weight:750;color:#245951">Desde ubicación con stock WMS</span><div class="v46Origins" role="radiogroup" aria-label="Seleccionar origen WMS">${sources.map(src=>`<label class="v46OriginChoice"><input type="radio" name="v46Origin" value="${wfEsc(src.loc)}" ${v46Selection.src?.loc===src.loc?'checked':''} onchange='v46ChooseOrigin(${args})'/><span class="v46OriginCopy"><strong>${src.isCW?'♻ ': '📍 '}${wfEsc(src.loc)} · ${fmtQty(src.available)} u libres</strong><small>${wfEsc(src.status)}</small></span></label>`).join('')}</div><div class="v46OriginHint">Selecciona directamente el origen. Se permite uno sin conteo físico.</div></div>`+
- `<label>Hasta ubicación<input value="${wfEsc(loc)}" readonly></label><label>Cantidad del movimiento<input type="number" min="1" step="any" inputmode="decimal" id="v38Qty" max="${v46Selection.limit}" oninput='v46RememberQty(${args})' value="${wfEsc(v46Selection.qty)}"/></label>`+
- `<div class="v45OriginHelp">Puedes elegir cualquier ubicación con stock WMS de este código. Procesos_CW se recomienda primero; otras ubicaciones pueden generar nuevas diferencias y requieren tu autorización.</div>`+
- `<div id="v38SourceInfo" class="v38Preview">${v46Selection.src.isCW?'♻ Recuperación recomendada desde Procesos_CW':v46Selection.src.unchecked?'⚠ Origen sin conteo físico, autorizado por Administración':v46Selection.src.checkedWithoutDeficit?'⚠ Origen sin faltante: verifica el impacto':'Origen con faltante físico'} · WMS libre ${fmtQty(v46Selection.src.available)} u.</div>`+
- `<button type="button" class="primary mini v38Action" onclick='v38SaveTransfer(${args})'>✓ Registrar movimiento en Ajustes</button>`:
- `<div class="v38Banner">No hay stock WMS del código en otras ubicaciones. Registra un sobrante confirmado sin traslado para su ajuste positivo.</div><button class="primary mini" onclick='v38Positive(${args})'>＋ Registrar ajuste positivo</button>`)+
- `</div>`;
- return `<tr class="v12ActionRow"><td colspan="7"><div class="v12InlinePanel">${content}${close}</div></td></tr>`;
+ const header=`<div class="v47PanelHead"><b>↔ Sobrante · ${wfEsc(code)}</b><span>📍 ${wfEsc(loc)}</span><span class="v47Balance">+${fmtQty(qty)} u por regularizar</span><button type="button" class="v47Close" onclick="v12CancelPanel()" aria-label="Cerrar formulario">×</button></div>`;
+ let body='';
+ if(!confirmed&&!verified){
+  body=`<div class="v38Banner">Primero registra o valida la cantidad física de este código.</div><button type="button" class="secondary mini" onclick='v17OpenVerification(${args})'>Revisar cantidad</button>`;
+ }else if(sources.length){
+  body=`<div class="v47MovementGrid"><section class="v47SourceArea"><div class="v47FieldName">Desde ubicación con stock WMS</div><div class="v46Origins v47OriginList" role="radiogroup" aria-label="Seleccionar origen WMS">${sources.map(src=>`<label class="v46OriginChoice"><input type="radio" name="v46Origin" value="${wfEsc(src.loc)}" ${v46Selection.src?.loc===src.loc?'checked':''} onchange='v46ChooseOrigin(${args})'/><span class="v46OriginCopy"><strong>${src.isCW?'♻ ': '📍 '}${wfEsc(src.loc)} · ${fmtQty(src.available)} u</strong><small>${wfEsc(src.status)}</small></span></label>`).join('')}</div></section>`+
+  `<label class="v47Dest">Hasta ubicación<input value="${wfEsc(loc)}" readonly aria-label="Destino WMS"/></label>`+
+  `<label class="v47Qty">Cantidad<input type="number" min="1" step="any" inputmode="decimal" id="v38Qty" max="${v46Selection.limit}" oninput='v46RememberQty(${args})' value="${wfEsc(v46Selection.qty)}"/></label>`+
+  `<button type="button" class="primary mini v38Action v47Submit" onclick='v38SaveTransfer(${args})'>✓ Registrar en Ajustes</button></div>`+
+  `<span id="v38SourceInfo" class="v47SrHint" role="status" aria-live="polite"></span>`;
+ }else{
+  body=`<div class="v47Fallback"><button type="button" class="primary mini" onclick='v38Positive(${args})'>＋ Ajuste positivo</button></div>`;
+ }
+ return `<tr class="v12ActionRow v47ActionRow"><td colspan="7"><div class="v12InlinePanel v47CompactPanel">${header}${body}</div></td></tr>`;
 };
 async function v38SaveTransfer(loc,code){
  if(!adminAccessV9||sourceDirty||!hasCompared)return;
@@ -5695,6 +5744,113 @@ else v42PrepareLocations();
   }
   if(typeof v42PrepareLocations==='function')v42PrepareLocations();
 })();
+</script>
+<script id="perchado-v47-sin-salto-scroll">
+'use strict';
+// V47: reemplaza exclusivamente el salto de v12Choose; no altera las reglas de conteo/WMS.
+v12Choose=function(kind,loc,code){
+ if(!adminAccessV9)return showAdminGateV9();
+ const focused=document.activeElement?.closest?.('tr');
+ const validFocus=focused && !focused.classList.contains('v12ActionRow') && focused.closest('#issuesLocations,#settledLocations,#squaredLocations');
+ const beforeTop=validFocus?focused.getBoundingClientRect().top:null;
+ const beforeScroll=window.scrollY;
+ const oldContainer=validFocus?focused.closest('.locCard'):null;
+ const oldIndex=oldContainer?Array.from(oldContainer.querySelectorAll('.locTable tbody>tr:not(.v12ActionRow)')).indexOf(focused):-1;
+ v12Panel=v12Panel.kind===kind&&v12Panel.loc===loc&&v12Panel.code===code?{kind:'',loc:'',code:''}:{kind,loc,code};
+ if(kind==='move')transferTargetV9={code,location:loc};
+ openLocations.add(loc);
+ renderLocations();
+ // Mantener la fila de trabajo en su posición; no usar scrollIntoView() ni animación.
+ if(beforeTop!==null&&oldIndex>=0){
+  const container=Array.from(document.querySelectorAll('#issuesLocations .locCard,#settledLocations .locCard,#squaredLocations .locCard')).find(card=>card.querySelector('.fullLoc')?.textContent.trim()===String(loc));
+  const row=container?.querySelectorAll('.locTable tbody>tr:not(.v12ActionRow)')[oldIndex];
+  if(row){const delta=row.getBoundingClientRect().top-beforeTop;if(Math.abs(delta)>1)window.scrollTo({top:window.scrollY+delta,behavior:'instant'});return;}
+ }
+ if(Math.abs(window.scrollY-beforeScroll)>1)window.scrollTo({top:beforeScroll,behavior:'instant'});
+};
+</script>
+<script id="perchado-v47-faltantes-y-sobrantes">
+'use strict';
+// Mostrar conciliación de faltantes en la misma fila, no obligar a Procesos_CW.
+const v47EarlierCodeButtons=v19CodeButtons;
+v19CodeButtons=function(loc,code){
+ const output=v47EarlierCodeButtons.apply(this,arguments),r=v13Row(loc,code);
+ if(!r||remaining(r)>=0)return output;
+ const a=v15Arg(loc)+','+v15Arg(code);
+ return output.replace(/onclick='v19SendMissing\([^']+\)'/g,`onclick='v12Choose("missingTransfer",${a})'`)
+  .replace(/>↪ Procesos_CW<\/button>/g,'>↔ Resolver faltante</button>');
+};
+const v47MissingDrafts=new Map();
+function v47MissingKey(loc,code){return String(loc)+'||'+String(code);}
+function v47MissingDestinations(loc,code){
+ const options=new Map();
+ for(const r of results){
+  if(!v38SameCode(r.codigo,code)||r.ubicacionNormalizada===loc||!r.locValid)continue;
+  const dest=r.ubicacionNormalizada;
+  if(dest===PROCESS_LOCATION||!v13ValidLocation(dest)||v13HasPendingRecount(dest,code))continue;
+  if(r.duplicado&&!v13DupApproved(r))continue;
+  if(!r.hasOperator&&!v40Ready(dest,code))continue;
+  const surplus=Math.max(0,Number(remaining(r)));
+  if(surplus>0.000001)options.set(dest,{loc:dest,available:surplus,isCW:false});
+ }
+ const list=[...options.values()].sort((a,b)=>b.available-a.available||a.loc.localeCompare(b.loc,undefined,{numeric:true}));
+ if(v13ValidLocation(PROCESS_LOCATION)&&loc!==PROCESS_LOCATION)
+  list.push({loc:PROCESS_LOCATION,available:Infinity,isCW:true});
+ return list;
+}
+function v47MissingState(loc,code){
+ const opts=v47MissingDestinations(loc,code),r=v13Row(loc,code);
+ const shortage=Math.max(0,r?-remaining(r):0),free=Math.max(0,v13ForCode(code,loc)-v38Committed(code,loc));
+ const saved=v47MissingDrafts.get(v47MissingKey(loc,code));
+ const dest=opts.find(x=>x.loc===saved?.to)||opts[0]||null;
+ const max=dest?Math.min(shortage,free,dest.available):0;
+ const qty=saved?.to===dest?.loc?saved.qty:String(max);
+ const state={to:dest?.loc||'',qty,limit:max};
+ v47MissingDrafts.set(v47MissingKey(loc,code),state);
+ return {opts,dest,max,qty,shortage,free};
+}
+function v47MissingChoose(loc,code){
+ const to=document.querySelector('input[name="v47MissingDest"]:checked')?.value;
+ if(!to)return;
+ const state=v47MissingState(loc,code),dest=state.opts.find(x=>x.loc===to);
+ if(!dest)return;
+ const max=Math.min(state.shortage,state.free,dest.available);
+ v47MissingDrafts.set(v47MissingKey(loc,code),{to,qty:String(max),limit:max});
+ const el=document.getElementById('v47MissingQty');if(el){el.value=String(max);el.max=String(max);}
+}
+function v47MissingRemember(loc,code){
+ const el=document.getElementById('v47MissingQty'),to=document.querySelector('input[name="v47MissingDest"]:checked')?.value;
+ if(el&&to){const st=v47MissingDrafts.get(v47MissingKey(loc,code))||{};v47MissingDrafts.set(v47MissingKey(loc,code),{...st,to,qty:el.value});}
+}
+const v47EarlierInline=v12Inline;
+v12Inline=function(loc,code){
+ if(v12Panel.loc!==loc||v12Panel.code!==code||v12Panel.kind!=='missingTransfer')return v47EarlierInline.apply(this,arguments);
+ const args=v15Arg(loc)+','+v15Arg(code),s=v47MissingState(loc,code);
+ const cards=s.opts.map(d=>`<label class="v47MissingChoice${d.isCW?' cw':''}"><input type="radio" name="v47MissingDest" value="${wfEsc(d.loc)}" ${s.dest?.loc===d.loc?'checked':''} onchange='v47MissingChoose(${args})'/><span>${d.isCW?'♻':'📍'} ${wfEsc(d.loc)}<small>${d.isCW?'Procesos_CW · pérdidas':`Sobrante +${fmtQty(d.available)} u`}</small></span></label>`).join('');
+ const ui=`<div class="v47PanelHead"><b>↔ Faltante · ${wfEsc(code)}</b><span>📍 ${wfEsc(loc)}</span><span class="v47Balance">−${fmtQty(s.shortage)} u</span><button type="button" class="v47Close" onclick="v12CancelPanel()" aria-label="Cerrar">×</button></div>`+
+  (s.opts.length?`<div class="v47MovementGrid"><section class="v47SourceArea"><div class="v47FieldName">Destino para regularizar</div><div class="v47MissingDestChoices" role="radiogroup" aria-label="Ubicación destino">${cards}</div></section>`+
+  `<label class="v47Dest">Desde ubicación<input value="${wfEsc(loc)}" readonly/></label>`+
+  `<label class="v47Qty">Cantidad<input id="v47MissingQty" type="number" min="1" step="any" inputmode="decimal" max="${s.max}" value="${wfEsc(s.qty)}" oninput='v47MissingRemember(${args})'/></label>`+
+  `<button type="button" class="primary mini v47Submit" onclick='v47SaveMissing(${args})'>✓ Registrar en Ajustes</button></div>`:
+  `<span class="v38Banner">No hay ubicaciones destino registradas en WMS para este faltante.</span>`);
+ return `<tr class="v12ActionRow v47ActionRow"><td colspan="7"><div class="v12InlinePanel v47CompactPanel v47MissingPanel">${ui}</div></td></tr>`;
+};
+async function v47SaveMissing(loc,code){
+ if(!adminAccessV9||!hasCompared||sourceDirty)return;
+ if(cloudEnabledV9&&!cloudWritableV9())return perchadoAlert('No hay conexión de escritura con Firebase.');
+ const r=v13Row(loc,code),deficit=r?Math.max(0,-remaining(r)):0;
+ if(!r||!deficit||!baseEligible(r)||!v13RecountIntegrated(r)||v13HasPendingRecount(loc,code))return perchadoAlert('El código no tiene un faltante físico disponible para conciliar.');
+ const {opts,free}=v47MissingState(loc,code);
+ const to=document.querySelector('input[name="v47MissingDest"]:checked')?.value || v47MissingDrafts.get(v47MissingKey(loc,code))?.to;
+ const dest=opts.find(x=>x.loc===to),qty=v13Amount(document.getElementById('v47MissingQty')?.value);
+ if(!dest||!Number.isFinite(qty)||qty<=0||qty>Math.min(deficit,free,dest.available)+0.000001)return perchadoAlert('La cantidad supera el faltante, el stock WMS libre o el sobrante de destino.');
+ if(!v13ValidLocation(loc)||!v13ValidLocation(to)||loc===to)return perchadoAlert('Revisa las ubicaciones WMS de origen y destino.');
+ const note=dest.isCW?'Se registra como pérdida en Procesos_CW.':'Se aprovechará el sobrante físico de la ubicación destino.';
+ if(!await perchadoConfirm(`Preparar movimiento para el código ${code}:\nDESDE ${loc}\nHACIA ${to}\nCANTIDAD ${fmtQty(qty)} u.\n${note}\nSe ejecutará después en tu WMS.`))return;
+ const move={id:wfId(),code:String(code),from:loc,to,qty,originVerified:true,adminApproved:true,sourceUncounted:false,v38:true,kind:dest.isCW?'FALTANTE_A_PROCESOS_CW':'CONCILIACION_FALTANTE',wmsOriginBefore:v38SystemQty(code,loc),wmsDestBefore:v38SystemQty(code,to),createdAt:wfToday(),by:adminIdentityV9,executedAt:null};
+ manualTransfersV9.push(move);window.perchadoV9Moves=manualTransfersV9;
+ saveDecisions();v47MissingDrafts.delete(v47MissingKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento registrado en Movimientos y ajustes');
+}
 </script>
 </body>
 </html>
