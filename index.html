@@ -299,12 +299,121 @@ window.PERCHADO_FIREBASE_CONFIG = {
  #v20AdminChatStatus{max-width:100px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
 }
 </style>
+
+<style id="perchadoV43SidebarStyle">
+/* V43 — Menú lateral retractil y buscador horizontal persistente; no se alteran los datos. */
+body.v43-admin .wrap{max-width:none!important;width:100%;padding:0 12px!important;margin:10px auto!important}
+body.v43-admin .wrap>.card{display:grid!important;grid-template-columns:62px minmax(0,1fr);align-items:start;overflow:visible!important;min-width:0;min-height:calc(100dvh - var(--perchado-header-height,68px) - 24px);border-radius:15px}
+body.v43-admin.v43-nav-expanded .wrap>.card{grid-template-columns:230px minmax(0,1fr)}
+body.v43-admin .wrap>.card>.section{grid-column:2;grid-row:1;min-width:0;margin:0;padding:13px 15px}
+body.v43-admin #perchadoStickyNavV15{
+ grid-column:1;grid-row:1;align-self:start;position:sticky!important;
+ top:calc(var(--perchado-header-height,68px) + 8px)!important;
+ height:calc(100dvh - var(--perchado-header-height,68px) - 18px);
+ max-height:calc(100dvh - var(--perchado-header-height,68px) - 18px);
+ min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+ background:#f2faf8;border:0;border-right:1px solid #cfe9e2;
+ border-radius:14px 0 0 14px;box-shadow:none;z-index:14;
+ scrollbar-width:thin;
+}
+body.v43-admin #perchadoStickyNavV15 .tabs{
+ display:flex!important;flex-direction:column;align-items:stretch;gap:5px;
+ padding:8px 7px 16px!important;overflow:visible!important;max-width:none!important;
+ background:transparent;white-space:normal;flex-wrap:nowrap;
+}
+body.v43-admin #perchadoStickyNavV15 .tabs>.tab{
+ display:flex;align-items:center;gap:10px;justify-content:flex-start;
+ text-align:left;width:100%;min-height:45px;margin:0;padding:9px 10px!important;
+ font-size:12.5px!important;font-weight:750;line-height:1.2;
+ border:1px solid transparent!important;border-radius:11px!important;
+ background:transparent!important;color:#23554e;white-space:normal;
+}
+body.v43-admin #perchadoStickyNavV15 .tabs>.tab[hidden]{display:none!important}
+body.v43-admin #perchadoStickyNavV15 .tabs>.tab:hover{background:#dff5ee!important;color:#086e5c}
+body.v43-admin #perchadoStickyNavV15 .tabs>.tab.active{
+ background:#d3f5e9!important;color:#007b68!important;
+ border-color:#92ddc8!important;box-shadow:inset 3px 0 #00a98d;
+}
+#perchadoStickyNavV15 .v43TabIcon{flex:none;font-size:19px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:25px}
+#perchadoStickyNavV15 .v43TabLabel{min-width:0;overflow-wrap:anywhere}
+body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .v43TabLabel{display:none}
+body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .tabs>.tab{justify-content:center;padding:10px 4px!important}
+body.v43-admin .v43SidebarHead{display:flex;padding:12px 7px 5px;background:transparent}
+body.v43-admin .v43SideToggle,body.v43-admin .v43SideSearch{
+ display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:42px;
+ padding:8px;border-radius:10px;border:1px solid #b4e6d8;background:#e7f9f3;color:#006f60;
+ cursor:pointer;font-weight:800;font-size:13px;
+}
+body.v43-admin .v43SideToggle:hover,body.v43-admin .v43SideSearch:hover{background:#d7f4e9}
+body.v43-admin .v43SideToggle .v43Glyph,body.v43-admin .v43SideSearch .v43Glyph{font-size:20px;line-height:1;flex:none}
+body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .v43SideText{display:none}
+body.v43-admin #perchadoStickyNavV15 .v43SideSearch{width:calc(100% - 14px);margin:6px 7px 2px}
+body.v43-admin #perchadoStickyNavV15 .perchadoGlobalBarV15{padding:7px!important;border-radius:0!important;background:transparent!important}
+body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .perchadoGlobalBarV15{display:none!important}
+body.v43-admin #perchadoStickyNavV15 .perchadoSearchLineV15{padding:0 4px 0 7px;gap:2px}
+body.v43-admin #perchadoStickyNavV15 .perchadoSearchLineV15 .perchadoSearchIconV15{display:none}
+body.v43-admin #perchadoStickyNavV15 .perchadoSearchResultsV15{left:7px;right:7px;padding:6px;max-height:50vh;z-index:28}
+body.v43-admin #perchadoStickyNavV15 .perchadoSearchControlsV15{display:block}
+body.v43-admin #perchadoStickyNavV15 .perchadoSearchControlsV15 button{margin-top:5px}
+body.v43-operator #perchadoStickyNavV15{display:none!important}
+body.v43-operator .v43MobileToggle{display:none!important}
+.v43MobileToggle{display:none!important}
+.v43SideBackdrop{display:none}
+/* Teléfono: el menú se despliega sobre el contenido, sin reducir el ancho de la captura. */
+@media(max-width:850px){
+ body.v43-admin .wrap{padding:0 6px!important;margin:7px auto!important}
+ body.v43-admin .wrap>.card,body.v43-admin.v43-nav-expanded .wrap>.card{display:block!important;min-height:50dvh}
+ body.v43-admin .wrap>.card>.section{padding:10px 8px}
+ body.v43-admin #perchadoStickyNavV15{
+  position:fixed!important;top:var(--perchado-header-height,64px)!important;left:0;
+  width:min(84vw,275px)!important;height:calc(100dvh - var(--perchado-header-height,64px));
+  max-height:none;border:1px solid #c5e8dd;border-top:0;
+  border-radius:0 14px 14px 0;
+  transform:translateX(-104%);transition:transform .18s ease;z-index:31;visibility:hidden;
+  box-shadow:8px 14px 35px rgba(17,75,67,.14);
+ }
+ body.v43-admin.v43-nav-expanded #perchadoStickyNavV15{transform:translateX(0);visibility:visible}
+ body.v43-admin #perchadoStickyNavV15 .v43TabLabel,body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .v43TabLabel{display:inline}
+ body.v43-admin #perchadoStickyNavV15 .tabs>.tab,body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .tabs>.tab{justify-content:flex-start!important;padding:9px 10px!important}
+ body.v43-admin #perchadoStickyNavV15 .v43SideText,body.v43-admin:not(.v43-nav-expanded) #perchadoStickyNavV15 .v43SideText{display:inline}
+ body.v43-admin.v43-nav-expanded #perchadoStickyNavV15 .perchadoGlobalBarV15:not([hidden]){display:block!important}
+ body.v43-admin .v43MobileToggle{display:inline-flex!important;align-items:center;justify-content:center;width:39px;height:38px;padding:0;margin-right:4px;flex:none;border:1px solid #b5e8d9;border-radius:10px;color:#007c67;background:#e8faf4;font-size:21px;cursor:pointer}
+ body.v43-admin .v43SideBackdrop{display:block;position:fixed;top:var(--perchado-header-height,64px);inset-inline:0;bottom:0;background:rgba(5,45,43,.35);opacity:0;pointer-events:none;z-index:30;transition:opacity .18s ease}
+ body.v43-admin.v43-nav-expanded .v43SideBackdrop{opacity:1;pointer-events:auto}
+}
+@media(prefers-reduced-motion:reduce){body.v43-admin #perchadoStickyNavV15,.v43SideBackdrop{transition:none!important}}
+</style>
+<style id="perchadoV43SearchTopCorrection">
+/* El buscador se conserva arriba en toda la anchura, sin moverse al lateral. */
+body.v43-admin .wrap>.card{grid-template-rows:auto minmax(0,1fr)}
+body.v43-admin .wrap>.card>.section{grid-row:2}
+body.v43-admin .wrap>.card > #perchadoGlobalBarV15{
+  grid-column:1 / -1;grid-row:1;position:sticky;
+  top:var(--perchado-header-height,68px);z-index:19;
+  padding:10px 14px 11px;background:#f8fffd;
+  border-bottom:1px solid #d6ece6;border-radius:14px 14px 0 0;
+  width:100%;min-width:0;
+}
+body.v43-admin #perchadoStickyNavV15{
+  grid-row:2;top:calc(var(--perchado-header-height,68px) + var(--v43-search-height,70px) + 3px)!important;
+  height:calc(100dvh - var(--perchado-header-height,68px) - var(--v43-search-height,70px) - 13px);
+  max-height:calc(100dvh - var(--perchado-header-height,68px) - var(--v43-search-height,70px) - 13px);
+}
+body.v43-admin #perchadoGlobalBarV15 .perchadoSearchLineV15{min-height:46px}
+body.v43-admin #perchadoGlobalBarV15 .perchadoSearchIconV15{display:inline-flex}
+body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:14px;z-index:29}
+@media(max-width:850px){
+ body.v43-admin .wrap>.card > #perchadoGlobalBarV15{padding:8px 8px 9px;top:var(--perchado-header-height,64px)}
+ body.v43-admin #perchadoStickyNavV15{top:calc(var(--perchado-header-height,64px) + var(--v43-search-height,66px))!important;
+   height:calc(100dvh - var(--perchado-header-height,64px) - var(--v43-search-height,66px));max-height:none}
+ body.v43-admin .v43SideBackdrop{top:calc(var(--perchado-header-height,64px) + var(--v43-search-height,66px))}
+}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V42</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V44</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
-<div class="perchadoStickyNav" id="perchadoStickyNavV15">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
   <div class="perchadoSearchLineV15">
     <span class="perchadoSearchIconV15" aria-hidden="true">⌕</span>
@@ -313,6 +422,7 @@ window.PERCHADO_FIREBASE_CONFIG = {
   </div>
   <div id="perchadoSearchResultsV15" class="perchadoSearchResultsV15" hidden></div>
 </div>
+<div class="perchadoStickyNav" id="perchadoStickyNavV15">
 <div class="tabs">
 <button class="tab active" data-tab="paste" onclick="openTab('paste')">📋 Pegar datas</button>
 <button class="tab" data-tab="squared" onclick="openTab('squared')">✅ Cuadradas</button>
@@ -2301,7 +2411,7 @@ function v15ClearSearch(){const e=$('perchadoSearchV15');if(e)e.value='';v15Hide
 function v15SelectSearch(loc,code){
  v15HideSearch();
  const idx=results.findIndex(r=>r.ubicacionNormalizada===loc&&r.codigo===code);
- if(idx>=0){openTab('results');openLocations.add(loc);renderLocations();const i=auditScope.mappedLocations.indexOf(loc);const el=$('location-'+i);if(el){const offset=($('perchadoStickyNavV15')?.getBoundingClientRect().height||100)+(document.querySelector('.topbar')?.getBoundingClientRect().height||60)+12;window.scrollTo({top:window.scrollY+el.getBoundingClientRect().top-offset,behavior:'smooth'});}openCodeReview(idx);return;}
+ if(idx>=0){openTab('results');openLocations.add(loc);renderLocations();const i=auditScope.mappedLocations.indexOf(loc);const el=$('location-'+i);if(el){const offset=(document.querySelector('.topbar')?.getBoundingClientRect().height||60)+14;window.scrollTo({top:window.scrollY+el.getBoundingClientRect().top-offset,behavior:'smooth'});}openCodeReview(idx);return;}
  const r=v15FindRows(code).filter(x=>x.loc===loc&&x.code===code)[0];const panel=$('perchadoSearchResultsV15');
  panel.hidden=false;panel.innerHTML=`<div class="perchadoSearchControlsV15"><b>Código ${v15E(code)}</b><button class="secondary mini" onclick="v15HideSearch()">Cerrar</button></div><div class="perchadoSearchDetailsV15"><b>📍 ${v15E(loc)}</b><p>Stock WMS: <strong>${r?.sys==null?'—':fmtQty(r.sys)}</strong></p><p>Esta posición figura en la base cargada, pero todavía no tiene una comparación de auditoría completa. No se puede asumir un faltante sin conteo físico.</p></div><button class="secondary mini" onclick="v15Search()">← Volver a resultados</button>`;
 }
@@ -5413,5 +5523,108 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else v42PrepareLocations();
 </script>
 
+
+<script id="perchadoV43SidebarScript">
+/* V44: menú lateral restaurado en todos los accesos administrativos, sin alterar los registros. */
+(function(){
+  const nav=document.getElementById('perchadoStickyNavV15');
+  const tabBox=nav&&nav.querySelector('.tabs');
+  const top=document.querySelector('.topbar');
+  if(!nav||!tabBox||!top)return;
+  const iconMap={paste:'📋',squared:'✅',results:'⚠️',map:'🗺️',decisions:'📦',adminPortal:'🛡',operatorPortal:'👷'};
+  for(const tab of tabBox.querySelectorAll('.tab')){
+    const label=tab.textContent.trim();
+    const initialIcon=iconMap[tab.dataset.tab]||'▸';
+    const visibleLabel=label.replace(/^[^\s]+\s*/, '').trim()||label;
+    tab.textContent='';
+    const icon=document.createElement('span');icon.className='v43TabIcon';icon.setAttribute('aria-hidden','true');icon.textContent=initialIcon;
+    const title=document.createElement('span');title.className='v43TabLabel';title.textContent=visibleLabel;
+    tab.append(icon,title);tab.setAttribute('aria-label',visibleLabel);
+  }
+  const header=document.createElement('div');header.className='v43SidebarHead';
+  const toggle=document.createElement('button');toggle.type='button';toggle.id='v43SideToggle';toggle.className='v43SideToggle';toggle.setAttribute('aria-label','Expandir o contraer menú');
+  toggle.innerHTML='<span class="v43Glyph" aria-hidden="true">☰</span><span class="v43SideText">Menú</span>';
+  header.appendChild(toggle);
+  nav.insertBefore(header,nav.firstChild);
+  const mobile=document.createElement('button');mobile.id='v43MobileToggle';mobile.className='v43MobileToggle';mobile.type='button';mobile.textContent='☰';mobile.setAttribute('aria-label','Abrir menú lateral');
+  top.insertBefore(mobile,top.firstChild);
+  const backdrop=document.createElement('div');backdrop.className='v43SideBackdrop';backdrop.id='v43SideBackdrop';backdrop.setAttribute('aria-hidden','true');document.body.appendChild(backdrop);
+  let expanded=false;
+  function setExpanded(value){
+    expanded=!!value;
+    document.body.classList.toggle('v43-nav-expanded',expanded);
+    toggle.setAttribute('aria-expanded',String(expanded));
+    mobile.setAttribute('aria-expanded',String(expanded));
+    toggle.querySelector('.v43Glyph').textContent=expanded?'‹':'☰';
+    toggle.setAttribute('aria-label',expanded?'Contraer menú':'Expandir menú');
+    mobile.setAttribute('aria-label',expanded?'Cerrar menú':'Abrir menú lateral');
+    if(typeof v42SetHeaderOffset==='function')v42SetHeaderOffset();
+  }
+  function syncView(){
+    // V9 puede alternar el perfil mediante profileBaseV9() sin ejecutar setProfileV8().
+    // La navegación debe seguir el perfil AUTORIZADO, no depender de un botón pulsado.
+    const gate=document.getElementById('adminGateV9');
+    const isAdmin=profileV8==='admin' && adminAccessV9===true && (!gate || gate.hidden);
+    document.body.classList.toggle('v43-admin',isAdmin);
+    document.body.classList.toggle('v43-operator',!isAdmin);
+    if(!isAdmin && expanded)setExpanded(false);
+    if(typeof v42SetHeaderOffset==='function')v42SetHeaderOffset();
+  }
+  toggle.addEventListener('click',()=>setExpanded(!expanded));
+  mobile.addEventListener('click',()=>setExpanded(!expanded));
+  backdrop.addEventListener('click',()=>setExpanded(false));
+  tabBox.addEventListener('click',e=>{
+    if(e.target.closest('.tab')){
+      // Return the full workspace after choosing a tab, without touching its contents.
+      setExpanded(false);
+      if(typeof v42PrepareLocations==='function')requestAnimationFrame(v42PrepareLocations);
+    }
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&expanded&&document.body.classList.contains('v43-admin'))setExpanded(false);
+  });
+  const previousSetProfile=setProfileV8;
+  setProfileV8=function(...args){const result=previousSetProfile.apply(this,args);syncView();return result;};
+  // El login histórico usa profileBaseV9('admin') directamente y se salta los wrappers:
+  // por eso V43 ocultaba el menú aunque la pantalla mostraba Administración.
+  const previousLogin=loginAdministratorV9;
+  loginAdministratorV9=async function(...args){
+    try{return await previousLogin.apply(this,args);}
+    finally{syncView();}
+  };
+  const previousLogout=logoutAdministratorV9;
+  logoutAdministratorV9=async function(...args){
+    try{return await previousLogout.apply(this,args);}
+    finally{syncView();}
+  };
+  // Abarca también cambios administrativos realizados desde funciones antiguas.
+  const adminBtn=document.getElementById('viewAdmin');
+  const adminGate=document.getElementById('adminGateV9');
+  if(adminBtn)new MutationObserver(syncView).observe(adminBtn,{attributes:true,attributeFilter:['class']});
+  if(adminGate)new MutationObserver(syncView).observe(adminGate,{attributes:true,attributeFilter:['hidden']});
+  // Cabecera fija + buscador superior: estos son los únicos elementos que deben reservar altura.
+  v42SetHeaderOffset=function(){
+    const bar=document.getElementById('perchadoGlobalBarV15');
+    const searchHeight=document.body.classList.contains('v43-admin')&&!bar.hidden?bar.offsetHeight:0;
+    const topHeight=document.querySelector('.topbar')?.offsetHeight||60;
+    const headerCss=Math.ceil(topHeight)+'px';
+    if(document.documentElement.style.getPropertyValue('--perchado-header-height')!==headerCss)
+      document.documentElement.style.setProperty('--perchado-header-height',headerCss);
+    const searchCss=searchHeight+'px';
+    if(document.documentElement.style.getPropertyValue('--v43-search-height')!==searchCss)
+      document.documentElement.style.setProperty('--v43-search-height',searchCss);
+    const h=Math.ceil(topHeight+searchHeight+6)+'px';
+    if(document.documentElement.style.getPropertyValue('--v42-heading-offset')!==h)
+      document.documentElement.style.setProperty('--v42-heading-offset',h);
+  };
+  syncView();
+  const persistentSearch=document.getElementById('perchadoGlobalBarV15');
+  if(persistentSearch){
+    if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>v42SetHeaderOffset()).observe(persistentSearch);
+    new MutationObserver(()=>v42SetHeaderOffset()).observe(persistentSearch,{attributes:true,attributeFilter:['hidden']});
+  }
+  if(typeof v42PrepareLocations==='function')v42PrepareLocations();
+})();
+</script>
 </body>
 </html>
