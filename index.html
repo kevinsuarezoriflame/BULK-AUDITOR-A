@@ -2063,7 +2063,7 @@ async function v13MakeMove(loc,code){
  if(!v13ValidLocation(from)||!v13ValidLocation(loc))return perchadoAlert('Origen y destino deben existir en las datas del WMS.');
  if(!await perchadoConfirm(`Proponer traslado para WMS: ${code}\n${from} → ${loc}\nCantidad: ${qty}.\nNo se ejecutará automáticamente.`))return;
  manualTransfersV9.push({id:wfId(),code,from,to:loc,qty,originVerified:true,createdAt:wfToday(),by:adminIdentityV9,kind:from===PROCESS_LOCATION?'RECUPERACION_CW':'TRASLADO',executedAt:null});
- window.perchadoV9Moves=manualTransfersV9;saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Propuesta registrada · pendiente WMS');
+ window.perchadoV9Moves=manualTransfersV9;saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Propuesta registrada localmente · comprobando Firebase');
 }
 async function v13ToProcess(loc,code){
  if(!adminAccessV9||sourceDirty)return;
@@ -5255,7 +5255,7 @@ async function v38SaveTransfer(loc,code){
  const priorityNote=!src.isCW&&cwAvailable>0?`\n♻ Procesos_CW todavía tiene ${fmtQty(cwAvailable)} unidades libres; se recomienda recuperarlas primero.`:'';
  if(!await perchadoConfirm(`Registrar movimiento WMS para el código ${code}:\nDESDE ${from}\nHACIA ${loc}\nCANTIDAD ${fmtQty(qty)} u.\n${warning}${priorityNote}\nNo se ejecutará automáticamente en el WMS.`))return;
  manualTransfersV9.push({id:wfId(),code:String(code),from,to:loc,qty,originVerified:!src.unchecked,adminApproved:true,sourceUncounted:src.unchecked,v38:true,wmsOriginBefore:v38SystemQty(code,from),wmsDestBefore:v38SystemQty(code,loc),createdAt:wfToday(),by:adminIdentityV9,kind:src.isCW?'RECUPERACION_CW':'CONCILIACION_BULK',executedAt:null});
- window.perchadoV9Moves=manualTransfersV9;saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento registrado en Movimientos y ajustes');
+ window.perchadoV9Moves=manualTransfersV9;saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento guardado en este equipo · comprobando Firebase');
 }
 async function v38Positive(loc,code){
  if(!adminAccessV9||!hasCompared||sourceDirty)return;
@@ -5266,7 +5266,7 @@ async function v38Positive(loc,code){
  if(resolutions.some(d=>d.type==='SOBRANTE'&&d.code===code&&d.location===loc&&!d.executedAt))return perchadoAlert('Ya existe una propuesta positiva pendiente para este código y ubicación.');
  if(!await perchadoConfirm(`¿Preparar ajuste POSITIVO por ${fmtQty(qty)} unidades del código ${code} en ${loc}?\nNo hay otro origen WMS elegible. No se genera traslado ni se modifica el WMS automáticamente.`))return;
  resolutions.push({id:wfId(),type:'SOBRANTE',code:String(code),location:loc,target:loc,qty,at:wfToday(),by:adminIdentityV9,executedAt:null,kind:'V38_AJUSTE_POSITIVO'});
- saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Ajuste positivo registrado en Movimientos y ajustes');
+ saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Ajuste positivo local · comprobando Firebase');
 }
 // V13 excluía los orígenes no contados, pero V38 permite esa autorización explícita.
 const v38PrevApprovedMovements=v13ApprovedMovements;
@@ -5905,7 +5905,7 @@ async function v47SaveMissing(loc,code){
   wmsOriginBefore:v38SystemQty(code,loc),wmsDestBefore:v38SystemQty(code,to),
   createdAt:wfToday(),by:adminIdentityV9,executedAt:null};
  manualTransfersV9.push(move);window.perchadoV9Moves=manualTransfersV9;
- saveDecisions();v47MissingDrafts.delete(v47MissingKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento registrado en Movimientos y ajustes');
+ saveDecisions();v47MissingDrafts.delete(v47MissingKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento guardado en este equipo · comprobando Firebase');
 }
 // Permitir exportar un traslado hacia una ubicación auditada que todavía no tenga
 // saldo del código en WMS. Conservar el resto de controles de formato y procedencia.
@@ -6241,5 +6241,267 @@ document.addEventListener('visibilitychange',()=>{
  }
 });
 </script>
+
+<!-- PERCHADO V52 · Protección de movimientos y confirmación de guardado cloud -->
+<style id="perchado-v52-sync-css">
+#v52SyncBar{position:fixed;right:14px;bottom:13px;z-index:1200;display:none;align-items:center;gap:7px;flex-wrap:wrap;max-width:min(720px,calc(100vw - 28px));padding:8px 10px;background:#effaf7;border:1px solid #b9dcd3;border-radius:12px;box-shadow:0 7px 30px rgba(7,59,51,.16);font:700 11px/1.35 system-ui,sans-serif;color:#175b51}
+#v52SyncBar button{min-height:29px!important;padding:5px 8px!important;border-radius:7px!important;font-size:11px!important;white-space:nowrap;cursor:pointer}
+#v52SyncBar[data-mode="error"],#v52SyncBar[data-mode="conflict"]{background:#fff5e6;border-color:#ecc898;color:#955118}
+#v52SyncBar[data-mode="local"]{background:#fff9e9;border-color:#efdcac;color:#77571c}
+#v52SyncBar[data-mode="ok"]{background:#edfaf1;border-color:#b9e3c9;color:#136746}
+#v52SyncBar span{max-width:380px;overflow-wrap:anywhere}
+#v52SyncBar .v52Important{background:#087f70;color:white;border:0}
+#v52SyncBar .v52Secondary{background:white;color:#245e55;border:1px solid #bdddd4}
+#v52BackupFile{display:none}
+@media(max-width:620px){#v52SyncBar{left:7px;right:7px;bottom:7px;justify-content:center;padding:7px}#v52SyncBar span{flex:1 1 100%;text-align:center}}
+</style>
+<div id="v52SyncBar" role="status" aria-live="polite"><span id="v52SyncText">Comprobando guardado…</span><button type="button" class="v52Important" onclick="v52ManualRetry()">☁ Sincronizar</button><button type="button" class="v52Secondary" onclick="v52DownloadBackup()">⬇ Respaldo</button><button type="button" class="v52Secondary" id="v52RecoverButton" onclick="v52RestoreBackup()" hidden>↩ Recuperar</button><button type="button" class="v52Secondary" onclick="document.getElementById('v52BackupFile').click()">⬆ Importar</button><input type="file" id="v52BackupFile" accept=".json,application/json" onchange="v52ImportBackup(this.files?.[0])"/></div>
+<script id="perchado-v52-save-guard">
+'use strict';
+// Los movimientos no pueden confirmarse en la UI antes de confirmar commit Firestore.
+const V52_DRAFT_KEY='perchado_v52_pending_admin_v1';
+const V52_LEGACY_KEY='perchado_v52_previo_v51';
+let v52Draft=null,v52Timer=null,v52Sending=false,v52Error='',v52Conflict=false;
+let v52RetryDelay=1500,v52RecentSaved=false,v52LastKnownRemote=null,v52Active=false,v52ColdPending=false;
+function v52Read(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch(e){return null;}}
+function v52Write(key,obj){try{localStorage.setItem(key,JSON.stringify(obj));return true;}catch(e){
+ v52Error='No hay espacio para guardar respaldo local: '+(e.message||e);v52Status();return false;
+}}
+function v52Payload(){return v37PackState();}
+function v52Fingerprint(data){try{return JSON.stringify(data);}catch{return '';}}
+function v52StagePayload(data,source){
+ const initial=v52Fingerprint(data);if(!initial)return false;
+ // Un borrador recuperado tras recargar nunca puede reemplazarse por un estado vacío.
+ if(v52ColdPending&&v52Draft){
+  if(v52Draft.wmsHash!==data.wmsHash){v52Error='Respaldo anterior pendiente en otra versión WMS. Descárgalo antes de seguir.';v52Status();return false;}
+  data=v52MergedPayload(v52Draft.payload,data);v52ColdPending=false;
+ }
+ const txt=v52Fingerprint(data);
+ if(v52Draft&&txt===v52Fingerprint(v52Draft.payload)){v52Status();v52Queue(300);return true;}
+ if(!v52Draft&&txt===v37Audit.lastStateText)return true;
+ const previous=v52Draft;
+ v52Draft={version:52,updatedAt:new Date().toISOString(),source:source||'Movimientos y ajustes',
+  baseRevision:previous?previous.baseRevision:v37Audit.stateRevision,
+  wmsHash:data.wmsHash,payload:data,
+  basePayload:previous?.basePayload||(v37Audit.remote?.payload||null)};
+ v52Error='';v52RecentSaved=false;
+ const stored=v52Write(V52_DRAFT_KEY,v52Draft);
+ v52Status();
+ if(stored)v52Queue(300);
+ return stored;
+}
+function v52Status(){
+ const bar=document.getElementById('v52SyncBar');if(!bar)return;
+ bar.style.display=adminAccessV9?'flex':'none';if(!adminAccessV9)return;
+ const label=document.getElementById('v52SyncText'),recover=document.getElementById('v52RecoverButton');
+ recover.hidden=!(v52Draft||v52Read(V52_LEGACY_KEY));
+ let msg='✓ Sin cambios pendientes · sincronización lista',mode='ok';
+ if(v52Error){msg='⚠ '+v52Error;mode='error';}
+ else if(v52Conflict){msg='⚠ Conflicto entre computadoras: respaldo local protegido. No se sobrescribió.';mode='conflict';}
+ else if(v52Draft){
+  msg=v52Sending?'☁ Guardando movimientos en Firebase…':'⚠ Guardado solo en este equipo · pendiente de Firebase';mode='local';
+ }else if(v52RecentSaved){msg='✓ Movimientos confirmados en Firebase';}
+ else if(!cloudV9?.connected){msg='⚠ Firebase desconectado · comprueba antes de operar';mode='local';}
+ else if(!v37Audit.manifest){msg='⚠ Stock WMS no compartido · abre Pegar datas y publícalo';mode='local';}
+ label.textContent=msg;bar.dataset.mode=mode;
+}
+function v52Queue(delay=700){
+ clearTimeout(v52Timer);v52Timer=setTimeout(()=>{v52Timer=null;void v52Flush();},delay);
+}
+async function v52Flush(){
+ if(!v52Draft||v52Sending||v52Conflict)return;
+ if(!adminAccessV9||!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected||!v37Audit.manifest||v37Audit.wmsLoading||v37Audit.busy){
+  v52Status();v52Queue(Math.min(v52RetryDelay,12000));return;
+ }
+ if(v52Draft.wmsHash!==v37Audit.manifest.hash){
+  v52Error='El WMS cargado no es la versión compartida. Respalda y publica/recupera el WMS correcto.';v52Status();return;
+ }
+ if(!v37Audit.stateReady){v52Status();v52Queue(1200);return;}
+ if(v52Draft.baseRevision!==v37Audit.stateRevision){
+  // Nunca forzar un documento completo sobre cambios de otra PC.
+  v52Conflict=true;v52Status();return;
+ }
+ const sent=v52Draft,serialized=v52Fingerprint(sent.payload);
+ v52Sending=true;v52Status();
+ try{
+  const result=await cloudV9.publishSharedState(sent.payload,sent.baseRevision);
+  v37Audit.stateRevision=Number(result.revision);
+  v37Audit.lastStateText=serialized;
+  v37Audit.remote=result;v52LastKnownRemote=result;
+  v52RetryDelay=1500;v52Error='';
+  // Un clic nuevo durante el commit debe preservarse y sincronizarse después.
+  if(v52Draft===sent){v52Draft=null;try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v52RecentSaved=true;}
+  else if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;v52Draft.basePayload=sent.payload;v52Write(V52_DRAFT_KEY,v52Draft);}
+ }catch(e){
+  const reason=String(e?.message||e);
+  if(/otro administrador|conflict|revision|version|updated/i.test(reason))v52Conflict=true;
+  v52Error='Firebase NO confirmó los cambios: '+reason;
+  v52RetryDelay=Math.min(v52RetryDelay*1.8,15000);
+  if(/permission-denied|unauthorized|missing or insufficient permissions|resource-exhausted|too large|demasiado grande/i.test(reason))v52Conflict=true;
+  console.error('PERCHADO V52, guardado pendiente',e);
+ }finally{
+  v52Sending=false;v52Status();
+  if(v52Draft&&!v52Conflict&&!v52Error.match(/El WMS/))v52Queue(v52RetryDelay);
+ }
+}
+// Los errores de la escucha remota también deben verse desde Novedades.
+const v52PriorCloudStatus=v37Status;
+v37Status=function(message,kind){
+ const out=v52PriorCloudStatus.apply(this,arguments);
+ if(kind==='error'){v52Error=String(message||'Firebase no disponible');v52Status();}
+ return out;
+};
+// Reemplaza el guardado sin confirmación de V37. El guardado local V9 sigue intacto.
+v37ScheduleSharedState=function(){
+ if(v37Audit.applying||!adminAccessV9)return;
+ v52StagePayload(v52Payload(),'Administración');
+};
+v37PublishSharedState=async function(){return v52Flush();};
+// Una respuesta de Firebase JAMÁS debe reemplazar un borrador no sincronizado.
+const v52PreviousApplyRemote=v37ApplyRemoteState;
+v37ApplyRemoteState=function(){
+ if(v52Draft){
+  v37Audit.stateReady=true;
+  const remote=v37Audit.remote;
+  if(remote?.payload&&v52Fingerprint(remote.payload)===v52Fingerprint(v52Draft.payload)){
+   // Una escritura que ya llegó al servidor también puede verse por onSnapshot.
+   if(!v52Sending){v37Audit.lastStateText=v52Fingerprint(remote.payload);v52Draft=null;
+    try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v52Conflict=false;v52Error='';v52RecentSaved=true;}
+  }else if(remote&&Number(remote.revision)>Number(v52Draft.baseRevision))v52Conflict=true;
+  v52Status();return;
+ }
+ const out=v52PreviousApplyRemote.apply(this,arguments);
+ if(v37Audit.remote?.payload&&!v52Draft){v52LastKnownRemote=v37Audit.remote;v52RecentSaved=false;}
+ v52Status();return out;
+};
+const v52OriginalOnSharedState=v37OnSharedState;
+v37OnSharedState=function(doc){
+ const result=v52OriginalOnSharedState.call(this,doc);
+ if(v52Draft&&!v52Conflict)v52Queue(400);
+ v52Status();return result;
+};
+const v52OriginalOnWms=v37OnWms;
+v37OnWms=async function(manifest){const result=await v52OriginalOnWms.call(this,manifest);v52Status();if(v52Draft)v52Queue(400);return result;};
+// Mantener copia del formato anterior: es posible que aún contenga los movimientos V51.
+(function v52CapturePrevious(){
+ try{const raw=localStorage.getItem('perchadoAuditDecisionsV7');
+ if(raw){const prev=v52Read(V52_LEGACY_KEY);
+  if(!prev?.record){const old=JSON.parse(raw);v52Write(V52_LEGACY_KEY,{createdAt:new Date().toISOString(),record:old});}
+ }}catch(e){console.warn('No se pudo preservar copia de V51',e);}
+ v52Draft=v52Read(V52_DRAFT_KEY);
+ if(v52Draft?.payload){v52RecentSaved=false;v52ColdPending=true;}else v52Draft=null;
+ setTimeout(()=>{v52Status();if(v52Draft)v52Queue(800);},500);
+})();
+function v52BackupContents(){
+ const current=v52Payload(), legacy=v52Read(V52_LEGACY_KEY);
+ return {app:'PERCHADO',backupVersion:52,createdAt:new Date().toISOString(),
+  projectId:'oriflame-picking',wmsHash:current.wmsHash,revision:v37Audit.stateRevision,
+  current,unsynced:v52Draft,legacy,
+  decisionsV51:v52Read('perchadoAuditDecisionsV7'),wmsLedger:v52Read('perchado_v33_ledger')};
+}
+function v52DownloadBackup(){
+ const data=v52BackupContents();const json=JSON.stringify(data,null,2);
+ const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+ a.download='PERCHADO_RESPALDO_AJUSTES_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function v52UniqueRows(items){const seen=new Set();return (items||[]).filter(x=>{
+ const k=String(x?.id||[x?.code,x?.from,x?.to,x?.qty,x?.type,x?.location].join('|'));
+ if(!k||seen.has(k))return false;seen.add(k);return true;
+});}
+function v52MergedPayload(remote,local){
+ const out={...remote,wmsHash:local.wmsHash};
+ for(const key of ['matches','resolutions','transfers','ledger'])out[key]=v52UniqueRows([...(remote?.[key]||[]),...(local?.[key]||[])]);
+ for(const key of ['confirmations','reviews','verifiedMissing'])out[key]=[...new Set([...(remote?.[key]||[]),...(local?.[key]||[])])];
+ return out;
+}
+// Recuperar borrador al reabrir la página: no confiar en la firma antigua V51.
+const v52PreviousRestore=restoreDecisions;
+restoreDecisions=function(...args){
+ const result=v52PreviousRestore.apply(this,args);
+ if(v52Draft?.payload&&!v37Audit.applying&&v52Draft.wmsHash===v37TextHash(document.getElementById('systemData')?.value)){
+  const snap=v52MergedPayload(v52Payload(),v52Draft.payload);
+  approvedMatches=v52UniqueRows(snap.matches);resolutions=v52UniqueRows(snap.resolutions);
+  manualTransfersV9=v52UniqueRows(snap.transfers);window.perchadoV9Moves=manualTransfersV9;
+  confirmations=new Set(snap.confirmations);reviews=new Set(snap.reviews);verifiedMissing=new Set(snap.verifiedMissing);
+  v33Ledger=v52UniqueRows(snap.ledger);
+  v52ColdPending=false;
+ }
+ return result;
+};
+function v52ApplyRescue(payload){
+ if(!payload||payload.wmsHash!==v37TextHash(document.getElementById('systemData')?.value)){
+  perchadoAlert('La base WMS actual no coincide con el respaldo. No se reemplazó información. Exporta el respaldo y revisa qué versión del WMS se utilizó.');return false;
+ }
+ // No aplicar un estado incompleto: proteger historial ya recuperado.
+ v37Audit.applying=true;
+ try{
+  approvedMatches=v52UniqueRows(payload.matches||[]);
+  resolutions=v52UniqueRows(payload.resolutions||[]);
+  manualTransfersV9=v52UniqueRows(payload.transfers||[]);
+  confirmations=new Set(payload.confirmations||[]);reviews=new Set(payload.reviews||[]);
+  verifiedMissing=new Set(payload.verifiedMissing||[]);
+  v33Ledger=v52UniqueRows(payload.ledger||[]);
+  window.perchadoV9Moves=manualTransfersV9;
+  v33Write();saveDecisions();renderAll();
+ }finally{v37Audit.applying=false;}
+ return true;
+}
+async function v52RestoreBackup(){
+ const legacy=v52Read(V52_LEGACY_KEY),v52Local=v52Draft;
+ let proposal=v52Local?.payload;
+ if(!proposal&&legacy?.record){
+  const x=legacy.record;
+  proposal={...v52Payload(),matches:x.matches||[],resolutions:x.resolutions||[],transfers:x.transfers||[]};
+ }
+ if(!proposal)return perchadoAlert('No encontré movimientos locales pendientes para recuperar. Puedes importar un respaldo JSON.');
+ const localCount=(proposal.transfers||[]).length+(proposal.matches||[]).length+(proposal.resolutions||[]).length;
+ if(!await perchadoConfirm('Se encontraron '+localCount+' movimientos/resoluciones en el respaldo local. ¿Recuperarlos y conservar también los que ya están en Firebase? Revisa los movimientos antes de exportar al WMS.'))return;
+ const remote=v37Audit.remote?.payload||v52Payload();
+ if(proposal.wmsHash!==v37TextHash(document.getElementById('systemData')?.value)){
+  perchadoAlert('El respaldo pertenece a otra versión WMS. No se aplicó. Conserva el JSON y carga la base correcta.');return;
+ }
+ const merged=v52MergedPayload(remote,proposal);
+ if(!v52ApplyRescue(merged))return;
+ v52Draft=null;v52Conflict=false;v52Error='';
+ v52StagePayload(merged,'Recuperación manual');
+ if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;v52Draft.basePayload=v37Audit.remote?.payload||null;v52Write(V52_DRAFT_KEY,v52Draft);v52Queue(100);}
+}
+async function v52ImportBackup(file){
+ const input=document.getElementById('v52BackupFile');if(input)input.value='';if(!file)return;
+ if(file.size>12000000)return perchadoAlert('Respaldo demasiado grande: supera 12 MB.');
+ try{
+  const obj=JSON.parse(await file.text());if(obj.app!=='PERCHADO'||obj.backupVersion!==52)throw Error('Archivo de respaldo PERCHADO V52 no reconocido.');
+  const proposal=obj.unsynced?.payload||obj.current;
+  if(!proposal||!Array.isArray(proposal.transfers))throw Error('El archivo no contiene movimientos válidos.');
+  if(!await perchadoConfirm('¿Importar este respaldo, conservando también los movimientos actuales? No se ejecutará nada en WMS.'))return;
+  if(proposal.wmsHash!==v37TextHash(document.getElementById('systemData')?.value))throw Error('La versión WMS del respaldo es diferente. Carga esa versión antes de importar.');
+  const merged=v52MergedPayload(v37Audit.remote?.payload||v52Payload(),proposal);
+  if(!v52ApplyRescue(merged))return;
+  v52Draft=null;v52Conflict=false;v52Error='';v52StagePayload(merged,'Importación JSON');
+  if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;v52Write(V52_DRAFT_KEY,v52Draft);v52Queue(100);}
+ }catch(e){perchadoAlert('No se importó el respaldo: '+(e.message||e));}
+}
+function v52ManualRetry(){
+ if(!v52Draft){v52Status();return perchadoAlert('No hay movimientos locales pendientes de sincronizar.');}
+ if(v52Conflict){
+  perchadoAlert('Hay cambios desde otra computadora. Descarga un respaldo y usa «Recuperar» para fusionar las propuestas. Revisa la lista antes de ejecutarlas.');return;
+ }
+ v52Error='';v52Queue(0);v52Status();
+}
+const v52PreviousAdminLogin=loginAdministratorV9;
+loginAdministratorV9=async function(...args){
+ const out=await v52PreviousAdminLogin.apply(this,args);
+ v52Status();if(v52Draft)v52Queue(700);return out;
+};
+const v52PreviousLogout=logoutAdministratorV9;
+logoutAdministratorV9=async function(...args){const out=await v52PreviousLogout.apply(this,args);v52Status();return out;};
+window.addEventListener('beforeunload',event=>{
+ if(v52Draft&&adminAccessV9){event.preventDefault();event.returnValue='Hay ajustes sin confirmar en Firebase';}
+});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&v52Draft){v52Queue(200);v52Status();}});
+</script>
+
 </body>
 </html>
