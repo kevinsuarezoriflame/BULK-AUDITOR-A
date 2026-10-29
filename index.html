@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V48 · Control de inventario</title>
+<title>PERCHADO V49 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V48</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V50</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -1637,6 +1637,27 @@ let v12Panel={loc:'',code:'',kind:''};
 const v12Reasons=['Diferencia de cantidad','Posible código mal ingresado','Posible ubicación cruzada','Duplicado · verificar','Faltante físico','Verificación solicitada'];
 const v12Safe = escapeHtml;
 const v12CatalogCache={raw:null,data:null};
+// V50: índices de una sola pasada para el render de ubicaciones.
+// Solo existen mientras se arma la vista; nunca modifican Firebase ni el WMS.
+let v50RowsIndex=null,v50LatestIndex=null,v50TaskIndex=null,v50ResultIndex=null;
+const v50SectionsBase=new Map();
+function v50BuildRenderIndexes(){
+ v50RowsIndex=new Map();v50LatestIndex=new Map();v50TaskIndex=new Map();v50ResultIndex=new Map();
+ results.forEach((r,i)=>{v50ResultIndex.set(r,i);const loc=r.ubicacionNormalizada;if(!v50RowsIndex.has(loc))v50RowsIndex.set(loc,[]);v50RowsIndex.get(loc).push(r);});
+ // Equivale al orden por submittedAt que ya usaba v12LatestEntries.
+ const sessions=wfV8.sessions.filter(s=>s.status!=='rejected'&&s.location).slice().sort((a,b)=>(a.submittedAt||'').localeCompare(b.submittedAt||''));
+ for(const s of sessions){if(!v50LatestIndex.has(s.location))v50LatestIndex.set(s.location,new Map());const map=v50LatestIndex.get(s.location);for(const e of s.entries||[])map.set(String(e.code),{session:s,entry:e});}
+ for(let i=wfV8.tasks.length-1;i>=0;i--){const t=wfV8.tasks[i];for(const code of [t.code,t.response?.code]){if(code==null)continue;const key=t.location+'\u0000'+String(code);if(!v50TaskIndex.has(key))v50TaskIndex.set(key,t);}}
+}
+function v50RowsForLocation(loc){return v50RowsIndex?.get(loc)||results.filter(r=>r.ubicacionNormalizada===loc);}
+function v50LatestForLocation(loc){return v50LatestIndex?v50LatestIndex.get(loc)||new Map():v12LatestEntries(loc);}
+function v50IndexForRow(r){return v50ResultIndex?.get(r)??results.indexOf(r);}
+function v50ReleaseRenderIndexes(){v50RowsIndex=null;v50LatestIndex=null;v50TaskIndex=null;v50ResultIndex=null;}
+function v50UpdateSection(id,html){
+ const el=$(id);if(!el)return;
+ if(v50SectionsBase.get(id)!==html){el.innerHTML=html;v50SectionsBase.set(id,html);}
+}
+
 function v12Catalog(){const raw=$('systemData').value;if(raw!==v12CatalogCache.raw){v12CatalogCache.raw=raw;v12CatalogCache.data=wfCatalog();}return v12CatalogCache.data;}
 function v12LatestEntries(loc){
  const catalog=new Map();
@@ -1646,6 +1667,7 @@ function v12LatestEntries(loc){
  return catalog;
 }
 function v12TaskFor(loc,code){
+ if(v50TaskIndex)return v50TaskIndex.get(loc+'\u0000'+String(code))||null;
  return [...wfV8.tasks].reverse().find(t=>t.location===loc&&(String(t.code)===String(code)||String(t.response?.code)===String(code)));
 }
 function v12TaskInfo(loc,code){
@@ -1690,7 +1712,7 @@ function v12SendRecount(){
 function v12ToggleLocation(loc){if(openLocations.has(loc))openLocations.delete(loc);else openLocations.add(loc);renderLocations();}
 // Present one consolidated table; counts already synchronized are shown here, not in a separate card list.
 renderOneLocation=function(loc){
- const rows=results.filter(r=>r.ubicacionNormalizada===loc),latest=v12LatestEntries(loc);
+ const rows=v50RowsForLocation(loc),latest=v50LatestForLocation(loc);
  const extras=[...latest].filter(([code])=>!rows.some(r=>String(r.codigo)===String(code)));
  let kind=rows.length?locationKind(loc):'novedad';
  if(extras.length)kind='novedad';
@@ -1698,7 +1720,7 @@ renderOneLocation=function(loc){
  const bad=rows.filter(r=>remaining(r)!==0||r.duplicado||!r.locValid||(!r.hasOperator&&!finished)).length+extras.length;
  const head='<th>Código</th><th>Físico</th><th>Sistema</th><th>Dif. inicial</th><th>Pendiente</th><th>Estado / seguimiento</th><th>Novedades / acciones</th>';
  const body=rows.map(r=>{
-  const rowid=results.indexOf(r),bal=remaining(r),entry=latest.get(String(r.codigo));
+  const rowid=v50IndexForRow(r),bal=remaining(r),entry=latest.get(String(r.codigo));
   const c=r.duplicado?'wait':bal===0?'square':'issue';
   const status=r.estado==='OK'&&r.diferencia===0&&!r.duplicado&&!entry?'CUADRADO':rowStatus(r);
   const requireAction=bal!==0||r.duplicado||!r.locValid||!!entry||(typeof v30CountEntries==='function'&&!v18Square(loc)&&v30CountEntries(loc,r.codigo).length>0);
@@ -1719,18 +1741,21 @@ renderOneLocation=function(loc){
 };
 const v12OriginalRenderLocations=renderLocations;
 renderLocations=function(){
+ v50BuildRenderIndexes();
+ try{
  const locs=[...new Set([...(hasCompared?auditScope.mappedLocations:[]),...wfV8.sessions.filter(s=>s.status!=='rejected'&&s.location).map(s=>s.location)])];
  const groups={novedad:[],cuadrada:[],conciliada:[]};
  for(const loc of locs){
-  const rows=results.filter(r=>r.ubicacionNormalizada===loc),entries=v12LatestEntries(loc),extra=[...entries.keys()].some(code=>!rows.some(r=>String(r.codigo)===code));
+  const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc),extra=[...entries.keys()].some(code=>!rows.some(r=>String(r.codigo)===code));
   let kind=rows.length?locationKind(loc):'novedad';if(extra)kind='novedad';
   if(groups[kind])groups[kind].push(loc);
  }
  for(const [kind,container,count] of [['novedad','issuesLocations','issuesCount'],['cuadrada','squaredLocations','squaredCount'],['conciliada','settledLocations','settledCount']]){
   const locations=groups[kind];
-  $(count).textContent=`${locations.length} ubicaciones · ${locations.reduce((n,loc)=>{const rows=results.filter(r=>r.ubicacionNormalizada===loc),entries=v12LatestEntries(loc);return n+rows.length+[...entries.keys()].filter(code=>!rows.some(r=>String(r.codigo)===code)).length;},0)} combinaciones código + ubicación`;
-  $(container).innerHTML=locations.length?locations.map(renderOneLocation).join(''):`<div class="emptyState">${kind==='novedad'?'No hay ubicaciones con novedades pendientes.':'Sin ubicaciones en esta categoría.'}</div>`;
+  $(count).textContent=`${locations.length} ubicaciones · ${locations.reduce((n,loc)=>{const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc);return n+rows.length+[...entries.keys()].filter(code=>!rows.some(r=>String(r.codigo)===code)).length;},0)} combinaciones código + ubicación`;
+  if((kind==='novedad'&&document.getElementById('results')?.classList.contains('active'))||(kind==='cuadrada'&&document.getElementById('squared')?.classList.contains('active')))v50UpdateSection(container,locations.length?locations.map(renderOneLocation).join(''):`<div class="emptyState">${kind==='novedad'?'No hay ubicaciones con novedades pendientes.':'Sin ubicaciones en esta categoría.'}</div>`);
  }
+ }finally{v50ReleaseRenderIndexes();}
 };
 // Keep internal calls that used to build a second inbox, but refresh the consolidated view instead.
 renderNoveltiesV9=function(){
@@ -5889,6 +5914,204 @@ v13ApprovedMovements=function(){
  return v13AllMovements().filter(m=>!m.executedAt&&m.from&&m.to&&m.from!==m.to&&
   (m.sourceType!=='transfer'||m.originVerified===true||m.v48===true&&m.adminApproved===true)&&
   v13ValidLocation(m.from)&&(v13ValidLocation(m.to)||m.v48===true&&v48KnownDestination(m.to,m.code)));
+};
+</script>
+
+<style id="perchado-v49-two-groups-style">
+/* Solo dos grupos operativos en Movimientos y ajustes; conserva el motor de datos. */
+#decisions > .wfSectionTitle,
+#decisions > #settledCount,
+#decisions > #settledLocations,
+#decisions > .mainSectionHead:not(:first-child),
+#decisions > .toolbar,
+#decisions > .tableWrap { display:none!important; }
+#decisions > .mainSectionHead:first-child > button { display:none!important; }
+#decisions #reconciliationPanel { display:block!important; min-width:0; }
+.v49Toolbar { display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:11px 13px;border:1px solid #b7e3d9;background:#f1fcf9;border-radius:12px;margin:12px 0; }
+.v49Toolbar .v49Controls { display:flex;gap:7px;align-items:center;flex-wrap:wrap; }
+.v49Toolbar select {font-size:12px;font-weight:700;min-height:35px;border-radius:8px;max-width:245px;padding:5px 10px;color:#0b635a;background:#fff;border:1px solid #acd9cf;}
+.v49Toolbar button {font-size:12px;min-height:35px;padding:6px 11px;border-radius:8px;white-space:nowrap;}
+.v49Summary {font-size:13px;font-weight:750;color:#0f5e54;}
+.v49Group {border:1px solid #bfe6dc;background:#fff;border-radius:13px;margin:11px 0;overflow:hidden;}
+.v49GroupHead {display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:#f2fbf7;border-bottom:1px solid #d5eae4;}
+.v49GroupHead h3 {font-size:15px;font-weight:800;margin:0;color:#075c51;}
+.v49GroupHead .v49Count {font-size:12px;font-weight:750;color:#387b70;}
+.v49Group .tableWrap{overflow:auto;-webkit-overflow-scrolling:touch;}
+.v49Group table{width:100%;border-collapse:collapse;font-size:12px;min-width:635px;}
+.v49Group th,.v49Group td{padding:8px 10px;text-align:left;border-bottom:1px solid #e6f2ee;white-space:nowrap;}
+.v49Group th{background:#e9f7f2;font-size:11px;color:#185e53;}
+.v49Group tbody tr:last-child td{border-bottom:none;}
+.v49Group tbody tr:hover td{background:#edfaf6;}
+.v49Group td:nth-child(4),.v49Group th:nth-child(4) {text-align:right;font-variant-numeric:tabular-nums;}
+.v49Flag {font-size:10px;font-weight:750;border-radius:12px;padding:4px 7px;display:inline-block;white-space:nowrap;background:#e8f4f1;color:#246459;}
+.v49Flag.done {background:#dff8e9;color:#137044;}
+.v49Flag.review {background:#fff1d8;color:#906000;}
+.v49Flag.positive{background:#e9f9e6;color:#2c7040;}
+.v49Group .v49Foot{margin:0;padding:7px 12px;font-size:11px;color:#6e6253;background:#fffbf4;}
+.v49Action{font-size:11px!important;min-height:27px!important;padding:3px 8px!important;border-radius:7px!important;}
+@media(max-width:640px){.v49Toolbar{align-items:stretch}.v49Toolbar .v49Controls{width:100%}.v49Toolbar select{flex:1;min-width:135px}.v49Toolbar button{flex:1}.v49GroupHead h3{font-size:14px}}
+</style>
+<script id="perchado-v49-consolidated-movements">
+'use strict';
+// Keep all original movement and Firebase storage structures unchanged.
+// Merge active movement records with the WMS audit ledger, without losing history.
+let v49Scope='pending';
+function v49Kind(m,linked){
+ const k=String(linked?.kind||m.kind||'').toUpperCase();
+ const from=String(m.from||''),to=String(m.to||'');
+ if(k==='RESOLUTION')return m.operation==='SOBRANTE'?'surplus':'missing';
+ if(k.includes('FALTANTE')||k==='MATCH')return 'missing';
+ if(k.includes('RECUPERACION')||k.includes('SOBRANTE')||k.includes('POSITIVO'))return 'surplus';
+ if(to===PROCESS_LOCATION)return 'missing';
+ if(from===PROCESS_LOCATION)return 'surplus';
+ // Legacy movements without an intention flag: use the original source deficit if available.
+ const row=typeof v13Row==='function'?v13Row(from,m.code):null;
+ if(row&&Number(row.diferencia)<0)return 'missing';
+ return 'surplus';
+}
+function v49Collect(){
+ const active=[];
+ (approvedMatches||[]).forEach((m,i)=>active.push({m,type:'match',index:i,kind:'MATCH'}));
+ (resolutions||[]).forEach((m,i)=>active.push({m,type:'resolution',index:i,kind:m.type}));
+ (manualTransfersV9||[]).forEach((m,i)=>active.push({m,type:'transfer',index:i,kind:m.kind||'TRASLADO'}));
+ const byLedger=new Map(active.filter(x=>x.m.v33Id).map(x=>[String(x.m.v33Id),x]));
+ const visited=new Set(),rows=[];
+ for(const l of (v33Ledger||[])){
+  if(!l||!l.code||!l.id||l.status==='discarded')continue;
+  const link=byLedger.get(String(l.id));
+  const from=String(l.from||''),to=String(l.to||'');
+  const isPositive=!from||from===to&&l.operation==='SOBRANTE';
+  rows.push({id:String(l.id),code:String(l.code),from,to,qty:Number(l.qty)||0,
+    category:v49Kind(l,link?{kind:link.kind}:null),
+    state:l.status==='regularizado'?'regularizado':l.status==='manual'||!!l.executedAt?'ejecutado':l.status==='review'?'revisar':'pendiente',
+    positive:isPositive,link});
+  visited.add(String(l.id));
+ }
+ for(const link of active){
+  const m=link.m,id=String(m.v33Id||m.id||'');
+  if(id&&visited.has(id))continue;
+  const from=link.type==='resolution'?(m.type==='FALTANTE'?String(m.location||''):''):String(m.from||'');
+  const to=link.type==='resolution'?String(m.type==='FALTANTE'?(m.target||PROCESS_LOCATION):m.location||''):String(m.to||'');
+  const positive=link.type==='resolution'&&m.type==='SOBRANTE';
+  rows.push({id,code:String(m.code),from,to,qty:Number(m.qty)||0,category:v49Kind({...m,from,to,operation:m.type==='SOBRANTE'?'SOBRANTE':'TRASLADO'},link),
+    state:m.executedAt?'ejecutado':'pendiente',positive,link});
+  if(id)visited.add(id);
+ }
+ return rows.filter(m=>m.code&&m.qty>0).sort((a,b)=>a.category.localeCompare(b.category)||a.code.localeCompare(b.code,undefined,{numeric:true}));
+}
+function v49PendingRows(){
+ // Existing validated export function also includes unreflected ledger entries.
+ return (v13Rows()||[]).filter(r=>r&&r.length>=4).map(r=>[String(r[0]),String(r[1]),String(r[2]),Number(r[3])]);
+}
+function v49IsPendingRow(m, pending){
+ return !m.positive&&m.state==='pendiente'&&pending.some(r=>r[0]===m.code&&r[1]===m.from&&r[2]===m.to&&Math.abs(r[3]-m.qty)<0.000001);
+}
+function v49SelectedRows(){
+ if(v49Scope==='pending')return v49PendingRows();
+ return v49Collect().filter(m=>!m.positive&&m.from&&m.to&&m.from!==m.to&&m.state!=='revisar')
+  .map(m=>[m.code,m.from,m.to,m.qty]);
+}
+function v49Copy(){
+ const rows=v49SelectedRows();
+ if(!rows.length)return perchadoAlert('No hay movimientos de traslado para copiar con el filtro seleccionado.');
+ const txt=[v13MovementHeaders,...rows].map(r=>r.join('\t')).join('\n');
+ copyText(txt,v49Scope==='pending'?'Movimientos pendientes copiados':'Todos los movimientos copiados');
+}
+function v49Download(){
+ const rows=v49SelectedRows();
+ if(!rows.length)return perchadoAlert('No hay movimientos de traslado para descargar con el filtro seleccionado.');
+ const label=v49Scope==='pending'?'PENDIENTES':'TODOS';
+ const data=[v13MovementHeaders,...rows];
+ if(typeof XLSX==='undefined')return wfDownloadBlob(data.map(r=>r.join('\t')).join('\n'),'PERCHADO_MOVIMIENTOS_'+label+'.tsv','text/tab-separated-values;charset=utf-8');
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Movimientos WMS');
+ XLSX.writeFile(wb,'PERCHADO_MOVIMIENTOS_'+label+'.xlsx');
+}
+function v49RowHtml(m,pending){
+ const state=m.state==='regularizado'?'Regularizado WMS':m.state==='ejecutado'?'Ejecutado informado':m.state==='revisar'?'Revisar contra WMS':m.positive?'Ajuste positivo':v49IsPendingRow(m,pending)?'Pendiente WMS':'No exportable · revisar';
+ const cls=m.positive?'positive':m.state==='regularizado'?'done':m.state==='revisar'?'review':'';
+ let action='';
+ if(!m.positive&&m.state==='pendiente'&&m.link&&v49IsPendingRow(m,pending)){
+  action=`<button class="secondary mini v49Action" onclick='v13MarkExecuted(${JSON.stringify(m.link.type)},${m.link.index})'>✓ Ejecutado</button>`;
+ }else if(m.state==='revisar'&&m.id){
+  action=`<button class="secondary mini v49Action" onclick='v33Manual(${JSON.stringify(m.id)})'>✓ Revisado</button>`;
+ }
+ return `<tr><td><b>${escapeHtml(m.code)}</b></td><td>${escapeHtml(m.from||'—')}</td><td>${escapeHtml(m.to)}</td><td>${fmtQty(m.qty)}</td><td><span class="v49Flag ${cls}">${escapeHtml(state)}</span></td><td>${action}</td></tr>`;
+}
+function v49SectionHtml(label,icon,category,moves,pending){
+ const visible=moves.filter(m=>m.category===category&&(v49Scope==='all'||m.positive&&m.state==='pendiente'||v49IsPendingRow(m,pending)));
+ const rows=visible.map(m=>v49RowHtml(m,pending)).join('');
+ const note=category==='surplus'&&visible.some(x=>x.positive)?'<p class="v49Foot">Los ajustes positivos sin origen WMS aparecen aquí, pero no se exportan como traslados de cuatro columnas.</p>':'';
+ return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} registros</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
+}
+function v49SetScope(value){v49Scope=value==='all'?'all':'pending';renderReconciliation();}
+renderReconciliation=function(){
+ const node=document.getElementById('reconciliationPanel');if(!node)return;
+ if(!hasCompared){node.innerHTML='<div class="wfEmpty">Actualiza la data WMS para consultar los movimientos.</div>';return;}
+ const moves=v49Collect(),pending=v49PendingRows(),selected=v49SelectedRows();
+ const positive=moves.filter(m=>m.positive&&m.state==='pendiente').length;
+ node.innerHTML=`<div class="v49Toolbar"><span class="v49Summary">📦 ${selected.length} movimientos para ${v49Scope==='pending'?'ejecutar en WMS':'consultar en historial'}</span>`+
+  `<div class="v49Controls"><select aria-label="Filtrar movimientos" onchange="v49SetScope(this.value)"><option value="pending" ${v49Scope==='pending'?'selected':''}>Pendientes WMS</option><option value="all" ${v49Scope==='all'?'selected':''}>Todos los movimientos</option></select>`+
+  `<button class="primary mini" onclick="v49Copy()">📋 Copiar ${v49Scope==='pending'?'pendientes':'todos'}</button>`+
+  `<button class="secondary mini" onclick="v49Download()">⬇️ Descargar ${v49Scope==='pending'?'pendientes':'todos'}</button></div></div>`+
+  v49SectionHtml('Sobrantes','🟢','surplus',moves,pending)+v49SectionHtml('Faltantes','🔴','missing',moves,pending);
+};
+// The existing export format stays precisely: Código | Posición Bulk | Pasar | Qty.
+// The original history and reconciliation logic continues to operate in storage.
+</script>
+
+<!-- PERCHADO V50 · rendimiento de Novedades y mensajes compactos -->
+<style id="perchado-v50-performance-notices">
+/* Avisos informativos discretos arriba a la derecha. Confirmaciones mantienen su modal. */
+#perchadoToastCenter{
+ top:calc(var(--perchado-header-height,68px) + 8px)!important;right:16px!important;bottom:auto!important;left:auto!important;
+ transform:none!important;width:max-content!important;
+ max-width:min(330px,calc(100vw - 28px))!important;
+ padding:9px 12px!important;border-radius:10px!important;
+ font-size:12px!important;font-weight:650!important;line-height:1.35!important;
+ text-align:left!important;letter-spacing:0!important;
+ box-shadow:0 5px 18px rgba(9,76,70,.12)!important;
+ animation:v50ToastEnter .16s ease-out!important;
+ overflow-wrap:anywhere;
+}
+@keyframes v50ToastEnter{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){#perchadoToastCenter{top:calc(var(--perchado-header-height,68px) + 6px)!important;right:8px!important;max-width:min(280px,calc(100vw - 16px))!important;padding:8px 10px!important;font-size:11px!important}}
+@media(prefers-reduced-motion:reduce){#perchadoToastCenter{animation:none!important}}
+</style>
+<script id="perchado-v50-performance">
+'use strict';
+// Evita reconstruir cientos de filas ocultas al recibir sesiones, tareas o metadatos.
+// Al abrir una pestaña, genera su vista con los datos actuales, una sola vez.
+const v50OriginalRenderLocations=renderLocations;
+renderLocations=function(){
+ const visible=['results','squared','settled'].some(id=>document.getElementById(id)?.classList.contains('active'));
+ if(!visible)return;
+ return v50OriginalRenderLocations.apply(this,arguments);
+};
+const v50OriginalOpenTab=openTab;
+openTab=function(id){
+ const wasAlreadyActive=!!document.getElementById(id)?.classList.contains('active');
+ const result=v50OriginalOpenTab.apply(this,arguments);
+ if(['results','squared','settled'].includes(id)&&hasCompared&&!sourceDirty){
+  // La pestaña puede haber recibido cambios mientras estaba oculta.
+  // Evitar un segundo render si ya estaba activa.
+  if(!wasAlreadyActive||!v50SectionsBase.size)renderLocations();
+ }
+ return result;
+};
+// Notificación repetida: no volver a colocarla en pantalla por cada guardado similar.
+const v50BaseToast=toast;
+let v50LastToastText='',v50LastToastAt=0;
+toast=function(message){
+ const msg=String(message??'').trim(),now=Date.now();
+ if(!msg)return;
+ const kind=perchadoMsgKind(msg,false);
+ if(kind!=='error'&&kind!=='warning'&&msg===v50LastToastText&&now-v50LastToastAt<3500)return;
+ v50LastToastText=msg;v50LastToastAt=now;
+ v50BaseToast(msg);
+ if(kind!=='error'&&kind!=='warning'){
+   clearTimeout(v50BaseToast.timer);clearTimeout(toast.timer);
+   toast.timer=setTimeout(()=>{const n=document.getElementById('perchadoToastCenter');if(n)n.hidden=true;},2000);
+ }
 };
 </script>
 </body>
