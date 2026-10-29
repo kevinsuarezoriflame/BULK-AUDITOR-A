@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V78</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V79</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -8888,6 +8888,161 @@ setCloudDataV9=function(group,docs){const out=v78PrevCloud.apply(this,arguments)
  for(const d of docs||[])if(d?.kind===V78_POSITIVE_KIND)v78Unsynced.delete(d.id);
  v78RenderIfActive();
  }return out;};
+</script>
+
+
+<style id="perchado-v79-ajustes">
+/* V79 — Un solo registro de ingresos positivos, compacto y editable. */
+#surplusLedger>#v78LedgerBody{display:none!important}
+#surplusLedger>.v78Info{display:none!important}
+#surplusLedger #v78PositivePanel>h3,#surplusLedger #v78PositivePanel>.v78Info{display:none!important}
+#surplusLedger #v78PositivePanel{margin-top:8px!important}
+#surplusLedger .v78Summary{margin:8px 0 12px;gap:8px}
+#surplusLedger .v78Metric{padding:9px 12px;min-width:150px}
+#surplusLedger .v78Metric b{font-size:18px}
+#surplusLedger .v78Table th,#surplusLedger .v78Table td{padding:7px 9px}
+#surplusLedger .v79Delete{background:#fff4f2;color:#a02f2f;border:1px solid #f2c4bc;min-width:36px;min-height:35px;padding:5px 9px;border-radius:8px}
+#surplusLedger .v79Delete:disabled{opacity:.4;cursor:wait}
+</style>
+<script id="perchado-v79-control-sobrantes">
+'use strict';
+/* V79: no altera conteos, WMS ni ERI original. Los sobrantes confirmados
+   dejan de requerir intervención administrativa hasta que exista un conteo
+   o reconteo físico posterior diferente. Se conserva evidencia en Firebase. */
+const V79_EXCLUDED='v79_positive_row_excluded';
+let v79DeletingPositive=false;
+function v79SurplusApproved(loc,code){
+  const d=wfV8.corrections?.[v15SurplusKey(loc,code)];
+  if(!d||d.kind!=='confirmed_surplus'||d.status!=='confirmed'||d.archived||!(Number(d.qty)>0))return null;
+  const verified=wfV8.corrections?.[d.verificationId];
+  if(!verified||verified.kind!=='physical_verified'||!verified.approved)return null;
+  if(String(verified.location)!==String(loc)||String(verified.code)!==String(code))return null;
+  if(String(d.taskId||'')!==String(verified.taskId||''))return null;
+  // Evita reutilizar la aprobación si se volvió a validar otra cantidad física.
+  if(Math.abs(Number(verified.wmsQty)+Number(d.qty)-Number(verified.qty))>0.00001)return null;
+  // Un reconteo posterior distinto vuelve a abrir la revisión.
+  const latest=typeof v40Ready==='function'?v40Ready(loc,code):null;
+  if(latest&&latest.response&&Number.isFinite(Number(latest.response.qty)) &&
+     Math.abs(Number(latest.response.qty)-Number(verified.qty))>0.00001)return null;
+  const recent=typeof v50LatestForLocation==='function'?v50LatestForLocation(loc).get(String(code)):null;
+  if(recent?.session && recent?.entry){
+    const newAt=Date.parse(recent.session.submittedAt||recent.session.createdAt||'')||0;
+    const approvedAt=Date.parse(d.at||'')||0;
+    if(newAt>approvedAt && Number.isFinite(Number(recent.entry.qty)) &&
+       Math.abs(Number(recent.entry.qty)-Number(verified.qty))>0.00001)return null;
+  }
+  return d;
+}
+const v79PrevAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,r){
+  if(r && v79SurplusApproved(loc,r.codigo))return false;
+  return v79PrevAttention(loc,r);
+};
+const v79PrevExtra=v71ExtraNeedsAttention;
+v71ExtraNeedsAttention=function(loc,code){
+  if(v79SurplusApproved(loc,code))return false;
+  return v79PrevExtra(loc,code);
+};
+const v79PrevRowStatus=rowStatus;
+rowStatus=function(r){
+  if(r && v79SurplusApproved(r.ubicacionNormalizada,r.codigo))return 'CUADRADO · SOBRANTE APROBADO';
+  return v79PrevRowStatus(r);
+};
+// No volver a pedir registrar un sobrante ya confirmado para el mismo físico.
+for(const name of ['v15RegisterSurplus','v19RegisterSurplus','v36RegisterRecountSurplus']){
+  const prev=window[name];if(typeof prev!=='function')continue;
+  window[name]=async function(loc,code,...args){
+    if(v79SurplusApproved(loc,code)){
+      if(typeof toast==='function')toast('✓ Sobrante ya aprobado. No se duplicó el registro.');
+      return;
+    }
+    return prev.call(this,loc,code,...args);
+  };
+}
+// La tabla inferior es la única visible; se unifican propuestas idénticas
+// por código, ubicación y unidades. Los registros de respaldo no se destruyen.
+function v79PositiveKey(x){return [String(x.code||'').trim(),String(x.location||'').trim(),String(Number(x.qty))].join('|');}
+function v79ExcludedId(key){return 'v79_excluded_'+v78Hash(key);}
+function v79IsExcluded(x){
+  const key=v79PositiveKey(x),doc=wfV8.corrections?.[v79ExcludedId(key)];
+  return doc?.kind===V79_EXCLUDED && doc.excluded===true;
+}
+const v79BaseRows=v78PositiveRows;
+v78PositiveRows=function(){
+  const dedup=new Map();
+  for(const row of v79BaseRows()){
+    if(!(Number(row.qty)>0)||v79IsExcluded(row))continue;
+    const key=v79PositiveKey(row);
+    if(!dedup.has(key))dedup.set(key,{...row,v79key:key,v79copies:1});
+    else dedup.get(key).v79copies++;
+  }
+  return [...dedup.values()];
+};
+async function v79DeletePositive(key){
+  if(!adminAccessV9||v79DeletingPositive)return;
+  const row=v78PositiveRows().find(x=>x.v79key===key);
+  if(!row)return;
+  if(!cloudEnabledV9||!cloudV9?.connected||!cloudV9?.ready||!cloudWritableV9()){
+    return perchadoAlert('Firebase debe estar sincronizado antes de retirar esta fila. No se modificó nada.');
+  }
+  // Retiro reversible por evidencia, sin borrar documentos históricos ni
+  // modificar propuestas WMS de otra pestaña.
+  const permitted=await perchadoConfirm('¿Retirar del panel este ingreso positivo completo?\n'+
+    'Código: '+row.code+'\nUbicación: '+row.location+'\nCantidad: '+fmtQty(row.qty)+
+    ' unidades\n\nSe ocultarán también sus registros idénticos. El historial permanece en Firebase; no se modifican stock, movimientos ni conteos.');
+  if(!permitted)return;
+  const record={id:v79ExcludedId(key),kind:V79_EXCLUDED,excluded:true,key,
+    code:String(row.code),location:String(row.location),qty:Number(row.qty),
+    at:new Date().toISOString(),by:String(adminIdentityV9||'Administración')};
+  v79DeletingPositive=true;
+  try{
+    await cloudV9.persist('corrections',record);
+    wfV8.corrections[record.id]=record;
+    v78RenderIfActive();
+    if(typeof toast==='function')toast('✓ Fila retirada del registro. Evidencia conservada.');
+  }catch(e){perchadoAlert('No se pudo retirar: '+(e?.message||e));}
+  finally{v79DeletingPositive=false;}
+}
+// No reconstruir la tabla superior oculta; evita trabajo visual innecesario.
+v78Render=function(){v78PositiveRender();};
+// Evitar que la búsqueda y el botón Copiar incluyan el panel superior oculto.
+v78CopyReport=function(){
+  const lines=v78PositiveRows().filter(x=>!v78Search||[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search)));
+  if(!lines.length){toast('Sin ingresos positivos para copiar.');return;}
+  const data=[['Fecha','Código','Ubicación','Cantidad','Responsable','Registro'],
+    ...lines.map(x=>[x.at,x.code,x.location,Number(x.qty),x.by,x.pending?'Pendiente Firebase':x.legacy?'Registro anterior':'Firebase'])];
+  void v72WriteClipboard(data.map(r=>r.join('\t')).join('\n')).then(()=>toast('✓ Ingresos positivos copiados.')).catch(e=>perchadoAlert(e.message));
+};
+// Render compacto y papelera por fila. Se oculta el panel superior, pero se
+// mantienen todos los datos para auditoría y reconstrucción de diferencias.
+v78PositiveRender=function(){
+  const target=document.getElementById('v78PositiveBody');if(!target)return;
+  const all=v78PositiveRows(),shown=v78Search?all.filter(x=>[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search))):all;
+  const rows=shown.slice(0,300);
+  target.innerHTML=`<div class="v78Summary"><div class="v78Metric"><b>${shown.length}</b><small>Ingresos positivos registrados</small></div><div class="v78Metric"><b>${fmtQty(shown.reduce((n,x)=>n+Number(x.qty),0))}</b><small>Unidades sin duplicar propuestas idénticas</small></div></div>
+  <div class="tableWrap"><table class="v78Table"><thead><tr><th>Fecha</th><th>Código</th><th>Ubicación</th><th>Unidades</th><th>Responsable</th><th>Registro</th><th>Acciones</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${v78Esc(x.at?wfFormatDate(x.at):'—')}</td><td><b>${v78Esc(x.code)}</b></td><td>${v78Esc(x.location)}</td><td>${fmtQty(Number(x.qty))}</td><td>${v78Esc(x.by||'—')}</td><td>${x.pending?'⚠ Pendiente Firebase':x.legacy?'Registro anterior':'✓ Historial Firebase'}${x.v79copies>1?` · ${x.v79copies} registros agrupados`:''}</td><td><button type="button" class="v79Delete" title="Retirar esta fila completa" aria-label="Retirar código ${v78Esc(x.code)}" onclick='v79DeletePositive(${JSON.stringify(x.v79key)})'>🗑️</button></td></tr>`).join('')||'<tr><td colspan="7">Sin ingresos positivos preparados.</td></tr>'}</tbody></table></div>
+  ${shown.length>300?'<p class="v78Info">Mostrando 300 registros. Usa el buscador para localizar otro.</p>':''}`;
+};
+// Ajustes visuales: sólo la tabla inferior solicitada.
+(function(){
+ const root=document.getElementById('surplusLedger');if(!root)return;
+ const head=root.querySelector('.mainSectionHead h2');if(head)head.textContent='＋ Ingresos positivos preparados';
+ const input=root.querySelector('#v78Find');if(input)input.placeholder='Buscar código, ubicación o responsable';
+ const info=root.querySelector('.v78Info');if(info)info.hidden=true;
+})();
+// Sólo mostrar operarios que tengan algún código realmente activo en el conteo.
+const v79PrevCloud=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ if(group==='liveCounts')docs=(docs||[]).filter(r=>
+  r.status==='counting' && (r.entries||[]).some(e=>!v29IsRemoved(e.id)));
+ return v79PrevCloud.call(this,group,docs);
+};
+const v79PrevMonitor=renderLiveMonitoringV9;
+renderLiveMonitoringV9=function(){
+ if(Array.isArray(lastLiveV9))lastLiveV9=lastLiveV9.filter(r=>(r.entries||[]).some(e=>!v29IsRemoved(e.id)));
+ return v79PrevMonitor.apply(this,arguments);
+};
+// Se reutilizan las escuchas existentes; no se crean consultas nuevas.
 </script>
 
 </body>
