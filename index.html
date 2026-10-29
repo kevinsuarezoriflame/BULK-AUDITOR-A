@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V76</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V77</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -1779,7 +1779,7 @@ renderOneLocation=function(loc){
  const body=rows.map(r=>{
   const rowid=v50IndexForRow(r),bal=remaining(r),entry=latest.get(String(r.codigo));
   const c=r.duplicado?'wait':bal===0?'square':'issue';
-  const activeRecount=typeof v12TaskFor==='function'&&['open','answered'].includes(v12TaskFor(loc,r.codigo)?.status);
+  const activeRecount=typeof v40Open==='function'&&v40Open(loc,r.codigo);
   const status=activeRecount?'EN RECONTEO':r.estado==='OK'&&r.diferencia===0&&!r.duplicado&&!entry?'CUADRADO':rowStatus(r);
   const requireAction=bal!==0||r.duplicado||!r.locValid||!!entry||(typeof v30CountEntries==='function'&&!v18Square(loc)&&v30CountEntries(loc,r.codigo).length>0);
   const entryInfo=entry?`<div class="v12EntryMeta">Conteo recibido: ${fmtQty(entry.entry.qty)} u · ${v12Safe(personNameV8(entry.session.userId))} · ${v12Safe(wfStatus(entry.session.status))}</div>`:'';
@@ -1807,7 +1807,7 @@ renderLocations=function(){
  for(const loc of locs){
   const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc);
   const codes=new Set(rows.map(r=>String(r.codigo)));
-  let extra=0;for(const code of entries.keys())if(!codes.has(code))extra++;
+  let extra=0;for(const code of entries.keys())if(!codes.has(code)&&v71ExtraNeedsAttention(loc,code))extra++;
   let kind=rows.length?locationKind(loc):'novedad';if(extra)kind='novedad';
   if(groups[kind]){
    const attention=kind==='novedad'?rows.filter(r=>v71NeedsAttention(loc,r)).length+extra:rows.length+extra;
@@ -5798,7 +5798,7 @@ function v40DecorateResults(){
   const loc=card.querySelector('.fullLoc')?.textContent?.trim();if(!loc)return;
   const tasks=wfV8.tasks.filter(t=>t.location===loc&&['open','answered','closed'].includes(t.status));
   const recounted=tasks.filter(t=>t.response&&['answered','closed'].includes(t.status));
-  const open=tasks.filter(t=>t.status==='open');
+  const open=tasks.filter(t=>t.status==='open'&&v40Open(loc,String(t.code||t.response?.code||'')));
   if(recounted.length){card.classList.toggle('v37LocationReceived',open.length>0);card.classList.toggle('v37LocationValidated',!open.length);}
   const banner=card.querySelector('.v37RecountBanner');
   if(banner){
@@ -8582,6 +8582,107 @@ async function v73Copy(){
  try{await v72WriteClipboard(tsv);toast('✓ '+rows.length+' variaciones WMS copiadas (informe, NO órdenes WMS).');}
  catch(e){perchadoAlert(String(e?.message||e));}
 }
+</script>
+
+
+<!-- PERCHADO V77: Novedades accionables. Datos del WMS, conteos y reconteos intactos. -->
+<script id="perchado-v77-actionable-novelties">
+'use strict';
+// Un reconteo recibido más reciente sustituye una solicitud antigua que todavía
+// figure como abierta. No se edita ni se elimina la tarea de Firebase.
+const v77PreviousOpen=v40Open;
+v40Open=function(loc,code){
+  const keyCode=String(code),keyLoc=String(loc);
+  const active=(wfV8.tasks||[]).filter(t=>String(t.location)===keyLoc &&
+    (String(t.code)===keyCode||String(t.response?.code)===keyCode) &&t.status==='open');
+  if(!active.length)return false;
+  const finished=(wfV8.tasks||[]).filter(t=>String(t.location)===keyLoc&&
+    (String(t.code)===keyCode||String(t.response?.code)===keyCode) &&
+    ['answered','closed'].includes(t.status)&&t.response&&t.response.qty!==undefined);
+  if(!finished.length)return true;
+  const toMs=v=>{const n=Date.parse(String(v||''));return Number.isFinite(n)?n:0;};
+  const readyTime=Math.max(...finished.map(t=>Math.max(toMs(t.answeredAt),toMs(t.response?.at),toMs(t.closedAt),toMs(t.updatedAt))));
+  if(!readyTime)return v77PreviousOpen(loc,code);
+  return active.some(t=>!toMs(t.createdAt)||toMs(t.createdAt)>readyTime);
+};
+
+// Indexar únicamente la evidencia de pases sobre la MISMA foto WMS.
+// El ledger tiene muchas versiones; no reutilizar una intención antigua.
+const v77PreviousIndex=v50BuildRenderIndexes;
+v50BuildRenderIndexes=function(){
+ v77PreviousIndex();
+ if(!v71PreparedSet||!hasCompared)return;
+ const stock=new Map();
+ for(const x of allSystemRows||[]){const k=String(x.code)+'\u0000'+String(x.locNorm);
+   stock.set(k,(stock.get(k)||0)+Number(x.qty||0));}
+ const hash=v57CurrentBase();
+ for(const m of v33Ledger||[]){
+   if(!m||!m.code||!m.from||!m.to||['discarded','regularizado','review'].includes(m.status))continue;
+   const from=stock.get(String(m.code)+'\u0000'+String(m.from))||0;
+   const to=stock.get(String(m.code)+'\u0000'+String(m.to))||0;
+   const sameQty=Number.isFinite(Number(m.baselineSource))&&Number.isFinite(Number(m.baselineDestination)) &&
+     Math.abs(from-Number(m.baselineSource))<0.000001&&Math.abs(to-Number(m.baselineDestination))<0.000001;
+   const sameHash=!!(m.baselineHash&&hash&&m.baselineHash===hash);
+   if(sameQty||sameHash){
+     v71PreparedSet.add(v71PreparedKey(m.from,m.code));
+     v71PreparedSet.add(v71PreparedKey(m.to,m.code));
+   }
+ }
+};
+
+// Novedades = únicamente registros que necesitan intervención real.
+// Cero físico y cero WMS tras un reconteo finalizado no es una novedad.
+v71NeedsAttention=function(loc,r){
+ if(!hasCompared||!r)return false;
+ if(v71IsPrepared(loc,r.codigo))return false;
+ const pending=Number(remaining(r));
+ if(!Number.isFinite(pending))return true;
+ if(r.duplicado||!r.locValid)return true;
+ if(v40Open(loc,r.codigo))return true;
+ if(Math.abs(pending)<=0.000001)return false;
+ const follow=typeof v70Doc==='function'?v70Doc(loc,r.codigo):null;
+ if(follow&&['ENVIADO_WMS','EJECUTADO_WMS','VERIFICADO'].includes(follow.status)){
+   const stamped=Date.parse(follow.updatedAt||'')||0;
+   const published=Date.parse(v37Audit.manifest?.updatedAt||'')||0;
+   if(stamped&&(!published||stamped>=published))return false;
+ }
+ if(!r.hasOperator&&!confirmations.has(loc))return true;
+ return true;
+};
+v71ExtraNeedsAttention=function(loc,code){
+ if(v71IsPrepared(loc,code))return false;
+ if(v40Open(loc,code))return true;
+ const extra=v50LatestForLocation(loc).get(String(code));
+ const qty=v40Ready(loc,code)?.qty??(extra?.entry?.type==='MISSING'?0:extra?.entry?.qty);
+ if(qty===undefined||qty===null||qty==='')return true;
+ const stock=Number(v13ForCode(code,loc));
+ return !Number.isFinite(Number(qty))||Math.abs(Number(qty)-stock)>0.000001;
+};
+
+// Una captura cuyo código existe en otro lugar del WMS debe ofrecer una acción.
+// No se inventa un traslado: primero se confirma el físico mediante reconteo.
+const v77PreviousRowAction=v12RowAction;
+v12RowAction=function(idx,loc,code,delta,latest){
+ if(idx>=0)return v77PreviousRowAction.apply(this,arguments);
+ const args=JSON.stringify(String(loc))+','+JSON.stringify(String(code));
+ const waiting=v40Open(loc,code);
+ return `<div class="v12ActionBtns"><button type="button" class="secondary mini" onclick='v77ReviewCrossLocation(${args})'>🔎 Investigar</button>`+
+   (waiting?'<span class="v19Tag">⏳ Reconteo en curso</span>':
+   `<button type="button" class="primary mini" onclick='v12Choose("recount",${args})'>📨 Reconteo</button>`)+`</div>`;
+};
+function v77ReviewCrossLocation(loc,code){
+ const audit=auditCodeV8(String(code),String(loc),v12Catalog());
+ const latest=v12LatestEntries(String(loc)).get(String(code));
+ const qty=v40Ready(loc,code)?.qty??latest?.entry?.qty;
+ perchadoAlert(`Código ${code} · ubicación física ${loc}\nFísico informado: ${qty==null?'Sin dato':fmtQty(qty)+' u'}\n${audit.note}\n\nSi no existe stock WMS en esta ubicación, solicita reconteo para confirmar el código y la cantidad. Tras recibirlo, PERCHADO lo integrará a la comparación. No se creará ningún pase automáticamente.`);
+}
+// Recalcular la pantalla cuando entran los nuevos estados, sin escrituras extra.
+const v77PreviousCloudRows=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const result=v77PreviousCloudRows.apply(this,arguments);
+ if(group==='tasks'&&hasCompared&&adminAccessV9){v40RefreshIndex();v69Invalidate();}
+ return result;
+};
 </script>
 
 </body>
