@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V83</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V84</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -8936,7 +8936,7 @@ function v79SurplusApproved(loc,code){
   if(String(verified.location)!==String(loc)||String(verified.code)!==String(code))return null;
   if(String(d.taskId||'')!==String(verified.taskId||''))return null;
   // Evita reutilizar la aprobación si se volvió a validar otra cantidad física.
-  if(Math.abs(Number(verified.wmsQty)+Number(d.qty)-Number(verified.qty))>0.00001)return null;
+  if(Math.abs(Number(verified.wmsQty)+Number(d.qty)+Number(d.allocatedBeforeApproval||0)-Number(verified.qty))>0.00001)return null;
   // Un reconteo posterior distinto vuelve a abrir la revisión.
   const latest=typeof v40Ready==='function'?v40Ready(loc,code):null;
   if(latest&&latest.response&&Number.isFinite(Number(latest.response.qty)) &&
@@ -9266,7 +9266,7 @@ v12Inline=function(loc,code){
  }).join('');
  const originForm=sources.length?`<div class="v81Origins" role="radiogroup" aria-label="Seleccionar ubicación de origen">${originRows}</div><div class="v81Bottom"><label>Cantidad<input type="number" id="v38Qty" min="0.001" step="any" inputmode="decimal" max="${selection.limit}" value="${wfEsc(selection.qty)}" oninput='v46RememberQty(${a})'/></label><button class="primary mini" type="button" onclick='v81SaveTransfer(${a})'>↔ Registrar en Ajustes WMS</button><button class="secondary mini v81Real" type="button" onclick='v81ApproveSurplus(${a})'>＋ Sobrante real</button></div><div class="v81Notice" id="v38SourceInfo"></div>`:
  `<div class="v81Notice">Sin ubicaciones de origen con saldo disponible en el WMS.</div><div class="v81Bottom"><button class="secondary mini v81Real" type="button" onclick='v81ApproveSurplus(${a})'>＋ Sobrante real</button></div>`;
- return `<tr class="v12ActionRow v47ActionRow"><td colspan="7"><div class="v12InlinePanel v47CompactPanel"><div class="v47PanelHead"><b>↔ ${wfEsc(code)} · +${fmtQty(positive)} u</b><span>Destino: ${wfEsc(loc)}</span><button type="button" class="v47Close" onclick="v12CancelPanel()">×</button></div>${originForm}</div></td></tr>`;
+ return `<tr class="v12ActionRow v47ActionRow"><td colspan="7"><div class="v12InlinePanel v47CompactPanel"><div class="v47PanelHead"><b>↔ ${wfEsc(code)} · +${fmtQty(positive)} u pendientes</b>${typeof v84PartialProgress==='function'&&v84PartialProgress(loc,code)?`<span>Compensadas: ${fmtQty(v84PartialProgress(loc,code).applied)} u</span>`:''}<span>Destino: ${wfEsc(loc)}</span><button type="button" class="v47Close" onclick="v12CancelPanel()">×</button></div>${originForm}</div></td></tr>`;
 };
 async function v81SaveTransfer(loc,code){
  if(!adminAccessV9)return showAdminGateV9();
@@ -9302,7 +9302,7 @@ async function v81ApproveSurplus(loc,code){
  if(!r||r.duplicado&&!v13DupApproved(r)||wfV8.tasks.some(t=>t.location===loc&&String(t.code)===String(code)&&t.status==='open'))
   return perchadoAlert('Primero verifica el código o termina el reconteo abierto.');
  const count=latest?Number(latest.qty):answered?.answered&&answered.surplus?Number(answered.qty):r.hasOperator?Number(r.qtyOperador):NaN;
- const wms=v13ForCode(code,loc),surplus=count-wms;
+ const wms=v13ForCode(code,loc),surplus=Math.max(0,Number(remaining(r))); // V84: aprobar únicamente el saldo pendiente, no toda la diferencia original.
  if(!Number.isFinite(count)||!(surplus>0))return perchadoAlert('No hay una cantidad física positiva para aprobar.');
  const confirmed=await perchadoConfirm(`CONFIRMAR SOBRANTE REAL\nCódigo: ${code}\nUbicación: ${loc}\nCantidad: +${fmtQty(surplus)} u\n\n¿Confirmas que NO corresponde mover stock desde otra ubicación?`);
  if(!confirmed)return;
@@ -9316,6 +9316,7 @@ async function v81ApproveSurplus(loc,code){
    source:task?'task:'+task.id:(old?.source||'initial'),taskId:task?.id||old?.taskId||'',by:adminIdentityV9,at:now,
    history:[...(Array.isArray(old?.history)?old.history:[]),{qty:count,source:task?'task:'+task.id:(old?.source||'initial'),by:adminIdentityV9,at:now}].slice(-40)};
   const sid=v15SurplusKey(loc,code),obj={id:sid,kind:'confirmed_surplus',status:'confirmed',code:String(code),location:String(loc),qty:surplus,
+   originalDifference:Math.max(0,count-wms),allocatedBeforeApproval:Math.max(0,Number((count-wms-surplus).toFixed(5))),
    verificationId:id,taskId:verification.taskId,by:adminIdentityV9,at:now};
   await cloudV9.persist('corrections',verification);
   wfV8.corrections[id]=verification;
@@ -9411,6 +9412,52 @@ async function v81ApproveSurplus(loc,code){
 }
 </style>
 
+
+<!-- PERCHADO V84 — Conciliaciones parciales por código y ubicación -->
+<style id="perchado-v84-partial-surplus-css">
+#issuesLocations .v84PartBadge{display:inline-flex;align-items:center;background:#e7f7ff;color:#036382;border-radius:7px;padding:3px 7px;font-size:10px;font-weight:800;white-space:nowrap}
+#issuesLocations .v47PanelHead span{font-size:10px}
+</style>
+<script id="perchado-v84-partial-surplus">
+'use strict';
+/* No modificamos físico, WMS, ni las cantidades de movimientos ya registrados.
+   El saldo residual sí debe seguir disponible tras una compensación parcial. */
+function v84PartialProgress(loc,code,row){
+ const r=row||v13Row(loc,code);
+ if(!r||!r.locValid||r.duplicado||r._v18SquareClosed)return null;
+ const pending=Number(remaining(r));
+ const initial=Number(r.diferencia);
+ if(!Number.isFinite(pending)||!Number.isFinite(initial)||initial<=0.000001||pending<=0.000001)return null;
+ if(typeof v18Square==='function'&&v18Square(loc))return null;
+ const candidate=(manualTransfersV9||[]).filter(m=>m&&String(m.code)===String(code)&&String(m.to)===String(loc)
+  &&(!m.v38||!v38MovementReflected(m))&&Number(m.qty)>0);
+ if(!candidate.length)return null;
+ if(typeof v79SurplusApproved==='function'&&v79SurplusApproved(loc,code))return null;
+ const applied=Math.max(0,Number((initial-pending).toFixed(5)));
+ // No habilitar una segunda propuesta si el pendiente no fue efectivamente reducido.
+ if(applied<=0.000001)return null;
+ return {initial,applied,pending};
+}
+// La V71/V77 trataba cualquier pase como si hubiese resuelto TODO el código.
+// Una compensación parcial debe permanecer en Novedades hasta que el pendiente sea 0.
+const v84EarlierNeedsAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,r){
+ if(r&&v84PartialProgress(loc,r.codigo,r))return true;
+ return v84EarlierNeedsAttention.apply(this,arguments);
+};
+// Mostrar cuánto quedó sin asignar, no un estado de resuelto falso.
+const v84EarlierRowStatus=rowStatus;
+rowStatus=function(r){
+ const partial=r&&v84PartialProgress(r.ubicacionNormalizada,r.codigo,r);
+ return partial?'SOBRANTE PARCIAL · '+fmtQty(partial.pending)+' u pendientes':v84EarlierRowStatus.apply(this,arguments);
+};
+// Para aprobaciones físicas de un REMANENTE, reconocer la cantidad asignada a
+// otros orígenes. Para aprobaciones anteriores, se conserva la validación original.
+const v84EarlierConfirmed=v15Confirmed;
+v15Confirmed=function(loc,code){
+ return v84EarlierConfirmed.apply(this,arguments)||v79SurplusApproved(loc,code)||null;
+};
+</script>
 </body>
 </html>
 
