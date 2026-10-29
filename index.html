@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V59 · Control de inventario</title>
+<title>PERCHADO V60 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V59</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V60</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -581,7 +581,11 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 
 <div class="wfPane v16ResetBox" style="margin-top:18px">
  <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Reinicia WMS, ajustes, movimientos y estados administrativos. <strong>Conserva conteos, reconteos, cantidades validadas, borradores y usuarios.</strong> Requiere respaldo y confirmación.</p></div>
- <button type="button" class="secondary v16ResetButton" onclick="v58BeginReset()">🧹 Reiniciar ajustes y WMS</button></div>
+ <div class="v60ResetActions">
+ <button type="button" class="secondary v16ResetButton" onclick="v58BeginReset()">🧹 Reiniciar avances y ajustes</button>
+ <button type="button" class="danger v16ResetButton" onclick="v60BeginDelete()">🗑️ Eliminar conteos y reconteos</button>
+ <button type="button" class="secondary mini" onclick="v60DownloadHistory()">⬇️ Descargar histórico de Firebase</button>
+ </div></div>
  <div id="v24ResetStatus" class="v23DeleteStatus" role="status" aria-live="polite"></div>
 </div>
 <div class="wfPane v19Guide"><b>✓ Los conteos finalizados se comparan automáticamente con el WMS.</b><p>Las ubicaciones cuadradas se cierran. Las diferencias se resuelven desde Novedades; aquí no necesitas aprobar ni integrar registros.</p><button class="secondary mini" onclick="backupWorkflowV8()" title="Exportar respaldo JSON">💾 Respaldo</button></div>
@@ -2160,7 +2164,7 @@ renderOperatorDraftV8();renderWorkflowV8();renderAll();
 <script type="module">/* Firebase: autenticación anónima para sincronización; usuarios administrativos en la web. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getFirestore,collection,doc,getDoc,setDoc,deleteDoc,updateDoc,onSnapshot,query,where,runTransaction,writeBatch,serverTimestamp,orderBy,limit} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,deleteDoc,updateDoc,onSnapshot,query,where,runTransaction,writeBatch,serverTimestamp,orderBy,limit,startAfter,documentId} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 const cfg=window.PERCHADO_FIREBASE_CONFIG;
 if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app);
@@ -2168,11 +2172,17 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const coll=group=>collection(db,...space,group);
  const ref=(group,id)=>doc(db,...space,group,String(id));
  let unsub=[],generation=0,seen=new Set(),errored=new Map(),listening=[];
- let v58ScopedAudit=false;
+ let v58ScopedAudit=false, v60AuditCycle=0;
  async function v58CheckScope(){
    try{const snap=await getDoc(ref('sharedAdmin','current'));
-     v58ScopedAudit=!!(snap.exists()&&Number(snap.data()?.v58ResetAt)>0);
-   }catch(e){v58ScopedAudit=false;console.warn('PERCHADO V59: consultas de compatibilidad activadas',e);}
+     v60AuditCycle=Number(snap.exists()?snap.data()?.v58ResetAt:0)||0;
+     v58ScopedAudit=v60AuditCycle>0;
+     window.perchadoAuditCycleV60=v60AuditCycle;
+     if(snap.exists()&&Number(snap.data()?.v60ClearCountsAt)>0){
+       window.perchadoCountsResetV60=Number(snap.data().v60ClearCountsAt);
+       window.dispatchEvent(new CustomEvent('perchado-v60-counts-reset',{detail:{stamp:window.perchadoCountsResetV60}}));
+     }
+   }catch(e){v60AuditCycle=0;v58ScopedAudit=false;console.warn('PERCHADO V60: no se pudo verificar ciclo',e);throw e;}
  }
 
  // V21: compartir una sola inicialización de Firebase Auth para que el chat
@@ -2218,6 +2228,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     async persist(group,item){
       if(!['operators','sessions','tasks','corrections'].includes(group)||!item?.id)throw Error('Documento inválido.');
       await ensureAnonymous();const clean=JSON.parse(JSON.stringify(item));
+      if(['sessions','tasks','corrections'].includes(group)&&v60AuditCycle>0)clean.auditCycle=v60AuditCycle;
       if(group==='sessions'){
         if(api.admin){await updateDoc(ref(group,clean.id),{status:clean.status,reviewedAt:clean.reviewedAt||null});return;}
         if(clean.status!=='pending')throw Error('Los conteos solo pueden aprobarse desde Administración.');
@@ -2273,7 +2284,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
       await ensureAnonymous();if(!api.admin)throw Error('Solo Administración puede solicitar reconteos.');
       if(!Array.isArray(tasks)||!tasks.length)return 0;
       for(let i=0;i<tasks.length;i+=180){
-        const batch=writeBatch(db);for(const task of tasks.slice(i,i+180))batch.set(ref('tasks',task.id),task);
+        const batch=writeBatch(db);for(const task of tasks.slice(i,i+180))batch.set(ref('tasks',task.id),v60AuditCycle>0?{...task,auditCycle:v60AuditCycle}:task);
         await batch.commit();
       }return tasks.length;
     },
@@ -2377,9 +2388,56 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
    return runTransaction(db,async tx=>{
      const snap=await tx.get(docRef),rev=Number(snap.exists()?snap.data().revision:0)||0;
      if(rev!==Number(expectedRevision||0))throw Error('Otro administrador actualizó Ajustes. Actualiza la vista y revisa los movimientos antes de guardar.');
-     const previous=snap.exists()?snap.data():{};const newState={revision:rev+1,updatedAt:new Date().toISOString(),payload,...(Number(previous.v58ResetAt)>0?{v58ResetAt:previous.v58ResetAt,v58ResetBy:previous.v58ResetBy||''}:{})};
+     const previous=snap.exists()?snap.data():{};const newState={revision:rev+1,updatedAt:new Date().toISOString(),payload,...(Number(previous.v58ResetAt)>0?{v58ResetAt:previous.v58ResetAt,v58ResetBy:previous.v58ResetBy||'',...(previous.v60ClearCountsAt?{v60ClearCountsAt:previous.v60ClearCountsAt}:{})}:{})};
      tx.set(docRef,newState);return newState;
    });
+ };
+ // Lectura paginada de históricos SOLO por petición explícita; nunca en escuchas en vivo.
+ async function v60GetAll(group){
+   const out=[];let cursor=null;
+   do{
+     const q=cursor?query(coll(group),orderBy(documentId()),startAfter(cursor),limit(250)):
+                    query(coll(group),orderBy(documentId()),limit(250));
+     const batch=await getDocs(q);
+     out.push(...batch.docs.map(d=>({...d.data(),id:d.id})));
+     if(batch.empty||batch.size<250)break;
+     cursor=batch.docs[batch.docs.length-1];
+   }while(out.length<100000);
+   return out;
+ }
+ api.downloadAuditHistory=async function(){
+   await ensureAnonymous();if(!api.admin)throw Error('Solo Administración puede exportar históricos.');
+   const [sessions,tasks,corrections]=await Promise.all(['sessions','tasks','corrections'].map(v60GetAll));
+   return {sessions,tasks,corrections};
+ };
+ api.archiveAllCountsV60=async function(actor){
+   await ensureAnonymous();if(!api.admin)throw Error('Acceso administrativo requerido.');
+   const [sessions,tasks,corrections,live]=await Promise.all(['sessions','tasks','corrections','liveCounts'].map(v60GetAll));
+   const activeS=sessions.filter(x=>x.status!=='archived'),activeT=tasks.filter(x=>x.status!=='archived');
+   const taskIds=new Set(tasks.map(t=>String(t.id))),entryIds=new Set(sessions.flatMap(x=>(x.entries||[]).map(e=>String(e.id||'')).filter(Boolean)));
+   const related=corrections.filter(c=>c.archived!==true&&(
+     entryIds.has(String(c.id))||entryIds.has(String(c.entryId||''))||
+     (c.taskId&&taskIds.has(String(c.taskId)))||
+     (String(c.source||'').startsWith('task:')&&taskIds.has(String(c.source).slice(5)))||
+     c.kind==='admin_removed_entry'||String(c.id||'').startsWith('v29_void_')
+   ));
+   const now=new Date().toISOString(),who=String(actor||'Administración').slice(0,90),items=[];
+   for(const x of activeS)items.push({group:'sessions',id:x.id,data:{status:'archived',reviewedAt:now,archivedBy:who}});
+   for(const x of activeT)items.push({group:'tasks',id:x.id,data:{status:'archived',archivedAt:now,archivedBy:who}});
+   for(const x of related)items.push({group:'corrections',id:x.id,data:{archived:true,archivedAt:now,archivedBy:who}});
+   // Las capturas en vivo antiguas también se retiran, pero se guardaron en el JSON previo.
+   for(const x of live)items.push({group:'liveCounts',id:x.id,delete:true});
+   let done=0;
+   for(let i=0;i<items.length;i+=120){
+     const batch=writeBatch(db);
+     for(const item of items.slice(i,i+120)){
+       if(item.delete)batch.delete(ref(item.group,item.id));
+       else batch.update(ref(item.group,item.id),item.data);
+     }
+     try{await batch.commit();}catch(e){throw Error(`Se procesaron ${done} de ${items.length} registros. ${e.message}`);}
+     done+=Math.min(120,items.length-i);
+   }
+   return {sessions:activeS.length,tasks:activeT.length,corrections:related.length,live:live.length};
  };
  api.retainRecountEvidence=async function(ids){
    await ensureAnonymous();if(!api.admin)throw Error('Requiere Administración.');
@@ -2394,7 +2452,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
    }
    return done;
  };
- api.resetAdministrativeWorkspace=async function(expectedAdminRev,expectedWmsRev,actor){
+ api.resetAdministrativeWorkspace=async function(expectedAdminRev,expectedWmsRev,actor,deleteCounts=false){
    await ensureAnonymous();if(!api.admin)throw Error('Acceso administrativo requerido.');
    const adminRef=ref('sharedAdmin','current'),wmsRef=ref('sharedWms','current');
    return runTransaction(db,async tx=>{
@@ -2404,7 +2462,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
      if(aRev!==Number(expectedAdminRev||0)||wRev!==Number(expectedWmsRev||0))
        throw Error('Otro equipo actualizó Ajustes o WMS. No se reinició nada de estos documentos; actualiza y comprueba antes de reintentar.');
      const now=Date.now(),by=String(actor||'Administración').slice(0,90);
-     const stamp={v58ResetAt:now,v58ResetBy:by};
+     const stamp={v58ResetAt:now,v58ResetBy:by,...(deleteCounts?{v60ClearCountsAt:now}:(a.data()?.v60ClearCountsAt?{v60ClearCountsAt:a.data().v60ClearCountsAt}:{}))};
      tx.set(adminRef,{revision:aRev+1,updatedAt:new Date(now).toISOString(),payload:null,...stamp});
      tx.set(wmsRef,{revision:wRev+1,version:'',hash:'',length:0,chunks:0,updatedAt:new Date(now).toISOString(),...stamp});
      return {...stamp,adminRevision:aRev+1,wmsRevision:wRev+1};
@@ -2424,7 +2482,11 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     listening=admin?['webAdmins','operators','sessions','tasks','corrections','liveCounts']:['operators','sessions','tasks','corrections'];
     const currentUid=auth.currentUser.uid;
     for(const group of listening){
-      const requested=(group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
+      // V60: Tras un reinicio, leer SOLO el nuevo ciclo de auditoría desde Firestore.
+      // Consultas de un único campo: sin índices compuestos y sin arrastrar registros viejos.
+      const requested=(v60AuditCycle>0&&admin&&['sessions','tasks','corrections'].includes(group))?
+                        query(coll(group),where('auditCycle','==',v60AuditCycle)):
+                      (group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
                       (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):
                       (group==='liveCounts'&&admin)?query(coll(group),where('status','==','counting')):
                       (admin&&group==='sessions')?query(coll(group),where('status','in',['pending','approved','rejected'])):
@@ -2439,7 +2501,11 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         notify();
         // V35: no reconstruir las vistas por confirmaciones de metadatos sin cambio de documentos.
         if(firstSnapshot||snapshot.docChanges({includeMetadataChanges:false}).length){
-          api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})));
+          api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})).filter(x=>{
+            if(group==='liveCounts'&&v60AuditCycle>0)return Date.parse(x.updatedAt||'')>=v60AuditCycle;
+            if(!admin&&v60AuditCycle>0&&['sessions','tasks','corrections'].includes(group))return Number(x.auditCycle||0)===v60AuditCycle;
+            return x.status!=='archived'&&x.archived!==true;
+          }));
         }
       },e=>{
         if(stamp!==generation)return;
@@ -7091,14 +7157,15 @@ function v58BeginReset(){
  if(!adminAccessV9)return showAdminGateV9();
  if(v58Busy)return;
  if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9.connected){
-  return perchadoAlert('El reinicio global requiere Firebase confirmado. No se ha modificado ningún dato.');
+  return perchadoAlert('No se puede reiniciar porque Firebase no está confirmado. '+(cloudV9?.lastError||'Verifica el indicador En vivo y vuelve a entrar en Administración.')+' No se cambió ningún registro.');
  }
  if(!v37Audit.stateReady||v37Audit.wmsLoading||v52Sending||v54Booting||v54PendingOps){
-  return perchadoAlert('Hay sincronización o guardado en proceso. Comprueba los cambios pendientes y reintenta antes de reiniciar.');
+  const causes=[!v37Audit.stateReady?'sin leer estado compartido':null,v37Audit.wmsLoading?'descargando WMS':null,v52Sending?'enviando ajustes':null,v54Booting?'cargando respaldo local':null,v54PendingOps?'guardando '+v54PendingOps+' respaldos locales':null].filter(Boolean);
+  return perchadoAlert('Reinicio bloqueado: '+causes.join(', ')+'. No se modificaron registros.');
  }
- if(v52Draft||v52Conflict||v52Error){
-  return perchadoAlert('Hay ajustes pendientes o un conflicto de Firebase. Descarga un respaldo de Ajustes y resuelve la sincronización antes de reiniciar.');
- }
+ // Las diferencias locales pendientes pueden descartarse SOLO tras respaldo y confirmación específica.
+ // Nunca se permite mientras haya escrituras en proceso.
+
  if(typeof cloudV9.resetAdministrativeWorkspace!=='function'||typeof cloudV9.archiveAuditRecords!=='function'||typeof cloudV9.retainRecountEvidence!=='function'){
   return perchadoAlert('El módulo de reinicio selectivo no está listo en esta computadora.');
  }
@@ -7108,11 +7175,12 @@ function v58BeginReset(){
  overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
  overlay.setAttribute('aria-label','Reiniciar ajustes conservando conteos y reconteos');
  overlay.innerHTML=`<div class="v23Dialog">
-  <h3>🧹 Reiniciar ajustes y WMS sin borrar conteos ni reconteos</h3>
+  <h3>🧹 Reiniciar avances de ubicaciones y ajustes</h3>
   <div class="v58Summary"><div><strong>${plan.sessions}</strong><small>Conteos guardados</small></div><div><strong>${plan.sessionLines}</strong><small>Líneas de operarios</small></div><div><strong>${plan.tasks.length}</strong><small>Reconteos conservados</small></div></div>
-  <div class="v58Keep"><b>SE CONSERVAN:</b> todos los conteos originales, <b>todos los reconteos</b> (abiertos, asignados, respondidos, aprobados, cerrados y cancelados), sus respuestas y correcciones validadas, capturas en curso, operarios, cuentas de Administración y chat.</div>
-  <div class="v58Remove"><b>SE REINICIAN:</b> base WMS compartida, ajustes y movimientos (incluidos duplicados), decisiones, novedades, cierres de ubicaciones, catálogo anterior y <b>${plan.corrections.length} registros administrativos</b> de la operación activa. Los reconteos <b>NO se archivan</b>. En Firebase se <b>archivan</b> los registros; no se destruye la evidencia histórica.</div>
-  <p class="v58Notice">Los conteos y reconteos permanecen disponibles para volver a comparar con un WMS nuevo. Todos deben utilizar esta versión: una pestaña antigua puede producir datos inconsistentes. Detén nuevos ajustes durante el reinicio.</p>
+  <div class="v58Keep"><b>SE CONSERVAN EN HISTÓRICO:</b> todos los conteos y reconteos originales, sus respuestas y evidencias; usuarios y chat. <b>Dejan de marcar ubicaciones como avanzadas.</b></div>
+  <div class="v58Remove"><b>SE REINICIAN:</b> avances de todas las ubicaciones (0 procesadas), WMS, movimientos, ajustes, novedades, cierres y estados operativos. <b>${plan.corrections.length}</b> ajustes administrativos salen de la operación; conteos y reconteos anteriores quedan como histórico fuera del nuevo ciclo.</div>
+  <p class="v58Notice">Los conteos y reconteos anteriores pasan a historial (pueden descargarse desde Administración); las ubicaciones comienzan en 0 y requieren conteos NUEVOS para volver a comparar. Detén nuevos ajustes y usa esta versión en todos los dispositivos.</p>
+  ${(v52Draft||v52Conflict||v52Error)?'<div class="v58Remove">⚠ Hay ajustes locales pendientes o un conflicto. Solo pueden descartarse con tu autorización y después de descargar el respaldo.</div><label class="v58Check"><input type="checkbox" id="v60DiscardAdmin" onchange="v58Validate()"> Autorizo descartar los ajustes sin confirmar (están incluidos en el respaldo).</label>':''}
   <button type="button" class="v58BackupBtn" id="v58BackupButton" onclick="v58DownloadBackup()">⬇️ Descargar respaldo completo antes del reinicio</button>
   <label class="v58Check"><input type="checkbox" id="v58BackupOk" onchange="v58Validate()"> Ya descargué y guardé el archivo de respaldo.</label>
   <label>Escribe <b>CONSERVAR CONTEOS Y RECONTEOS</b> para habilitar el reinicio
@@ -7126,7 +7194,7 @@ function v58BeginReset(){
  document.getElementById('v58ResetPhrase')?.focus();
 }
 function v58CloseReset(){if(!v58Busy)document.getElementById('v58Overlay')?.remove();}
-function v58Validate(){const node=document.getElementById('v58ResetConfirm');if(node)node.disabled=!(v58BackupRequested&&document.getElementById('v58BackupOk')?.checked&&document.getElementById('v58ResetPhrase')?.value.trim()==='CONSERVAR CONTEOS Y RECONTEOS');}
+function v58Validate(){const node=document.getElementById('v58ResetConfirm');if(node)node.disabled=!(v58BackupRequested&&document.getElementById('v58BackupOk')?.checked&&document.getElementById('v58ResetPhrase')?.value.trim()==='CONSERVAR CONTEOS Y RECONTEOS'&&(!(v52Draft||v52Conflict||v52Error)||document.getElementById('v60DiscardAdmin')?.checked));}
 function v58DownloadBackup(){
  if(!adminAccessV9)return;
  const backup={app:'PERCHADO',version:59,type:'respaldo_previo_reinicio_selectivo',createdAt:new Date().toISOString(),
@@ -7167,9 +7235,11 @@ async function v58ClearAdminLocal(stamp,remoteRevision){
   for(const key of adminKeys){try{localStorage.removeItem(key);}catch(e){console.warn('Respaldo antiguo no borrado',key,e);}}
   try{await v54PersistTail.catch(()=>{});await v54DbAction(V52_DRAFT_KEY,null,'delete');}catch(e){console.warn('No se limpió borrador IDB',e);}
   try{localStorage.setItem(V58_LOCAL_KEY,String(stamp));}catch(e){console.warn('No se guardó marca de reinicio',e);}
-  // Preservar íntegramente sessions, tasks, sus correcciones y las evidencias locales.
-  wfV8.corrections=Object.fromEntries(Object.entries(wfV8.corrections||{}).filter(([,x])=>v59KeepCorrection(x)));
-  wfV8.events=(wfV8.events||[]).filter(e=>/^(CONTEO_|RECONTEO_)/.test(String(e.event||'')));
+  // Los conteos y reconteos originales siguen en Firebase y en el respaldo previo.
+  // NO forman parte del avance del NUEVO CICLO de auditoría.
+  wfV8.sessions=[];wfV8.tasks=[];wfV8.corrections={};
+  wfV8.events=[];
+  window.perchadoAuditCycleV60=stamp;
   try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));}catch(e){console.warn('La caché local está llena; Firebase mantiene los conteos y reconteos',e);}
   for(const id of ['operatorData','systemData','masterData']){const node=document.getElementById(id);if(node)node.value='';}
   allSystemRows=[];results=[];parsedErrors=[];hasCompared=false;sourceDirty=false;currentSignature='';
@@ -7189,24 +7259,25 @@ async function v58ClearAdminLocal(stamp,remoteRevision){
  }finally{v37Audit.applying=false;v52Status();}
 }
 async function v58ExecuteReset(){
- if(!adminAccessV9||v58Busy||!v58BackupRequested||!document.getElementById('v58BackupOk')?.checked||document.getElementById('v58ResetPhrase')?.value.trim()!=='CONSERVAR CONTEOS Y RECONTEOS')return;
- if(!cloudV9?.ready||!cloudV9?.connected||v52Draft||v52Sending||v52Conflict||v54PendingOps){
+ if(!adminAccessV9||v58Busy||!v58BackupRequested||!document.getElementById('v58BackupOk')?.checked||document.getElementById('v58ResetPhrase')?.value.trim()!=='CONSERVAR CONTEOS Y RECONTEOS'||((v52Draft||v52Conflict||v52Error)&&!document.getElementById('v60DiscardAdmin')?.checked))return;
+ if(!cloudV9?.ready||!cloudV9?.connected||v52Sending||v54PendingOps){
   return v58Status('Firebase no está confirmado o existe un ajuste sin sincronizar. No se inició el reinicio.');
  }
  v58Busy=true;const plan=v58Plan(),btn=document.getElementById('v58ResetConfirm');
  if(btn){btn.disabled=true;btn.textContent='Reiniciando…';}
  try{
-  v58Status('Protegiendo correcciones de reconteos y evidencia de conteos…');
-  await cloudV9.retainRecountEvidence(plan.keepCorrections);
-  v58Status('Archivando sólo correcciones administrativas. Conteos y reconteos no se tocan…');
+  // Las correcciones de reconteo ya están presentes y se excluyen de la selección
+  // de archivado. Reescribirlas aquí era innecesario, lento y fallaba si faltaba un ID.
+  v58Status('Conservando correcciones de reconteo sin reescribirlas…');
+  v58Status('Archivando únicamente ajustes administrativos anteriores…');
   // Requisito incondicional: ni una sesión ni una tarea de reconteo se archivan.
   await cloudV9.archiveAuditRecords({sessions:[],tasks:[],corrections:plan.corrections},adminIdentityV9||'Administración');
   v58Status('Reiniciando ajustes y base WMS compartida…');
   const outcome=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración');
   await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
   document.getElementById('v58Overlay')?.remove();
-  v58Status('Reinicio administrativo finalizado. '+plan.sessions+' conteos, '+plan.tasks.length+' reconteos y '+plan.sessionLines+' líneas conservados. Carga y publica un nuevo WMS.');
-  perchadoAlert('Reinicio finalizado. Los conteos, reconteos y capturas de los operarios permanecen. Las propuestas WMS anteriores ya no son activas. Publica una nueva base WMS para comenzar.');
+  v58Status('Reinicio administrativo finalizado. Avance de ubicaciones: 0. '+plan.sessions+' conteos y '+plan.tasks.length+' reconteos conservados como histórico.');
+  perchadoAlert('Reinicio finalizado. Avance de ubicaciones a 0; conteos y reconteos anteriores conservados en el histórico. Carga el nuevo WMS y comienza con conteos nuevos.');
   // Tras el reinicio, la escucha de correcciones seleccionará sólo documentos NO archivados.
   if(adminAccessV9&&cloudV9?.ready){try{await cloudV9.enterAdminView();}catch(e){v58Status('Reiniciado, pero no se pudo refrescar la consulta: '+e.message);}}
  }catch(e){v58Status('Reinicio incompleto: '+String(e?.message||e)+'. No repitas la acción sin comprobar el respaldo y la nube. Los conteos y reconteos no fueron archivados por este procedimiento.');perchadoAlert('No se completó el reinicio selectivo: '+String(e?.message||e));}
@@ -7236,6 +7307,116 @@ v37OnSharedState=function(doc){
  }
  return v58PriorOnState.call(this,doc);
 };
+</script>
+
+<!-- PERCHADO V60: dos reinicios independientes, ciclo operativo y confirmación segura. -->
+<style id="perchado-v60-style">
+.v60ResetActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.v60ResetActions .v16ResetButton{width:auto;white-space:normal;max-width:300px}
+.v60ResetActions .danger{border:1px solid #e5b5aa!important;background:#fff0ed!important;color:#9b301b!important}
+#v60DeleteOverlay[hidden]{display:none!important}
+#v60DeleteOverlay{z-index:155000!important}
+#v60DeleteOverlay .v23Dialog{max-width:630px}
+#v60DeleteOverlay label.v60Tick{display:flex;align-items:center;gap:8px;font-size:13px}
+#v60DeleteOverlay label.v60Tick input{width:20px;min-height:20px;height:20px;margin:0}
+#v60DeleteMsg{font-size:12px;min-height:20px;margin:12px 0;color:#9b311f;font-weight:700;white-space:pre-wrap}
+@media(max-width:620px){.v60ResetActions{width:100%}.v60ResetActions button{width:100%!important;max-width:none!important}}
+</style>
+<script id="perchado-v60-delete">
+'use strict';
+let v60DeleteBusy=false,v60BackupDownloaded=false;
+function v60CanOperate(){
+ if(!adminAccessV9)return 'Necesitas iniciar sesión en Administración.';
+ if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9.connected)return 'Firebase no está confirmado: '+(cloudV9?.lastError||'revisa tu conexión y la sesión anónima');
+ const work=[!v37Audit.stateReady?'estado administrativo sin leer':null,v37Audit.wmsLoading?'base WMS descargándose':null,
+  v52Sending?'ajustes en sincronización':null,v54Booting?'respaldo local inicializándose':null,v54PendingOps?'guardados locales pendientes: '+v54PendingOps:null,
+  ].filter(Boolean);
+ if(work.length)return 'No es seguro reiniciar: '+work.join(' · ')+'. Sincroniza o descarga los movimientos pendientes antes.';
+ if(typeof cloudV9?.downloadAuditHistory!=='function'||typeof cloudV9?.archiveAllCountsV60!=='function')return 'Actualiza todos los HTML a PERCHADO V60 para habilitar el borrado.';
+ return '';
+}
+async function v60DownloadHistory(){
+ const warning=v60CanOperate();
+ // Para respaldo se permite que existan movimientos pendientes; solo bloquear cuando no se ha conectado a la nube.
+ if(!adminAccessV9)return showAdminGateV9();
+ if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9.connected||!cloudV9?.downloadAuditHistory)return perchadoAlert('No se puede exportar un respaldo completo sin Firebase en vivo.');
+ const msg=document.getElementById('v60DeleteMsg');
+ try{
+  if(msg)msg.textContent='Leyendo conteos y reconteos de Firebase…';
+  const history=await cloudV9.downloadAuditHistory();
+  const backup={app:'PERCHADO',version:60,type:'historico_completo_antes_de_borrado',createdAt:new Date().toISOString(),
+   ...history,users:wfV8.users,operatorDraft:draftV8,operatorDraftContext:draftContextV8,
+   adminState:typeof v52BackupContents==='function'?v52BackupContents():null,
+   currentWms:document.getElementById('systemData')?.value||'',live:lastLiveV9};
+  const str=JSON.stringify(backup),blob=new Blob([str],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+  anchor.href=url;anchor.download='PERCHADO_HISTORICO_COMPLETO_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+  document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  v60BackupDownloaded=true;
+  if(msg)msg.textContent=`Respaldo preparado: ${history.sessions.length} conteos, ${history.tasks.length} reconteos, ${history.corrections.length} correcciones. Comprueba el archivo descargado.`;
+  v60ValidateDelete();
+ }catch(e){v60BackupDownloaded=false;if(msg)msg.textContent='No se pudo obtener el histórico completo: '+(e?.message||e);else perchadoAlert('Error exportando histórico: '+(e?.message||e));}
+}
+function v60BeginDelete(){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v60DeleteBusy)return;
+ const error=v60CanOperate();
+ if(error)return perchadoAlert(error);
+ v60BackupDownloaded=false;document.getElementById('v60DeleteOverlay')?.remove();
+ const overlay=document.createElement('div');overlay.id='v60DeleteOverlay';overlay.className='v23Overlay';
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+ overlay.innerHTML=`<div class="v23Dialog"><h3>🗑️ Eliminar conteos y reconteos de la operación</h3>
+ <div class="v58Remove">Esta opción <b>retira TODOS los conteos y reconteos</b> de la operación (incluidas tareas pendientes y capturas en vivo). Sus documentos quedan <b>archivados en Firebase</b> para recuperación y trazabilidad; no se borran físicamente. Los usuarios y chats permanecen. El avance de ubicaciones volverá a cero.</div>
+ <p class="v58Notice">Debes descargar un respaldo <b>completo de Firebase</b>, no solo de los registros visibles. Detén los conteos en otros teléfonos y pide que todos recarguen la V60 al terminar.</p>
+ <button type="button" class="v58BackupBtn" onclick="v60DownloadHistory()">⬇️ Descargar respaldo completo de Firebase</button>
+ <label class="v60Tick"><input type="checkbox" id="v60BackupVerified" onchange="v60ValidateDelete()"> Verifiqué que el archivo JSON quedó guardado.</label>
+ ${(v52Draft||v52Conflict||v52Error)?'<div class="v58Remove">⚠ Hay ajustes administrativos pendientes. El respaldo incluirá estos datos; para reiniciar debes autorizar que se descarten.</div><label class="v60Tick"><input type="checkbox" id="v60DiscardPending" onchange="v60ValidateDelete()"> Autorizo descartar los ajustes pendientes.</label>':''}
+ <label>Para confirmar escribe <b>ELIMINAR CONTEOS Y RECONTEOS</b>
+ <input type="text" id="v60DeletePhrase" autocomplete="off" spellcheck="false" placeholder="ELIMINAR CONTEOS Y RECONTEOS" oninput="v60ValidateDelete()"></label>
+ <div id="v60DeleteMsg" role="status" aria-live="polite"></div>
+ <div class="v23DialogActions"><button class="secondary" type="button" onclick="v60CloseDelete()">Cancelar</button>
+ <button type="button" class="v23Confirm" id="v60DeleteConfirm" disabled onclick="v60ExecuteDelete()">Archivar conteos y reconteos</button></div></div>`;
+ document.body.appendChild(overlay);
+ document.getElementById('v60DeletePhrase')?.focus();
+}
+function v60ValidateDelete(){
+ const btn=document.getElementById('v60DeleteConfirm');
+ if(btn)btn.disabled=v60DeleteBusy||!v60BackupDownloaded||!document.getElementById('v60BackupVerified')?.checked||document.getElementById('v60DeletePhrase')?.value.trim()!=='ELIMINAR CONTEOS Y RECONTEOS'||((v52Draft||v52Conflict||v52Error)&&!document.getElementById('v60DiscardPending')?.checked);
+}
+function v60CloseDelete(){if(!v60DeleteBusy)document.getElementById('v60DeleteOverlay')?.remove();}
+async function v60ExecuteDelete(){
+ if(v60DeleteBusy||!adminAccessV9||!v60BackupDownloaded||!document.getElementById('v60BackupVerified')?.checked||document.getElementById('v60DeletePhrase')?.value.trim()!=='ELIMINAR CONTEOS Y RECONTEOS'||((v52Draft||v52Conflict||v52Error)&&!document.getElementById('v60DiscardPending')?.checked))return;
+ const error=v60CanOperate();
+ if(error){document.getElementById('v60DeleteMsg').textContent=error;return;}
+ const msg=document.getElementById('v60DeleteMsg'),button=document.getElementById('v60DeleteConfirm');
+ v60DeleteBusy=true;button.disabled=true;button.textContent='Procesando…';
+ try{
+  msg.textContent='Archivando conteos y reconteos en Firebase. No cierres este proceso.';
+  const data=await cloudV9.archiveAllCountsV60(adminIdentityV9||'Administración');
+  msg.textContent=`Archivados ${data.sessions} conteos, ${data.tasks} reconteos y ${data.corrections} evidencias. Reiniciando el ciclo de ubicación…`;
+  // Tras archivar todos los físicos, se reinicia el estado WMS en la misma rutina transaccional.
+  const outcome=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración',true);
+  await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
+  v60ClearDrafts(outcome.v58ResetAt);
+  document.getElementById('v60DeleteOverlay')?.remove();
+  await cloudV9.enterAdminView();
+  perchadoAlert(`Reinicio completado: ${data.sessions} conteos, ${data.tasks} reconteos y ${data.live} capturas en vivo retirados. Las ubicaciones están en 0. Usuarios y chat conservados.`);
+ }catch(e){
+  if(msg)msg.textContent='No terminó el proceso: '+(e?.message||e)+'\nNo vuelvas a ejecutar sin verificar en Firebase. El archivo JSON previo conserva la evidencia.';
+ }finally{v60DeleteBusy=false;if(button){button.textContent='Archivar conteos y reconteos';v60ValidateDelete();}}
+}
+function v60ClearDrafts(stamp){
+ const seen=Number(localStorage.getItem('perchado_v60_drafts_cleared_at')||0);
+ if(!stamp||seen>=stamp)return;
+ for(const key of Object.keys(localStorage))if(key==='perchado_v9_draft'||/^perchado_v13_(?:recuento|draft|recount)|^perchado_recount_/i.test(key))try{localStorage.removeItem(key);}catch{}
+ draftV8=[];draftContextV8={user:'',location:''};
+ try{localStorage.setItem('perchado_v60_drafts_cleared_at',String(stamp));}catch{}
+ try{renderOperatorDraftV8();renderOperatorTasksV8();}catch{}
+}
+window.addEventListener('perchado-v60-counts-reset',e=>{
+ const stamp=Number(e.detail?.stamp||0);
+ if(stamp>0)v60ClearDrafts(stamp);
+});
 </script>
 
 </body>
