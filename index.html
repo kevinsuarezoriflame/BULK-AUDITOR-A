@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V53 · Control de inventario</title>
+<title>PERCHADO V57 · Control de inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V53</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V57</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -1713,10 +1713,18 @@ function v12ToggleLocation(loc){if(openLocations.has(loc))openLocations.delete(l
 // Present one consolidated table; counts already synchronized are shown here, not in a separate card list.
 renderOneLocation=function(loc){
  const rows=v50RowsForLocation(loc),latest=v50LatestForLocation(loc);
- const extras=[...latest].filter(([code])=>!rows.some(r=>String(r.codigo)===String(code)));
+ const rowCodes=new Set(rows.map(r=>String(r.codigo)));
+ const extras=[...latest].filter(([code])=>!rowCodes.has(String(code)));
  let kind=rows.length?locationKind(loc):'novedad';
  if(extras.length)kind='novedad';
- const expanded=openLocations.has(loc),finished=confirmations.has(loc),sessionLatest=[...latest.values()].at(-1)?.session;
+ const expanded=openLocations.has(loc);
+ // V56: una tarjeta cerrada sólo necesita encabezado y estado, nunca sus 48+ filas.
+ // Los cálculos de códigos, auditorías y botones se realizan exclusivamente al abrirla.
+ if(!expanded){
+  const badge=rows.length&&!extras.length?badgeForKind(kind):'CON NOVEDADES';
+  return `<article class="locCard" data-kind="${kind}"><button class="locToggle" onclick='v12ToggleLocation(${JSON.stringify(loc)})' aria-expanded="false"><span class="locName"><span class="chevron">▸</span><b>📍 ${v12Safe(shortLoc(loc))}</b><span class="muted fullLoc">${v12Safe(loc)}</span></span><span class="locCounter"><span class="badge ${cssKind(kind)}">${v12Safe(badge)}</span><span class="small">${rows.length+extras.length} códigos</span></span></button></article>`;
+ }
+ const finished=confirmations.has(loc),sessionLatest=[...latest.values()].at(-1)?.session;
  const bad=rows.filter(r=>remaining(r)!==0||r.duplicado||!r.locValid||(!r.hasOperator&&!finished)).length+extras.length;
  const head='<th>Código</th><th>Físico</th><th>Sistema</th><th>Dif. inicial</th><th>Pendiente</th><th>Estado / seguimiento</th><th>Novedades / acciones</th>';
  const body=rows.map(r=>{
@@ -1745,14 +1753,17 @@ renderLocations=function(){
  try{
  const locs=[...new Set([...(hasCompared?auditScope.mappedLocations:[]),...wfV8.sessions.filter(s=>s.status!=='rejected'&&s.location).map(s=>s.location)])];
  const groups={novedad:[],cuadrada:[],conciliada:[]};
+ const groupTotals={novedad:0,cuadrada:0,conciliada:0};
  for(const loc of locs){
-  const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc),extra=[...entries.keys()].some(code=>!rows.some(r=>String(r.codigo)===code));
+  const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc);
+  const codes=new Set(rows.map(r=>String(r.codigo)));
+  let extra=0;for(const code of entries.keys())if(!codes.has(code))extra++;
   let kind=rows.length?locationKind(loc):'novedad';if(extra)kind='novedad';
-  if(groups[kind])groups[kind].push(loc);
+  if(groups[kind]){groups[kind].push(loc);groupTotals[kind]+=rows.length+extra;}
  }
  for(const [kind,container,count] of [['novedad','issuesLocations','issuesCount'],['cuadrada','squaredLocations','squaredCount'],['conciliada','settledLocations','settledCount']]){
   const locations=groups[kind];
-  $(count).textContent=`${locations.length} ubicaciones · ${locations.reduce((n,loc)=>{const rows=v50RowsForLocation(loc),entries=v50LatestForLocation(loc);return n+rows.length+[...entries.keys()].filter(code=>!rows.some(r=>String(r.codigo)===code)).length;},0)} combinaciones código + ubicación`;
+  $(count).textContent=`${locations.length} ubicaciones · ${groupTotals[kind]} combinaciones código + ubicación`;
   if((kind==='novedad'&&document.getElementById('results')?.classList.contains('active'))||(kind==='cuadrada'&&document.getElementById('squared')?.classList.contains('active')))v50UpdateSection(container,locations.length?locations.map(renderOneLocation).join(''):`<div class="emptyState">${kind==='novedad'?'No hay ubicaciones con novedades pendientes.':'Sin ubicaciones en esta categoría.'}</div>`);
  }
  }finally{v50ReleaseRenderIndexes();}
@@ -2063,7 +2074,7 @@ async function v13MakeMove(loc,code){
  if(!v13ValidLocation(from)||!v13ValidLocation(loc))return perchadoAlert('Origen y destino deben existir en las datas del WMS.');
  if(!await perchadoConfirm(`Proponer traslado para WMS: ${code}\n${from} → ${loc}\nCantidad: ${qty}.\nNo se ejecutará automáticamente.`))return;
  manualTransfersV9.push({id:wfId(),code,from,to:loc,qty,originVerified:true,createdAt:wfToday(),by:adminIdentityV9,kind:from===PROCESS_LOCATION?'RECUPERACION_CW':'TRASLADO',executedAt:null});
- window.perchadoV9Moves=manualTransfersV9;saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Propuesta registrada localmente · comprobando Firebase');
+ window.perchadoV9Moves=manualTransfersV9;saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll(); // Guardado y sincronización automáticos; sin aviso repetitivo.
 }
 async function v13ToProcess(loc,code){
  if(!adminAccessV9||sourceDirty)return;
@@ -2377,7 +2388,8 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     const currentUid=auth.currentUser.uid;
     for(const group of listening){
       const requested=(group==='sessions'&&!admin)?query(coll(group),where('deviceUid','==',currentUid)):
-                      (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):coll(group);
+                      (group==='tasks'&&!admin)?query(coll(group),where('status','==','open')):
+                      (group==='liveCounts'&&admin)?query(coll(group),where('status','==','counting')):coll(group);
       unsub.push(onSnapshot(requested,{includeMetadataChanges:true},snapshot=>{
         if(stamp!==generation)return;
         const firstSnapshot=!seen.has(group);
@@ -5255,7 +5267,7 @@ async function v38SaveTransfer(loc,code){
  const priorityNote=!src.isCW&&cwAvailable>0?`\n♻ Procesos_CW todavía tiene ${fmtQty(cwAvailable)} unidades libres; se recomienda recuperarlas primero.`:'';
  if(!await perchadoConfirm(`Registrar movimiento WMS para el código ${code}:\nDESDE ${from}\nHACIA ${loc}\nCANTIDAD ${fmtQty(qty)} u.\n${warning}${priorityNote}\nNo se ejecutará automáticamente en el WMS.`))return;
  manualTransfersV9.push({id:wfId(),code:String(code),from,to:loc,qty,originVerified:!src.unchecked,adminApproved:true,sourceUncounted:src.unchecked,v38:true,wmsOriginBefore:v38SystemQty(code,from),wmsDestBefore:v38SystemQty(code,loc),createdAt:wfToday(),by:adminIdentityV9,kind:src.isCW?'RECUPERACION_CW':'CONCILIACION_BULK',executedAt:null});
- window.perchadoV9Moves=manualTransfersV9;saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento guardado en este equipo · comprobando Firebase');
+ window.perchadoV9Moves=manualTransfersV9;saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll(); // Guardado y sincronización automáticos; sin aviso repetitivo.
 }
 async function v38Positive(loc,code){
  if(!adminAccessV9||!hasCompared||sourceDirty)return;
@@ -5266,7 +5278,7 @@ async function v38Positive(loc,code){
  if(resolutions.some(d=>d.type==='SOBRANTE'&&d.code===code&&d.location===loc&&!d.executedAt))return perchadoAlert('Ya existe una propuesta positiva pendiente para este código y ubicación.');
  if(!await perchadoConfirm(`¿Preparar ajuste POSITIVO por ${fmtQty(qty)} unidades del código ${code} en ${loc}?\nNo hay otro origen WMS elegible. No se genera traslado ni se modifica el WMS automáticamente.`))return;
  resolutions.push({id:wfId(),type:'SOBRANTE',code:String(code),location:loc,target:loc,qty,at:wfToday(),by:adminIdentityV9,executedAt:null,kind:'V38_AJUSTE_POSITIVO'});
- saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Ajuste positivo local · comprobando Firebase');
+ saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll(); // Guardado y sincronización automáticos; sin aviso repetitivo.
 }
 // V13 excluía los orígenes no contados, pero V38 permite esa autorización explícita.
 const v38PrevApprovedMovements=v13ApprovedMovements;
@@ -5905,7 +5917,7 @@ async function v47SaveMissing(loc,code){
   wmsOriginBefore:v38SystemQty(code,loc),wmsDestBefore:v38SystemQty(code,to),
   createdAt:wfToday(),by:adminIdentityV9,executedAt:null};
  manualTransfersV9.push(move);window.perchadoV9Moves=manualTransfersV9;
- saveDecisions();v47MissingDrafts.delete(v47MissingKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento guardado en este equipo · comprobando Firebase');
+ saveDecisions();v47MissingDrafts.delete(v47MissingKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll(); // Guardado y sincronización automáticos; sin aviso repetitivo.
 }
 // Permitir exportar un traslado hacia una ubicación auditada que todavía no tenga
 // saldo del código en WMS. Conservar el resto de controles de formato y procedencia.
@@ -6263,10 +6275,89 @@ const V52_DRAFT_KEY='perchado_v52_pending_admin_v1';
 const V52_LEGACY_KEY='perchado_v52_previo_v51';
 let v52Draft=null,v52Timer=null,v52Sending=false,v52Error='',v52Conflict=false;
 let v52RetryDelay=1500,v52RecentSaved=false,v52LastKnownRemote=null,v52Active=false,v52ColdPending=false;
-function v52Read(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch(e){return null;}}
-function v52Write(key,obj){try{localStorage.setItem(key,JSON.stringify(obj));return true;}catch(e){
- v52Error='No hay espacio para guardar respaldo local: '+(e.message||e);v52Status();return false;
-}}
+// V54: los borradores grandes usan IndexedDB, no el cupo reducido de localStorage.
+// localStorage previo permanece intacto hasta que la nueva copia se confirma.
+const V54_DB_NAME='PERCHADO_SAFE_BACKUPS_V54',V54_STORE='snapshots';
+let v54Booting=true,v54PendingOps=0,v54PersistTail=Promise.resolve();
+function v54OpenDb(){return new Promise((resolve,reject)=>{
+ if(!window.indexedDB){reject(Error('IndexedDB no disponible'));return;}
+ const req=indexedDB.open(V54_DB_NAME,1);
+ req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(V54_STORE))req.result.createObjectStore(V54_STORE);};
+ req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('No se pudo abrir IndexedDB'));
+ req.onblocked=()=>reject(Error('IndexedDB bloqueado por otra pestaña'));
+});}
+async function v54DbAction(key,value,action){
+ const db=await v54OpenDb();
+ try{return await new Promise((resolve,reject)=>{
+  const tx=db.transaction(V54_STORE,action==='get'?'readonly':'readwrite');
+  const store=tx.objectStore(V54_STORE);
+  let result=null;
+  const req=action==='get'?store.get(key):action==='delete'?store.delete(key):store.put(value,key);
+  req.onsuccess=()=>{result=req.result;};
+  tx.oncomplete=()=>resolve(result);
+  tx.onerror=()=>reject(tx.error||req.error||Error('Error de almacenamiento'));
+  tx.onabort=()=>reject(tx.error||Error('Guardado interrumpido'));
+ });}finally{db.close();}
+}
+function v54WriteDraft(snapshot){
+ if(!window.indexedDB)return v54LocalFallback(snapshot);
+ const serialized=JSON.stringify(snapshot);
+ v54PendingOps++;
+ v54PersistTail=v54PersistTail.catch(()=>{}).then(async()=>{
+  try{
+   await v54DbAction(V52_DRAFT_KEY,serialized,'put');
+   // Elimina la copia antigua sólo si coincide: nunca borra un cambio más nuevo.
+   try{const existing=localStorage.getItem(V52_DRAFT_KEY);
+    if(existing){
+     const old=JSON.parse(existing);
+     // Una copia con basePayload de V52 puede tener el mismo movimiento aunque pese el doble.
+     if(existing===serialized||(old?.updatedAt===snapshot.updatedAt&&
+         v52Fingerprint(old?.payload)===v52Fingerprint(snapshot.payload)))
+      localStorage.removeItem(V52_DRAFT_KEY);
+    }
+   }catch(e){}
+   if(v52Error.startsWith('No hay espacio para guardar respaldo local'))v52Error='';
+  }catch(e){
+   // Si IndexedDB falla, conservar la antigua vía sin eliminar ningún respaldo.
+   v54LocalFallback(snapshot,e);
+  }finally{
+   v54PendingOps--;v52Status();
+   if(v52Draft&&!v52Conflict)v52Queue(100);
+  }
+ });
+ return true;
+}
+function v54LocalFallback(snapshot,cause){
+ try{localStorage.setItem(V52_DRAFT_KEY,JSON.stringify(snapshot));return true;}
+ catch(e){v52Error='No se pudo guardar respaldo local (navegador sin espacio): '+
+  String(e?.message||cause?.message||e)+'. Descarga un respaldo JSON y verifica Firebase.';
+  v52Status();return false;}
+}
+function v54RemoveConfirmedDraft(){
+ v54PersistTail=v54PersistTail.catch(()=>{}).then(async()=>{
+  // Si un movimiento nuevo apareció mientras Firebase respondía, conservarlo.
+  if(v52Draft)return;
+  try{await v54DbAction(V52_DRAFT_KEY,null,'delete');}catch(e){console.warn('PERCHADO: no se pudo borrar borrador ya confirmado',e);}
+ });
+}
+function v52Read(key){try{
+ const raw=localStorage.getItem(key);
+ if(raw)return JSON.parse(raw);
+ if(key===V52_LEGACY_KEY){
+  const historic=localStorage.getItem('perchadoAuditDecisionsV7');
+  if(historic)return {createdAt:'Respaldo histórico V51',record:JSON.parse(historic)};
+ }
+ return null;
+}catch(e){return null;}}
+function v52Write(key,obj){
+ if(key===V52_DRAFT_KEY)return v54WriteDraft(obj);
+ try{localStorage.setItem(key,JSON.stringify(obj));return true;}
+ catch(e){
+  // Un respaldo auxiliar lleno no debe impedir registrar y sincronizar el borrador principal.
+  console.warn('PERCHADO: copia auxiliar local no guardada',key,e);
+  return false;
+ }
+}
 function v52Payload(){return v37PackState();}
 function v52Fingerprint(data){try{return JSON.stringify(data);}catch{return '';}}
 function v52StagePayload(data,source){
@@ -6282,8 +6373,7 @@ function v52StagePayload(data,source){
  const previous=v52Draft;
  v52Draft={version:52,updatedAt:new Date().toISOString(),source:source||'Movimientos y ajustes',
   baseRevision:previous?previous.baseRevision:v37Audit.stateRevision,
-  wmsHash:data.wmsHash,payload:data,
-  basePayload:previous?.basePayload||(v37Audit.remote?.payload||null)};
+  wmsHash:data.wmsHash,payload:data};
  v52Error='';v52RecentSaved=false;
  const stored=v52Write(V52_DRAFT_KEY,v52Draft);
  v52Status();
@@ -6299,7 +6389,7 @@ function v52Status(){
  if(v52Error){msg='⚠ '+v52Error;mode='error';}
  else if(v52Conflict){msg='⚠ Conflicto entre computadoras: respaldo local protegido. No se sobrescribió.';mode='conflict';}
  else if(v52Draft){
-  msg=v52Sending?'☁ Guardando movimientos en Firebase…':'⚠ Guardado solo en este equipo · pendiente de Firebase';mode='local';
+  msg=v54PendingOps?'⏳ Guardando respaldo local seguro…':v52Sending?'☁ Guardando movimientos en Firebase…':'⚠ Respaldo local · pendiente de confirmación Firebase';mode='local';
  }else if(v52RecentSaved){msg='✓ Movimientos confirmados en Firebase';}
  else if(!cloudV9?.connected){msg='⚠ Firebase desconectado · comprueba antes de operar';mode='local';}
  else if(!v37Audit.manifest){msg='⚠ Stock WMS no compartido · abre Pegar datas y publícalo';mode='local';}
@@ -6310,6 +6400,7 @@ function v52Queue(delay=700){
 }
 async function v52Flush(){
  if(!v52Draft||v52Sending||v52Conflict)return;
+ if(v54Booting||v54PendingOps){v52Queue(350);return;}
  if(!adminAccessV9||!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected||!v37Audit.manifest||v37Audit.wmsLoading||v37Audit.busy){
   v52Status();v52Queue(Math.min(v52RetryDelay,12000));return;
  }
@@ -6330,8 +6421,8 @@ async function v52Flush(){
   v37Audit.remote=result;v52LastKnownRemote=result;
   v52RetryDelay=1500;v52Error='';
   // Un clic nuevo durante el commit debe preservarse y sincronizarse después.
-  if(v52Draft===sent){v52Draft=null;try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v52RecentSaved=true;}
-  else if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;v52Draft.basePayload=sent.payload;v52Write(V52_DRAFT_KEY,v52Draft);}
+  if(v52Draft===sent){v52Draft=null;try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v54RemoveConfirmedDraft();v52RecentSaved=true;}
+  else if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;delete v52Draft.basePayload;v52Write(V52_DRAFT_KEY,v52Draft);}
  }catch(e){
   const reason=String(e?.message||e);
   if(/otro administrador|conflict|revision|version|updated/i.test(reason))v52Conflict=true;
@@ -6360,13 +6451,14 @@ v37PublishSharedState=async function(){return v52Flush();};
 // Una respuesta de Firebase JAMÁS debe reemplazar un borrador no sincronizado.
 const v52PreviousApplyRemote=v37ApplyRemoteState;
 v37ApplyRemoteState=function(){
+ if(v54Booting)return;
  if(v52Draft){
   v37Audit.stateReady=true;
   const remote=v37Audit.remote;
   if(remote?.payload&&v52Fingerprint(remote.payload)===v52Fingerprint(v52Draft.payload)){
    // Una escritura que ya llegó al servidor también puede verse por onSnapshot.
    if(!v52Sending){v37Audit.lastStateText=v52Fingerprint(remote.payload);v52Draft=null;
-    try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v52Conflict=false;v52Error='';v52RecentSaved=true;}
+    try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v54RemoveConfirmedDraft();v52Conflict=false;v52Error='';v52RecentSaved=true;}
   }else if(remote&&Number(remote.revision)>Number(v52Draft.baseRevision))v52Conflict=true;
   v52Status();return;
  }
@@ -6384,13 +6476,24 @@ const v52OriginalOnWms=v37OnWms;
 v37OnWms=async function(manifest){const result=await v52OriginalOnWms.call(this,manifest);v52Status();if(v52Draft)v52Queue(400);return result;};
 // Mantener copia del formato anterior: es posible que aún contenga los movimientos V51.
 (function v52CapturePrevious(){
- try{const raw=localStorage.getItem('perchadoAuditDecisionsV7');
- if(raw){const prev=v52Read(V52_LEGACY_KEY);
-  if(!prev?.record){const old=JSON.parse(raw);v52Write(V52_LEGACY_KEY,{createdAt:new Date().toISOString(),record:old});}
- }}catch(e){console.warn('No se pudo preservar copia de V51',e);}
+ // Las decisiones V51 se mantienen en su clave original. No crear copias duplicadas.
  v52Draft=v52Read(V52_DRAFT_KEY);
  if(v52Draft?.payload){v52RecentSaved=false;v52ColdPending=true;}else v52Draft=null;
- setTimeout(()=>{v52Status();if(v52Draft)v52Queue(800);},500);
+ (async()=>{
+  try{
+   const saved=await v54DbAction(V52_DRAFT_KEY,null,'get');
+   const fromDb=saved?JSON.parse(saved):null;
+   const localAt=Date.parse(v52Draft?.updatedAt||'')||0;
+   const dbAt=Date.parse(fromDb?.updatedAt||'')||0;
+   if(fromDb?.payload&&dbAt>=localAt){v52Draft=fromDb;v52ColdPending=true;}
+   else if(v52Draft?.payload){delete v52Draft.basePayload;v54WriteDraft(v52Draft);}
+  }catch(e){console.warn('PERCHADO: recuperación ampliada no disponible; se conserva respaldo anterior',e);}
+  finally{
+   v54Booting=false;
+   if(v52Draft?.payload){v52ColdPending=true;v52Queue(200);}
+   v37ApplyRemoteState();v52Status();
+  }
+ })();
 })();
 function v52BackupContents(){
  const current=v52Payload(), legacy=v52Read(V52_LEGACY_KEY);
@@ -6466,7 +6569,7 @@ async function v52RestoreBackup(){
  if(!v52ApplyRescue(merged))return;
  v52Draft=null;v52Conflict=false;v52Error='';
  v52StagePayload(merged,'Recuperación manual');
- if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;v52Draft.basePayload=v37Audit.remote?.payload||null;v52Write(V52_DRAFT_KEY,v52Draft);v52Queue(100);}
+ if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;delete v52Draft.basePayload;v52Write(V52_DRAFT_KEY,v52Draft);v52Queue(100);}
 }
 async function v52ImportBackup(file){
  const input=document.getElementById('v52BackupFile');if(input)input.value='';if(!file)return;
@@ -6570,6 +6673,328 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&v52Draft)
  window.addEventListener('pageshow',()=>{if(v52Draft&&!v52Conflict)v52Queue(100);v52Status();});
  v52Status();
 })();
+</script>
+
+
+<!-- PERCHADO V56 · búsquedas acotadas, índice WMS en memoria y renderizado bajo demanda -->
+<style id="perchado-v56-styles">
+#v56SearchScope{width:120px;min-width:105px;min-height:31px;border:0!important;border-left:1px solid #cdebe5!important;box-shadow:none!important;border-radius:0;background:#f5fbf9;padding:4px 7px;font:700 12px Segoe UI,Arial,sans-serif;color:#126458;flex:0 0 auto}
+#v56SearchScope:focus{outline:2px solid #68c9bc!important;outline-offset:-2px}
+@media(max-width:600px){#v56SearchScope{width:99px;min-width:90px;font-size:11px;padding:4px 3px}}
+</style>
+<script id="perchado-v56-performance">
+'use strict';
+// La indexación es solamente una representación en memoria, nunca sustituye registros.
+const v56Limit=81;
+let v56Index=null,v56IndexDirty=true,v56SearchTimer=null;
+function v56InvalidateSearch(){v56IndexDirty=true;v56Index=null;}
+function v56IndexBuild(){
+ if(v56Index&&!v56IndexDirty)return v56Index;
+ const data=new Map();
+ const access=(loc,code,source,sys)=>{
+  const key=loc+'\u0000'+code;
+  if(!data.has(key))data.set(key,{loc,code,sys,source});
+  return data.get(key);
+ };
+ // Una sola agregación WMS, no recorrer toda la base por cada tecla.
+ for(const r of allSystemRows){
+  const code=String(r.code),loc=String(r.locNorm);
+  const item=access(loc,code,'WMS',0);item.sys=(Number(item.sys)||0)+Number(r.qty||0);
+ }
+ for(const r of results){
+  const code=String(r.codigo),loc=String(r.ubicacionNormalizada);
+  const item=access(loc,code,'Conteo',r.qtySistema||0);
+  item.phy=r.qtyOperador;item.delta=remaining(r);
+ }
+ for(const session of wfV8.sessions){
+  const loc=String(session.location);
+  for(const entry of session.entries||[]){
+   const code=String(entry.code),item=access(loc,code,'Operarios',null);
+   if(item.phy===undefined)item.phy=entry.qty;
+  }
+ }
+ for(const task of wfV8.tasks){
+  const code=String(task.code),loc=String(task.location);
+  access(loc,code,'Reconteo',null).task=task.status;
+ }
+ v56Index=[...data.values()];v56IndexDirty=false;
+ return v56Index;
+}
+// Mantiene búsqueda parcial por subcadena; se limita por campo y por máximo de resultados.
+v15FindRows=function(query){
+ const term=String(query||'').toUpperCase().trim();if(!term)return [];
+ const scope=document.getElementById('v56SearchScope')?.value||'code';
+ const matches=[];
+ for(const r of v56IndexBuild()){
+  const c=scope!=='location'&&r.code.toUpperCase().includes(term);
+  const l=scope!=='code'&&r.loc.toUpperCase().includes(term);
+  if(c||l){matches.push(r);if(matches.length>=v56Limit)break;}
+ }
+ return matches.sort((a,b)=>Number(b.code.toUpperCase()===term)-Number(a.code.toUpperCase()===term)||a.code.localeCompare(b.code,undefined,{numeric:true})||a.loc.localeCompare(b.loc,undefined,{numeric:true}));
+};
+// No buscar por cada pulsación ni ejecutar escaneos para consultas genéricas de una letra.
+v15Search=function(){
+ const panel=document.getElementById('perchadoSearchResultsV15');
+ const input=document.getElementById('perchadoSearchV15');
+ if(!panel||!input||!adminAccessV9||profileV8==='operator'){if(panel)panel.hidden=true;return;}
+ const term=input.value.trim();if(!term){panel.hidden=true;return;}
+ panel.hidden=false;
+ if(term.length<3){panel.innerHTML='<div class="perchadoSearchDetailsV15">Ingresa al menos 3 caracteres para buscar sin consultar toda la bodega.</div>';return;}
+ const rows=v15FindRows(term),show=rows.slice(0,60),limited=rows.length>=v56Limit;
+ const label=limited?'Más de 80 coincidencias':rows.length+' coincidencia'+(rows.length===1?'':'s');
+ panel.innerHTML=`<div class="perchadoSearchControlsV15"><b>${label}</b><button class="secondary mini" onclick="v15HideSearch()">Cerrar</button></div>`+
+  (show.length?show.map(x=>`<button type="button" class="perchadoSearchItemV15" onclick='v15SelectSearch(${v15Arg(x.loc)},${v15Arg(x.code)})'><span><strong>${v15E(x.code)}</strong><div class="perchadoSearchMiniV15">📍 ${v15E(x.loc)} · ${v15E(x.source)}${x.task?' · Reconteo '+v15E(x.task):''}</div></span><span class="perchadoSearchMiniV15">WMS ${x.sys==null?'—':fmtQty(x.sys)} · Físico ${x.phy===undefined||x.phy===null?'—':fmtQty(x.phy)}</span></button>`).join(''):'<div class="perchadoSearchDetailsV15">No se encontraron coincidencias con este filtro.</div>')+
+  (rows.length>60?'<div class="perchadoSearchDetailsV15">Resultados limitados a 60. Escribe más caracteres o cambia el tipo de búsqueda.</div>':'');
+};
+function v56SearchScheduled(){
+ clearTimeout(v56SearchTimer);
+ const p=document.getElementById('perchadoSearchResultsV15'),input=document.getElementById('perchadoSearchV15');
+ if(!input?.value.trim()){if(p)p.hidden=true;return;}
+ v56SearchTimer=setTimeout(()=>{v56SearchTimer=null;v15Search();},280);
+}
+(function(){
+ const input=document.getElementById('perchadoSearchV15');
+ if(!input)return;
+ input.removeAttribute('oninput');input.removeAttribute('onfocus');
+ input.placeholder='Buscar código (3+ caracteres)…';
+ const scope=document.createElement('select');scope.id='v56SearchScope';scope.setAttribute('aria-label','Limitar búsqueda');
+ scope.innerHTML='<option value="code">Código</option><option value="location">Ubicación</option><option value="both">Ambos</option>';
+ input.parentElement.insertBefore(scope,input.nextSibling);
+ input.addEventListener('input',v56SearchScheduled,{passive:true});
+ input.addEventListener('focus',()=>{if(input.value.trim())v56SearchScheduled();},{passive:true});
+ scope.addEventListener('change',v56SearchScheduled);
+ const previousCompare=compareData;
+ compareData=async function(...args){const result=await previousCompare.apply(this,args);v56InvalidateSearch();return result;};
+ const previousCloudData=setCloudDataV9;
+ setCloudDataV9=function(group,docs){v56InvalidateSearch();return previousCloudData.apply(this,arguments);};
+ const previousStore=wfStore;
+ wfStore=function(...args){v56InvalidateSearch();return previousStore.apply(this,args);};
+ const previousSave=saveDecisions;
+ saveDecisions=function(...args){v56InvalidateSearch();return previousSave.apply(this,args);};
+})();
+</script>
+
+
+<!-- PERCHADO V57 · Antiduplicados operativo, sin borrar trazabilidad -->
+<style id="perchado-v57-style">
+.v57AuditCount{display:inline-block;margin-left:7px;padding:3px 7px;border-radius:10px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800}
+.v57AuditCount.warning{background:#fff0d5;color:#8c510c}
+.v57SafeNotice{font-size:12px;border:1px solid #e2bd87;background:#fff9ed;border-radius:9px;padding:10px 12px;margin:10px 0;color:#845017;line-height:1.45}
+.v57SafeNotice.ok{border-color:#bce2d2;background:#eefbf6;color:#155d4e}
+.v57Inspect{padding:5px 8px!important;font-size:11px!important;min-height:29px!important}
+</style>
+<script id="perchado-v57-once-only">
+'use strict';
+/* Cada movimiento físico requiere una única intención WMS. Nunca se eliminan
+ registros antiguos automáticamente. La lista WMS es sólo una proyección segura. */
+const v57LegacyCollect=v49Collect;
+const v57PreExistingRows=v13Rows;
+const v57InFlight=new Set();
+let v57RenderDepth=0,v57GroupMemo=null;
+const v57BaseSources=['matches','resolutions','transfers','ledger'];
+function v57Key(code,from,to,qty){
+ const clean=s=>String(s??'').trim().toUpperCase();
+ return [clean(code),clean(from),clean(to),String(Number(qty))].join('\u001f');
+}
+function v57MoveBase(row,ledgerIndex){
+ const ledger=ledgerIndex.get(String(row.id));
+ if(ledger&&ledger.from&&ledger.to&&Number.isFinite(Number(ledger.baselineSource))&&Number.isFinite(Number(ledger.baselineDestination)))
+  return 'qty:'+Number(ledger.baselineSource)+':'+Number(ledger.baselineDestination);
+ if(ledger&&ledger.baselineHash)return 'wms:'+ledger.baselineHash;
+ const from=row.link?.m;
+ if(from&&Number.isFinite(Number(from.wmsOriginBefore))&&Number.isFinite(Number(from.wmsDestBefore)))
+  return 'qty:'+Number(from.wmsOriginBefore)+':'+Number(from.wmsDestBefore);
+ return 'unknown';
+}
+function v57CurrentBase(){
+ return allSystemRows?.length ? v33StockSignature(allSystemRows):'';
+}
+function v57CurrentStock(code,loc){
+ return Number(v38SystemQty(code,loc));
+}
+function v57AlreadyProposed(code,from,to,qty){
+ const key=v57Key(code,from,to,qty),current=v57CurrentBase();
+ for(const entry of (v33Ledger||[])){
+  if(!entry||entry.status==='discarded'||entry.status==='regularizado'||v57Key(entry.code,entry.from,entry.to,entry.qty)!==key)continue;
+  // Si la foto WMS cambió, se necesita nueva auditoría, no reutilizar una intención antigua.
+  if(entry.from&&entry.to&&Number.isFinite(Number(entry.baselineSource))&&Number.isFinite(Number(entry.baselineDestination))){
+   if(v57CurrentStock(code,from)===Number(entry.baselineSource)&&v57CurrentStock(code,to)===Number(entry.baselineDestination))return true;
+   continue;
+  }
+  if(!entry.baselineHash||!current||entry.baselineHash===current)return true;
+ }
+ for(const m of [...(manualTransfersV9||[]),...(approvedMatches||[])]){
+  if(!m||v57Key(m.code,m.from,m.to,m.qty)!==key)continue;
+  const ledger=(v33Ledger||[]).find(l=>l&&l.id===m.v33Id);
+  if(ledger?.status==='discarded'||ledger?.status==='regularizado')continue;
+  if(ledger?.baselineHash&&current&&ledger.baselineHash!==current)continue;
+  if(Number.isFinite(Number(m.wmsOriginBefore))&&Number.isFinite(Number(m.wmsDestBefore))){
+   if(v57CurrentStock(code,from)!==Number(m.wmsOriginBefore)||v57CurrentStock(code,to)!==Number(m.wmsDestBefore))continue;
+  }
+  return true;
+ }
+ return false;
+}
+function v57GroupedMovements(){
+ if(v57RenderDepth&&v57GroupMemo)return v57GroupMemo;
+ const raw=v57LegacyCollect();
+ const ledgerIndex=new Map((v33Ledger||[]).filter(Boolean).map(x=>[String(x.id),x]));
+ const groups=new Map();
+ for(const m of raw){
+  const key=v57Key(m.code,m.from,m.to,m.qty),base=v57MoveBase(m,ledgerIndex);
+  // Para registros sin huella WMS, se agrupan por la misma operación.
+  const groupKey=key+'\u001e'+base;
+  if(!groups.has(groupKey))groups.set(groupKey,{...m,v57Base:base,v57Entries:[],v57GroupKey:groupKey});
+  groups.get(groupKey).v57Entries.push(m);
+ }
+ // Un registro con origen/des­tino/qty idénticos pero huellas parciales puede
+ // tener referencias diferentes (ledger vs propuesta). Sólo mezclarlos cuando
+ // no hay prueba de que procedan de una foto WMS distinta.
+ const byKey=new Map();
+ for(const g of groups.values()){
+  const key=v57Key(g.code,g.from,g.to,g.qty);
+  if(!byKey.has(key))byKey.set(key,[]);
+  byKey.get(key).push(g);
+ }
+ for(const groupsForKey of byKey.values()){
+  const known=groupsForKey.filter(x=>x.v57Base!=='unknown');
+  const unknown=groupsForKey.filter(x=>x.v57Base==='unknown');
+  if(known.length===1&&unknown.length){
+   const target=known[0];
+   for(const other of unknown){target.v57Entries.push(...other.v57Entries);groups.delete(other.v57GroupKey);}
+  }
+ }
+ const consolidated=[...groups.values()];
+ for(const g of consolidated){
+  const statuses=new Set(g.v57Entries.map(x=>x.state));
+  // V49 puede aportar dos evidencias del mismo acto (registro y ledger).
+  // Mostrar una estimación operativa conservadora, sin borrar ninguna evidencia.
+  const nLedger=g.v57Entries.filter(x=>ledgerIndex.has(String(x.id))).length;
+  g.v57Count=Math.max(nLedger,g.v57Entries.length-nLedger,1);
+  g.v57EvidenceCount=g.v57Entries.length;
+  g.v57Ids=g.v57Entries.map(x=>x.id).filter(Boolean);
+  g.v57Statuses=[...statuses];
+  // Ante mezcla de ejecutado/pendiente o diferencia WMS, bloquear toda la
+  // operación: no se puede inferir qué ocurrió realmente en el WMS.
+  g.v57Mixed=(statuses.has('pendiente')&&[...statuses].some(s=>s!=='pendiente'))||statuses.has('revisar');
+  g.v57Review=g.v57Mixed;
+  if(g.v57Review)g.state='revisar';
+  else if(statuses.has('regularizado'))g.state='regularizado';
+  else if(statuses.has('ejecutado'))g.state='ejecutado';
+  else g.state='pendiente';
+ }
+ // Distintas cantidades o distintas fotos WMS, mismo producto y recorrido:
+ // revisión manual. No asumir que deben sumarse ni elegir arbitrariamente.
+ const byRoute=new Map();
+ for(const g of consolidated){
+  const key=[String(g.code),String(g.from),String(g.to)].join('\u001f');
+  if(!byRoute.has(key))byRoute.set(key,[]);byRoute.get(key).push(g);
+ }
+ for(const items of byRoute.values()){
+  const unresolved=items.filter(x=>x.state==='pendiente');
+  const qtys=new Set(unresolved.map(x=>String(Number(x.qty))));
+  const snapshots=new Set(unresolved.map(x=>x.v57Base));
+  // Diferentes cantidades en la misma foto WMS son ambiguas, no exportar.
+  if(qtys.size>1&&snapshots.size<=1){for(const x of unresolved){x.v57Review=true;x.state='revisar';x.v57Issue='Cantidades distintas para el mismo recorrido y la misma base WMS';}}
+ }
+ consolidated.sort((a,b)=>a.category.localeCompare(b.category)||a.code.localeCompare(b.code,undefined,{numeric:true}));
+ if(v57RenderDepth)v57GroupMemo=consolidated;
+ return consolidated;
+}
+v49Collect=function(){return v57GroupedMovements();};
+function v57AllowedRows(){
+ // Conservar los controles WMS originales de elegibilidad, físico y origen.
+ const allowed=new Set(v57PreExistingRows().map(r=>v57Key(r[0],r[1],r[2],r[3])));
+ const safe=[],unique=new Set();
+ for(const m of v57GroupedMovements()){
+  const key=v57Key(m.code,m.from,m.to,m.qty);
+  if(m.positive||m.state!=='pendiente'||m.v57Review||!m.from||!m.to||m.from===m.to||!allowed.has(key)||unique.has(key))continue;
+  safe.push([String(m.code),String(m.from),String(m.to),Number(m.qty)]);unique.add(key);
+ }
+ return safe;
+}
+v49PendingRows=function(){return v57AllowedRows();};
+v49SelectedRows=function(){return v57AllowedRows();};
+// Se impide copiar/descargar el historial como si fuera una orden WMS.
+const v57PriorCopy=v49Copy,v57PriorDownload=v49Download;
+v49Copy=function(){
+ if(v49Scope==='all')return perchadoAlert('El historial es solamente de consulta. Selecciona «Pendientes WMS» para copiar una lista operativa segura.');
+ if(v57GroupedMovements().some(x=>x.v57Review))return perchadoAlert('Hay movimientos duplicados o ambiguos por revisar. Para evitar errores WMS, la copia está bloqueada hasta resolver esas diferencias. Descarga primero el respaldo de auditoría.');
+ return v57PriorCopy();
+};
+v49Download=function(){
+ if(v49Scope==='all')return perchadoAlert('El historial no puede exportarse como instrucciones para el WMS. Utiliza «Pendientes WMS».');
+ if(v57GroupedMovements().some(x=>x.v57Review))return perchadoAlert('La exportación está bloqueada porque existen movimientos ambiguos. Conserva el respaldo y revisa esos movimientos.');
+ return v57PriorDownload();
+};
+// No permitir otras rutas de exportación que salten la validación central.
+v13Rows=function(){return v57AllowedRows();};
+v13CopyWms=function(){v49Copy();};
+v13DownloadWms=function(){v49Download();};
+wmsMovements=function(){return v57AllowedRows().map(r=>movementLine(r[0],r[1],r[2],r[3]));};
+function v57AuditInfo(groupKey){
+ const g=v57GroupedMovements().find(x=>x.v57GroupKey===groupKey);
+ if(!g)return perchadoAlert('Este registro cambió; vuelve a cargar la vista de movimientos.');
+ const lines=g.v57Entries.map((r,i)=>`${i+1}. ID: ${r.id||'sin ID'} · Estado: ${r.state} · ${r.link?.m?.createdAt||'fecha no disponible'}`);
+ return perchadoAlert(`REVISIÓN DE MOVIMIENTO — NO EJECUTAR SIN VALIDAR\nCódigo ${g.code} · ${g.from} → ${g.to} · ${g.qty} u\n${g.v57EvidenceCount} evidencias del historial y propuestas encontradas. No se eliminaron.\n\n${lines.join('\n')}`);
+}
+const v57OldRowHtml=v49RowHtml;
+// Los riesgos también se muestran en la pestaña Pendientes, para no ocultarlos.
+v49SectionHtml=function(label,icon,category,moves,pending){
+ const visible=moves.filter(m=>m.category===category&&(v49Scope==='all'||m.v57Review||m.positive&&m.state==='pendiente'||v49IsPendingRow(m,pending)));
+ const rows=visible.map(m=>v49RowHtml(m,pending)).join('');
+ const note=category==='surplus'&&visible.some(x=>x.positive)?'<p class="v49Foot">Los ajustes positivos se consultan por separado; no se exportan como traslados.</p>':'';
+ return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} operaciones</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
+};
+v49RowHtml=function(m,pending){
+ let html=v57OldRowHtml(m,pending);
+ const extra=(m.v57Count>1?`<span class="v57AuditCount${m.v57Review?' warning':''}">${m.v57Review?'⚠ Revisar':'Consolidados'} · ${m.v57Count}</span>`:'');
+ if(extra)html=html.replace('</span></td><td>',`</span>${extra}</td><td>`);
+ if(m.v57Review)html=html.replace(/<button[^>]*onclick='v33Manual\([^']+\)'[^>]*>[^<]*<\/button>/g,'');
+ if(m.v57Count>1||m.v57Review){
+  const action=`<button type="button" class="secondary mini v57Inspect" onclick='v57AuditInfo(${JSON.stringify(m.v57GroupKey)})'>🔎 Registros</button>`;
+  html=html.replace('</td></tr>',`${action}</td></tr>`);
+ }
+ return html;
+};
+const v57OldRender=renderReconciliation;
+renderReconciliation=function(){
+ v57RenderDepth++;v57GroupMemo=null;
+ try{
+ v57OldRender.apply(this,arguments);
+ const panel=document.getElementById('reconciliationPanel');if(!panel||!hasCompared)return;
+ const moves=v57GroupedMovements(),dupes=moves.filter(x=>x.v57Count>1).length,risks=moves.filter(x=>x.v57Review).length;
+ if(dupes||risks){
+  const div=document.createElement('div');div.className='v57SafeNotice'+(risks?'':' ok');
+  div.textContent=risks?`⚠ ${risks} movimiento(s) ambiguo(s): bloqueada la exportación WMS hasta verificar. ${dupes} grupo(s) con registros repetidos. Se conservó toda la evidencia.`:
+   `✓ ${dupes} grupo(s) con registros repetidos agrupados en pantalla y exportación: solo una instrucción por operación. Los registros originales se conservan para auditoría.`;
+  panel.prepend(div);
+ }
+ // En vista historial, botones de WMS deshabilitados: jamás exportar ejecutados.
+ if(v49Scope==='all')for(const b of panel.querySelectorAll('.v49Controls button')){b.disabled=true;b.title='El historial es solo para consulta';}
+ }finally{v57RenderDepth--;if(!v57RenderDepth)v57GroupMemo=null;}
+};
+// Bloquear doble clic/confirmación concurrente y repetir la misma intención WMS.
+function v57GuardCreate(fn,extract){
+ return async function(...args){
+  const data=extract(...args);if(!data)return fn.apply(this,args);
+  const key=v57Key(data.code,data.from,data.to,data.qty);
+  if(v57InFlight.has(key))return perchadoAlert('Este ajuste ya está siendo registrado. No vuelvas a confirmarlo.');
+  if(v57AlreadyProposed(data.code,data.from,data.to,data.qty))return perchadoAlert('Este movimiento ya fue registrado para la misma base WMS. Consulta «Movimientos y ajustes»; no se generó una segunda propuesta.');
+  v57InFlight.add(key);
+  try{return await fn.apply(this,args);}finally{v57InFlight.delete(key);}
+ };
+}
+const v57PreviousSaveTransfer=v38SaveTransfer;
+v38SaveTransfer=v57GuardCreate(v57PreviousSaveTransfer,(loc,code)=>({
+ code,from:document.querySelector('input[name="v46Origin"]:checked')?.value||v46MovementDrafts.get(v46MovementKey(loc,code))?.from,
+ to:loc,qty:v13Amount(document.getElementById('v38Qty')?.value)
+}));
+const v57PreviousSaveMissing=v47SaveMissing;
+v47SaveMissing=v57GuardCreate(v57PreviousSaveMissing,(loc,code)=>({
+ code,from:loc,to:document.querySelector('input[name="v47MissingDest"]:checked')?.value||v47MissingDrafts.get(v47MissingKey(loc,code))?.to,
+ qty:v13Amount(document.getElementById('v47MissingQty')?.value)
+}));
 </script>
 
 </body>
