@@ -409,9 +409,22 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
  body.v43-admin .v43SideBackdrop{top:calc(var(--perchado-header-height,64px) + var(--v43-search-height,66px))}
 }
 </style>
+<style>
+/* V46 — elección de origen estable, sin desplegable nativo que se reinicie. */
+.v46Origins{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:8px;margin:7px 0 11px}
+.v46OriginChoice{display:flex!important;align-items:flex-start;gap:9px;border:1px solid #c3e5de;border-radius:10px;background:#fff;padding:10px 12px;cursor:pointer;min-width:0;margin:0!important;color:#185d52!important;line-height:1.25;transition:border-color .14s,background .14s}
+.v46OriginChoice:hover{background:#f1fbf8;border-color:#6ed2bd}
+.v46OriginChoice:has(input:checked){background:#ddf7ef;border-color:#0a967d;box-shadow:inset 0 0 0 1px #0a967d}
+.v46OriginChoice input[type=radio]{flex:0 0 auto;width:17px!important;height:17px!important;min-height:17px!important;margin:1px 0 0;padding:0;accent-color:#088d74;cursor:pointer}
+.v46OriginCopy{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+.v46OriginCopy strong{font-size:13px;font-weight:750;color:#084f43}
+.v46OriginCopy small{font-size:11px;color:#51766e;font-weight:500}
+.v46OriginHint{font-size:12px;color:#476f66;margin:5px 0 0}
+@media(max-width:700px){.v46Origins{grid-template-columns:1fr}.v46OriginChoice{padding:11px}}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V45</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V46</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -5093,35 +5106,62 @@ function v38Sources(code,target){
  }).filter(x=>x.available>0)
  .sort((a,b)=>Number(b.isCW)-Number(a.isCW)||Number(b.unchecked)-Number(a.unchecked)||Number(b.deficit>0)-Number(a.deficit>0)||a.loc.localeCompare(b.loc,undefined,{numeric:true}));
 }
+// V46: preserve administrator choice and typed quantity across live Firebase redraws.
+const v46MovementDrafts=new Map();
+function v46MovementKey(loc,code){return String(loc)+'||'+String(code);}
+function v46OriginState(loc,code,sources){
+ const key=v46MovementKey(loc,code),saved=v46MovementDrafts.get(key);
+ const src=(sources||v38Sources(code,loc)).find(x=>x.loc===saved?.from) || (sources||v38Sources(code,loc))[0];
+ if(!src)return {src:null,qty:''};
+ const row=v13Row(loc,code),limit=Math.min(src.available,Math.max(0,row?remaining(row):0));
+ let qty=saved&&saved.from===src.loc?saved.qty:String(limit);
+ if(qty!=='' && Number.isFinite(Number(qty))&&Number(qty)>limit)qty=String(limit);
+ const state={from:src.loc,qty:String(qty),limit};
+ v46MovementDrafts.set(key,state);
+ return {src,qty:state.qty,limit};
+}
+function v46ChooseOrigin(loc,code){
+ const chosen=document.querySelector('input[name="v46Origin"]:checked')?.value;
+ if(!chosen)return;
+ const src=v38Sources(code,loc).find(x=>x.loc===chosen);
+ if(!src)return;
+ const row=v13Row(loc,code),max=Math.min(src.available,Math.max(0,row?remaining(row):0));
+ v46MovementDrafts.set(v46MovementKey(loc,code),{from:src.loc,qty:String(max),limit:max});
+ v38SourceChanged(loc,code);
+}
+function v46RememberQty(loc,code){
+ const input=document.getElementById('v38Qty');if(!input)return;
+ const from=document.querySelector('input[name="v46Origin"]:checked')?.value || v46MovementDrafts.get(v46MovementKey(loc,code))?.from;
+ const old=v46MovementDrafts.get(v46MovementKey(loc,code))||{};
+ v46MovementDrafts.set(v46MovementKey(loc,code),{...old,from,qty:input.value});
+}
 function v38SourceChanged(loc,code){
- const select=document.getElementById('v38Source');
- const src=v38Sources(code,loc).find(x=>x.loc===select?.value),row=v13Row(loc,code);
+ const src=v46OriginState(loc,code).src,row=v13Row(loc,code);
  const input=document.getElementById('v38Qty'),info=document.getElementById('v38SourceInfo');
  if(!input||!info)return;
  const max=Math.min(src?.available||0,Math.max(0,row?remaining(row):0));
  input.max=String(max);
- // Al cambiar de Procesos_CW (por ejemplo, 1 u) a Bulk, sugerir el nuevo
- // máximo; antes la cantidad antigua permanecía en 1 y confundía al usuario.
- input.value=max>0?String(max):'';
+ input.value=v46MovementDrafts.get(v46MovementKey(loc,code))?.qty??String(max);
  if(!src){info.textContent='No hay saldo WMS disponible en la ubicación seleccionada.';return;}
- const note=src.isCW?'♻ Recuperación de pérdidas: primera opción recomendada.':
-   src.unchecked?'⚠ Ubicación sin conteo físico: el ajuste puede generar una futura diferencia.':
-   src.checkedWithoutDeficit?'⚠ Ubicación ya contada y SIN faltante: quitar stock puede descuadrarla. Revisar antes de ejecutar el WMS.':
-   'Ubicación con faltante físico registrado.';
- info.textContent=`${note} WMS origen: ${fmtQty(src.qty)} u · Ya comprometido: ${fmtQty(src.committed)} u · Libre para proponer: ${fmtQty(src.available)} u · Máximo hacia este sobrante: ${fmtQty(max)} u.`;
+ const note=src.isCW?'♻ Recuperación de pérdidas: origen recomendado, no obligatorio.':
+  src.unchecked?'⚠ Ubicación aún sin conteo físico: puedes seleccionarla; podría generar una diferencia posterior.':
+  src.checkedWithoutDeficit?'⚠ Ubicación contada sin faltante: descontar stock puede descuadrarla.':
+  'Ubicación con faltante físico registrado.';
+ info.textContent=`${note} WMS origen: ${fmtQty(src.qty)} u · Comprometido: ${fmtQty(src.committed)} u · Disponible: ${fmtQty(src.available)} u · Máximo hacia este sobrante: ${fmtQty(max)} u.`;
 }
 const v38OldInline=v12Inline;
 v12Inline=function(loc,code){
  if(v12Panel.loc!==loc||v12Panel.code!==code||!['move','positive'].includes(v12Panel.kind))return v38OldInline.apply(this,arguments);
  const r=v13Row(loc,code),qty=r?Math.max(0,remaining(r)):0;
  const args=v15Arg(loc)+','+v15Arg(code),sources=v38Sources(code,loc),confirmed=v15Confirmed(loc,code),verified=v17Verified(loc,code);
+ const v46Selection=v46OriginState(loc,code,sources);
  const close=`<div class="v12Actions"><button type="button" class="secondary mini" onclick="v12CancelPanel()">Cerrar</button></div>`;
  const content=(!confirmed&&!verified)?`<div class="v38Banner">Primero valida el reconteo y registra el sobrante físico antes de proponer movimientos.</div><button class="secondary mini" onclick='v17OpenVerification(${args})'>✓ Verificar cantidad</button>`:
  `<div class="v38Panel"><b>↔ Regularizar sobrante · ${wfEsc(code)}</b><p style="font-size:12px">Ubicación con sobrante: <b>${wfEsc(loc)}</b> · Pendiente: <b>+${fmtQty(qty)} u</b></p>`+
- (sources.length?`<label>Desde ubicación con stock WMS<select id="v38Source" onchange='v38SourceChanged(${args})'>${sources.map(src=>`<option value="${wfEsc(src.loc)}">${src.isCW?'♻ ':'📍 '}${wfEsc(src.loc)} · WMS libre ${fmtQty(src.available)} u · ${wfEsc(src.status)}</option>`).join('')}</select></label>`+
- `<label>Hasta ubicación<input value="${wfEsc(loc)}" readonly></label><label>Cantidad del movimiento<input type="number" min="1" step="any" inputmode="decimal" id="v38Qty" value="${Math.min(sources[0].available,qty)}"/></label>`+
+ (sources.length?`<div><span style="font-size:12px;font-weight:750;color:#245951">Desde ubicación con stock WMS</span><div class="v46Origins" role="radiogroup" aria-label="Seleccionar origen WMS">${sources.map(src=>`<label class="v46OriginChoice"><input type="radio" name="v46Origin" value="${wfEsc(src.loc)}" ${v46Selection.src?.loc===src.loc?'checked':''} onchange='v46ChooseOrigin(${args})'/><span class="v46OriginCopy"><strong>${src.isCW?'♻ ': '📍 '}${wfEsc(src.loc)} · ${fmtQty(src.available)} u libres</strong><small>${wfEsc(src.status)}</small></span></label>`).join('')}</div><div class="v46OriginHint">Selecciona directamente el origen. Se permite uno sin conteo físico.</div></div>`+
+ `<label>Hasta ubicación<input value="${wfEsc(loc)}" readonly></label><label>Cantidad del movimiento<input type="number" min="1" step="any" inputmode="decimal" id="v38Qty" max="${v46Selection.limit}" oninput='v46RememberQty(${args})' value="${wfEsc(v46Selection.qty)}"/></label>`+
  `<div class="v45OriginHelp">Puedes elegir cualquier ubicación con stock WMS de este código. Procesos_CW se recomienda primero; otras ubicaciones pueden generar nuevas diferencias y requieren tu autorización.</div>`+
- `<div id="v38SourceInfo" class="v38Preview">${sources[0].isCW?'♻ Recuperación prioritaria desde Procesos_CW':sources[0].unchecked?'⚠ Origen sin conteo físico':sources[0].checkedWithoutDeficit?'⚠ Origen sin faltante: verifica el impacto':'Origen con faltante físico'} · WMS libre ${fmtQty(sources[0].available)} u.</div>`+
+ `<div id="v38SourceInfo" class="v38Preview">${v46Selection.src.isCW?'♻ Recuperación recomendada desde Procesos_CW':v46Selection.src.unchecked?'⚠ Origen sin conteo físico, autorizado por Administración':v46Selection.src.checkedWithoutDeficit?'⚠ Origen sin faltante: verifica el impacto':'Origen con faltante físico'} · WMS libre ${fmtQty(v46Selection.src.available)} u.</div>`+
  `<button type="button" class="primary mini v38Action" onclick='v38SaveTransfer(${args})'>✓ Registrar movimiento en Ajustes</button>`:
  `<div class="v38Banner">No hay stock WMS del código en otras ubicaciones. Registra un sobrante confirmado sin traslado para su ajuste positivo.</div><button class="primary mini" onclick='v38Positive(${args})'>＋ Registrar ajuste positivo</button>`)+
  `</div>`;
@@ -5132,7 +5172,7 @@ async function v38SaveTransfer(loc,code){
  if(cloudEnabledV9&&!cloudWritableV9())return;
  const r=v13Row(loc,code),verified=v17Verified(loc,code),confirmed=v15Confirmed(loc,code);
  if(!r||!baseEligible(r)||!v13RecountIntegrated(r)||v13HasPendingRecount(loc,code)||(!verified&&!confirmed))return perchadoAlert('Primero valida la cantidad física recontada de este código.');
- const from=document.getElementById('v38Source')?.value,qty=v13Amount(document.getElementById('v38Qty')?.value),src=v38Sources(code,loc).find(s=>s.loc===from);
+ const from=document.querySelector('input[name="v46Origin"]:checked')?.value || v46MovementDrafts.get(v46MovementKey(loc,code))?.from,qty=v13Amount(document.getElementById('v38Qty')?.value),src=v38Sources(code,loc).find(s=>s.loc===from);
  if(!src||!qty||qty<=0||qty>src.available+1e-8||qty>Math.max(0,remaining(r))+1e-8)return perchadoAlert('Cantidad inválida o superior al saldo disponible.');
  if(!v13ValidLocation(from)||!v13ValidLocation(loc))return perchadoAlert('Las dos ubicaciones deben existir en el WMS.');
  const warning=src.unchecked?'\n⚠ El origen todavía no tiene conteo físico. Esta transferencia puede crear una futura diferencia en él.':
@@ -5141,7 +5181,7 @@ async function v38SaveTransfer(loc,code){
  const priorityNote=!src.isCW&&cwAvailable>0?`\n♻ Procesos_CW todavía tiene ${fmtQty(cwAvailable)} unidades libres; se recomienda recuperarlas primero.`:'';
  if(!await perchadoConfirm(`Registrar movimiento WMS para el código ${code}:\nDESDE ${from}\nHACIA ${loc}\nCANTIDAD ${fmtQty(qty)} u.\n${warning}${priorityNote}\nNo se ejecutará automáticamente en el WMS.`))return;
  manualTransfersV9.push({id:wfId(),code:String(code),from,to:loc,qty,originVerified:!src.unchecked,adminApproved:true,sourceUncounted:src.unchecked,v38:true,wmsOriginBefore:v38SystemQty(code,from),wmsDestBefore:v38SystemQty(code,loc),createdAt:wfToday(),by:adminIdentityV9,kind:src.isCW?'RECUPERACION_CW':'CONCILIACION_BULK',executedAt:null});
- window.perchadoV9Moves=manualTransfersV9;saveDecisions();v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento registrado en Movimientos y ajustes');
+ window.perchadoV9Moves=manualTransfersV9;saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();toast('Movimiento registrado en Movimientos y ajustes');
 }
 async function v38Positive(loc,code){
  if(!adminAccessV9||!hasCompared||sourceDirty)return;
