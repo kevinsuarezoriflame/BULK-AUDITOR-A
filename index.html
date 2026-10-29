@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V60 · Control de inventario</title>
+<title>PERCHADO V62 · Tandas de auditoría y ajustes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -470,7 +470,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V60</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V62</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -535,7 +535,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <div class="mapModules" id="mapGrid"></div>
 </section>
 <section class="section" id="decisions">
-<div class="mainSectionHead"><div><h2>📦 Movimientos y ajustes</h2></div><button class="secondary mini v16IconOnly" title="Descargar movimientos WMS" aria-label="Descargar movimientos WMS" onclick="downloadExcel()">⬇️</button></div>
+<div class="mainSectionHead"><div><h2>📦 Ajustes WMS · tanda actual</h2></div><button class="secondary mini v16IconOnly" title="Descargar movimientos WMS" aria-label="Descargar movimientos WMS" onclick="downloadExcel()">⬇️</button></div>
 <h3 class="wfSectionTitle">✅ Ubicaciones ajustadas · movimientos pendientes de WMS</h3><div class="sectionStats" id="settledCount"></div><div class="locationCards" id="settledLocations"></div><div id="reconciliationPanel"></div>
 <div class="mainSectionHead" style="margin-top:28px"><div><h2>📊 Comparación detallada</h2></div></div>
 <div class="toolbar"><div class="filters"><select id="statusFilter" onchange="renderTable()"><option value="ALL">Todos los estados</option><option value="OK">OK</option><option value="DIFERENCIA CANTIDAD">Diferencia cantidad</option><option value="NO EXISTE EN SISTEMA">No existe en sistema</option><option value="NO REGISTRADO POR OPERADOR">No registrado por operador</option><option value="UBICACIÓN NO RECONOCIDA">Ubicación no reconocida</option><option value="DUPLICADO OPERADOR">Duplicado operador</option></select><select id="sortFilter" onchange="renderTable()"><option value="estado">Por estado</option><option value="pallet">Por ubicación</option><option value="codigo">Por código</option><option value="diferencia">Por diferencia</option></select><input id="searchBox" oninput="renderTable()" placeholder="Buscar código / ubicación"/></div><button class="secondary mini v16IconOnly" title="Copiar detalle filtrado" aria-label="Copiar detalle filtrado" onclick="copyTable()">📋</button></div>
@@ -575,7 +575,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <div class="workflowGrid">
 <div class="wfPane"><h3>👥 Operarios habilitados</h3><div class="wfActions"><input id="newOpName" onkeydown="if(event.key==='Enter')addOperatorV8()" placeholder="Nombre y apellido" style="flex:1;min-width:180px"/><button class="primary" onclick="addOperatorV8()">＋ Habilitar</button></div><div id="wfUsers"></div></div>
 </div>
-<h3 class="wfSectionTitle">📍 Avance de ubicaciones <small class="v58BoundedNote">(50 más recientes; usa el buscador para registros anteriores)</small></h3><div class="wfActions"><input class="wfFilter" id="wfSessionSearch" oninput="renderAdminV8()" placeholder="Buscar ubicación, código u operario"/></div><div id="wfSessions"></div>
+<!-- V61: eliminado por solicitud: panel Avance de ubicaciones y listas repetidas de conteos. Identificadores preservados pero sin visualización para compatibilidad histórica. --><div id="v61LegacySessions" hidden><input id="wfSessionSearch" value="" readonly tabindex="-1"/><div id="wfSessions" hidden></div></div>
 <h3 class="wfSectionTitle">🔎 Reconteos · resumen <small class="v58BoundedNote">(40 más recientes; buscar para ver anteriores)</small></h3><div id="wfTasksAdmin"></div>
 
 
@@ -1224,7 +1224,7 @@ async function approveTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||t.
 async function cancelTaskV8(id){const t=wfV8.tasks.find(x=>x.id===id);if(!t||!['open','answered'].includes(t.status))return;if(!await perchadoConfirm('¿Cancelar esta solicitud? El historial se conservará.'))return;t.status='cancelled';t.closedAt=wfToday();wfStore('RECONTEO_CANCELADO',id);renderWorkflowV8();}
 async function setSessionStatusV8(id,status){const s=wfV8.sessions.find(x=>x.id===id);if(!s||!['pending','approved','rejected'].includes(s.status))return;if(status==='approved'&&wfV8.tasks.some(t=>t.sessionId===id&&['open','answered'].includes(t.status)))return perchadoAlert('Este conteo tiene reconteos aún pendientes de cerrar.');if(status==='approved'&&!$('systemData').value.trim()&&!await perchadoConfirm('Aún no existe data del sistema para auditar los códigos. ¿Aprobar de todas formas?'))return;if(!await perchadoConfirm(`¿${status==='approved'?'Aprobar este conteo para comparación':'Rechazar este conteo'}? Se conservará el historial.`))return;s.status=status;s.reviewedAt=wfToday();wfStore(status==='approved'?'CONTEO_APROBADO':'CONTEO_RECHAZADO',id);renderWorkflowV8();}
 function wfSessionView(s,catalog){const pending=wfV8.tasks.some(t=>t.sessionId===s.id&&['open','answered'].includes(t.status)),classes=wfClass(s.status),rows=s.entries.map(e=>{const correction=wfV8.corrections[e.id],audit=auditCodeV8(correction?.code||e.code,s.location,catalog);const tag=e.type==='MISSING'?'<span class="wfTag alert">Posible faltante</span>':'';const modified=correction?`<div class="wfMini">✅ Validado en reconteo: ${wfEsc(correction.code)} · ${fmtQty(correction.qty)} u</div>`:'';return `<tr><td class="wfMonospace">${wfEsc(e.code)}</td><td>${fmtQty(e.qty)}</td><td>${tag}${wfEsc(e.type==='MISSING'?'No encontrado':'Encontrado')}</td><td><span class="wfTag ${audit.state!=='COINCIDENCIA'?'alert':''}">${wfEsc(audit.state)}</span><div class="wfMini">${wfEsc(audit.note)}</div>${modified}</td><td><button class="secondary wfActionSmall" onclick="taskFromEntryV8('${s.id}','${e.id}')">🔎 Revisar / reconteo</button></td></tr>`;}).join('');return `<div class="wfSession"><div class="wfSessionHead"><strong>📍 ${wfEsc(s.location)} · ${wfEsc(personNameV8(s.userId))}</strong><span class="wfStatus ${classes}">${wfEsc(wfStatus(s.status))}</span></div><div class="wfMini">Enviado: ${wfFormatDate(s.submittedAt)} · ${s.entries.length} códigos ${pending?'· ⚠️ Hay reconteos pendientes':''}</div><div class="tableWrap compactTable"><table class="wfTable"><thead><tr><th>Código original</th><th>Físico original</th><th>Resultado</th><th>Auditoría del código</th><th>Acción</th></tr></thead><tbody>${rows}</tbody></table></div><div class="wfActions"><button class="primary wfActionSmall" onclick="setSessionStatusV8('${s.id}','approved')" ${pending?'disabled':''}>✓ Aprobar para comparación</button><button class="danger wfActionSmall" onclick="setSessionStatusV8('${s.id}','rejected')">Rechazar conteo</button></div></div>`;}
-function renderAdminV8(){const enabled=wfV8.users.filter(u=>u.enabled).length,pending=wfV8.sessions.filter(s=>s.status==='pending').length,openTasks=wfV8.tasks.filter(t=>t.status==='open'||t.status==='answered').length,approved=wfV8.sessions.filter(s=>s.status==='approved').length;const cards=[['Habilitados',enabled],['Conteos por revisar',pending],['Reconteos pendientes',openTasks],['Conteos aprobados',approved]];$('wfOverview').innerHTML=cards.map(([label,n])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');$('wfUsers').innerHTML=wfV8.users.length?wfV8.users.map(u=>`<div class="wfEntry"><div><b>${wfEsc(u.name)}</b> <span class="wfTag ${u.enabled?'':'alert'}">${u.enabled?'Habilitado':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick="toggleOperatorV8('${u.id}')">${u.enabled?'Deshabilitar':'Habilitar'}</button></div>`).join(''):'<div class="wfEmpty">Sin operarios registrados. Habilita nombres para iniciar conteos.</div>';const search=$('wfSessionSearch').value.trim().toLowerCase(),catalog=wfCatalog();const records=[...wfV8.sessions].reverse().filter(s=>!search||[personNameV8(s.userId),s.location,s.status,...(s.entries||[]).map(e=>e.code)].join(' ').toLowerCase().includes(search)).slice(0,50);$('wfSessions').innerHTML=records.length?records.map(s=>wfSessionView(s,catalog)).join(''):'<div class="wfEmpty">No hay conteos para este filtro.</div>';const tasks=[...wfV8.tasks].reverse().filter(t=>!search||[t.code,t.location,t.reason,personNameV8(t.userId)].join(' ').toLowerCase().includes(search)).slice(0,40);$('wfTasksAdmin').innerHTML=tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>${wfEsc(t.code)} · ${wfEsc(t.location)}</strong><span class="wfStatus ${wfClass(t.status)}">${wfEsc(wfStatus(t.status))}</span></div><div class="wfMini">Operario: ${wfEsc(personNameV8(t.userId))} · ${wfFormatDate(t.createdAt)}<div>Motivo: ${wfEsc(t.reason)}</div>${t.response?`<div>Respuesta: código ${wfEsc(t.response.code)} · ${fmtQty(t.response.qty)} u · ${wfEsc(t.response.type==='MISSING'?'No encontrado':'Encontrado')} · ${wfFormatDate(t.response.at)}</div>`:''}</div><div class="wfActions">${t.status==='answered'?`<button class="primary wfActionSmall" onclick="approveTaskV8('${t.id}')">🔍 Verificar conteos</button>`:''}${['open','answered'].includes(t.status)?`<button class="danger wfActionSmall" onclick="cancelTaskV8('${t.id}')">Cancelar</button>`:''}</div></div>`).join(''):'<div class="wfEmpty">Sin solicitudes de reconteo.</div>';}
+function renderAdminV8(){const enabled=wfV8.users.filter(u=>u.enabled).length,pending=wfV8.sessions.filter(s=>s.status==='pending').length,openTasks=wfV8.tasks.filter(t=>t.status==='open'||t.status==='answered').length,approved=wfV8.sessions.filter(s=>s.status==='approved').length;const cards=[['Habilitados',enabled],['Conteos por revisar',pending],['Reconteos pendientes',openTasks],['Conteos aprobados',approved]];$('wfOverview').innerHTML=cards.map(([label,n])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');$('wfUsers').innerHTML=wfV8.users.length?wfV8.users.map(u=>`<div class="wfEntry"><div><b>${wfEsc(u.name)}</b> <span class="wfTag ${u.enabled?'':'alert'}">${u.enabled?'Habilitado':'Deshabilitado'}</span></div><button class="secondary wfActionSmall" onclick="toggleOperatorV8('${u.id}')">${u.enabled?'Deshabilitar':'Habilitar'}</button></div>`).join(''):'<div class="wfEmpty">Sin operarios registrados. Habilita nombres para iniciar conteos.</div>';const search='';/* V61: omitir el render costoso del panel Avance de ubicaciones retirado. */const tasks=[...wfV8.tasks].reverse().filter(t=>!search||[t.code,t.location,t.reason,personNameV8(t.userId)].join(' ').toLowerCase().includes(search)).slice(0,40);$('wfTasksAdmin').innerHTML=tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>${wfEsc(t.code)} · ${wfEsc(t.location)}</strong><span class="wfStatus ${wfClass(t.status)}">${wfEsc(wfStatus(t.status))}</span></div><div class="wfMini">Operario: ${wfEsc(personNameV8(t.userId))} · ${wfFormatDate(t.createdAt)}<div>Motivo: ${wfEsc(t.reason)}</div>${t.response?`<div>Respuesta: código ${wfEsc(t.response.code)} · ${fmtQty(t.response.qty)} u · ${wfEsc(t.response.type==='MISSING'?'No encontrado':'Encontrado')} · ${wfFormatDate(t.response.at)}</div>`:''}</div><div class="wfActions">${t.status==='answered'?`<button class="primary wfActionSmall" onclick="approveTaskV8('${t.id}')">🔍 Verificar conteos</button>`:''}${['open','answered'].includes(t.status)?`<button class="danger wfActionSmall" onclick="cancelTaskV8('${t.id}')">Cancelar</button>`:''}</div></div>`).join(''):'<div class="wfEmpty">Sin solicitudes de reconteo.</div>';}
 function renderOperatorTasksV8(){const id=$('opUser').value;const tasks=wfV8.tasks.filter(t=>t.userId===id&&t.status==='open');$('opTasks').innerHTML=!id?'<div class="wfEmpty">Elige tu nombre para consultar los reconteos.</div>':tasks.length?tasks.map(t=>`<div class="wfTask"><div class="wfSessionHead"><strong>📍 ${wfEsc(t.location)} · ${wfEsc(t.code)}</strong><span class="wfStatus pending">Pendiente</span></div><div class="wfMini">${wfEsc(t.reason)} · Asignado ${wfFormatDate(t.createdAt)}</div><div class="wfFields" style="margin-top:10px"><label>Código observado<input id="taskCode_${t.id}" type="text" inputmode="numeric" autocapitalize="off" autocomplete="off" spellcheck="false" value="${wfEsc(t.code)}"/></label><label>Cantidad encontrada<input id="taskQty_${t.id}" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false"/></label><label class="wfWide">Resultado<select id="taskType_${t.id}"><option value="COUNT">Encontrado físicamente</option><option value="MISSING">No encontrado físicamente</option></select></label></div><div class="wfActions"><button class="primary wfActionSmall" onclick="answerTaskV8('${t.id}')">📨 Enviar reconteo</button></div></div>`).join(''):'<div class="wfEmpty">No tienes reconteos pendientes.</div>';const sessions=wfV8.sessions.filter(s=>s.userId===id).slice(-10).reverse();$('opMySessions').innerHTML=sessions.length?sessions.map(s=>`<div class="wfEntry"><div>📍 <strong>${wfEsc(s.location)}</strong><div class="wfMini">${s.entries.length} códigos · ${wfFormatDate(s.submittedAt)}</div></div><span class="wfStatus ${wfClass(s.status)}">${wfEsc(wfStatus(s.status))}</span></div>`).join(''):'<div class="wfEmpty">No hay conteos enviados por este operario.</div>';}
 function renderWorkflowV8(){renderUserSelectorsV8();renderOperatorDraftV8();renderAdminV8();renderOperatorTasksV8();}
 async function applyApprovedToComparisonV8(){const approved=wfV8.sessions.filter(s=>s.status==='approved');if(!approved.length)return perchadoAlert('No hay conteos aprobados.');if(!$('systemData').value.trim())return perchadoAlert('Carga la data del sistema en «Pegar datas» antes de comparar.');const current=new Map();for(const s of approved){const previous=current.get(s.location);if(!previous||new Date(s.reviewedAt||s.submittedAt)>=new Date(previous.reviewedAt||previous.submittedAt))current.set(s.location,s);}const rows=[];for(const s of current.values()){for(const e of s.entries){const corrected=wfV8.corrections[e.id]||e;rows.push([s.location,corrected.code,corrected.type==='MISSING'?0:corrected.qty].join('\t'));}}if(!rows.length)return perchadoAlert('No se encontraron registros en los conteos aprobados.');if(!await perchadoConfirm(`Integrar ${rows.length} líneas de ${current.size} ubicaciones aprobadas. Esto REEMPLAZARÁ el cuadro «Data operador» del análisis actual, sin borrar los originales de la bandeja. ¿Continuar?`))return;$('operatorData').value='Ubicación\tCódigo\tCantidad\n'+rows.join('\n');savePaste();compareData();wfStore('APROBADOS_INTEGRADOS',`${rows.length} líneas / ${current.size} ubicaciones`);renderWorkflowV8();openTab('results');toast('Conteos aprobados integrados al cruce (no modifica WMS)');}
@@ -2410,34 +2410,9 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
    const [sessions,tasks,corrections]=await Promise.all(['sessions','tasks','corrections'].map(v60GetAll));
    return {sessions,tasks,corrections};
  };
- api.archiveAllCountsV60=async function(actor){
-   await ensureAnonymous();if(!api.admin)throw Error('Acceso administrativo requerido.');
-   const [sessions,tasks,corrections,live]=await Promise.all(['sessions','tasks','corrections','liveCounts'].map(v60GetAll));
-   const activeS=sessions.filter(x=>x.status!=='archived'),activeT=tasks.filter(x=>x.status!=='archived');
-   const taskIds=new Set(tasks.map(t=>String(t.id))),entryIds=new Set(sessions.flatMap(x=>(x.entries||[]).map(e=>String(e.id||'')).filter(Boolean)));
-   const related=corrections.filter(c=>c.archived!==true&&(
-     entryIds.has(String(c.id))||entryIds.has(String(c.entryId||''))||
-     (c.taskId&&taskIds.has(String(c.taskId)))||
-     (String(c.source||'').startsWith('task:')&&taskIds.has(String(c.source).slice(5)))||
-     c.kind==='admin_removed_entry'||String(c.id||'').startsWith('v29_void_')
-   ));
-   const now=new Date().toISOString(),who=String(actor||'Administración').slice(0,90),items=[];
-   for(const x of activeS)items.push({group:'sessions',id:x.id,data:{status:'archived',reviewedAt:now,archivedBy:who}});
-   for(const x of activeT)items.push({group:'tasks',id:x.id,data:{status:'archived',archivedAt:now,archivedBy:who}});
-   for(const x of related)items.push({group:'corrections',id:x.id,data:{archived:true,archivedAt:now,archivedBy:who}});
-   // Las capturas en vivo antiguas también se retiran, pero se guardaron en el JSON previo.
-   for(const x of live)items.push({group:'liveCounts',id:x.id,delete:true});
-   let done=0;
-   for(let i=0;i<items.length;i+=120){
-     const batch=writeBatch(db);
-     for(const item of items.slice(i,i+120)){
-       if(item.delete)batch.delete(ref(item.group,item.id));
-       else batch.update(ref(item.group,item.id),item.data);
-     }
-     try{await batch.commit();}catch(e){throw Error(`Se procesaron ${done} de ${items.length} registros. ${e.message}`);}
-     done+=Math.min(120,items.length-i);
-   }
-   return {sessions:activeS.length,tasks:activeT.length,corrections:related.length,live:live.length};
+ // V61: archivado masivo deshabilitado. Se sustituye por reinicio atómico del ciclo.
+ api.archiveAllCountsV60=async function(){
+   throw Error('Archivado masivo deshabilitado por seguridad. Utiliza el reinicio de ciclo V61.');
  };
  api.retainRecountEvidence=async function(ids){
    await ensureAnonymous();if(!api.admin)throw Error('Requiere Administración.');
@@ -3141,10 +3116,10 @@ renderAdminV8=function(){
   const previous=byLoc.get(session.location);
   if(!previous||String(session.submittedAt||'')>=String(previous.submittedAt||''))byLoc.set(session.location,session);
  }
- let latest=[...byLoc.values()].sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||'')));
- latest=latest.filter(s=>!filter||[s.location,personNameV8(s.userId),...(s.entries||[]).map(x=>x.code)].join(' ').toLowerCase().includes(filter));
+ /* V61: no construir la lista de avance retirada. Solo conservar tamaño del índice para indicadores. */
+ let latest=[];
  const node=document.getElementById('wfSessions');
- if(node)node.innerHTML='<div class="v19Summary">'+(latest.length?latest.slice(0,120).map(s=>{
+ if(node&&!node.closest('#v61LegacySessions'))node.innerHTML='<div class="v19Summary">'+(latest.length?latest.slice(0,120).map(s=>{
   const frozen=v18Square(s.location),rows=results.filter(r=>r.ubicacionNormalizada===s.location),bad=rows.some(r=>r.diferencia!==0||r.duplicado),status=frozen?'✓ Cuadrada cerrada':rows.length?(bad?'⚠ Con novedades':'✓ Sin diferencias'):'✓ Conteo recibido';
   const klass=frozen?'':bad?'warn':'neutral';
   return `<div class="v19Loc"><div><b>📍 ${wfEsc(s.location)}</b><small>${wfEsc(personNameV8(s.userId))} · ${s.entries.filter(e=>!wfV8.corrections['v29_void_'+e.id]?.removed).length} registros · ${wfFormatDate(s.submittedAt)}${s.manualLocation?' · ⚑ Ubicación digitada, no registrada en WMS':''}</small>${typeof v29SessionActions==='function'?v29SessionActions(s):''}</div><span class="v19Tag ${klass}">${status}</span></div>`;
@@ -3485,7 +3460,7 @@ function v23OpenDelete(kind){
  const label=counts?'ELIMINAR CONTEOS':'ELIMINAR RECONTEOS';
  overlay.innerHTML=`<div class="v23Dialog"><h3>🗑️ ${counts?'Eliminar conteos':'Eliminar reconteos'}</h3>
  <p>${counts?`Se retirarán <b>${plan.sessions.length} conteos</b> y <b>${plan.tasks.length} reconteos</b> para no dejar tareas huérfanas.`:`Se retirarán <b>${plan.tasks.length} reconteos</b>. Los conteos originales seguirán visibles.`}</p>
- <div class="v23Notice">Los registros quedarán archivados en Firebase y desaparecerán de la auditoría activa. No se eliminarán el stock WMS, el chat, los usuarios ni las ubicaciones cuadradas cerradas. Se reiniciará la comparación y se descartarán propuestas locales dependientes.</div>
+ <div class="v23Notice">Los registros quedarán disponibles como histórico en Firebase y desaparecerán de la auditoría activa. No se eliminarán el stock WMS, el chat, los usuarios ni las ubicaciones cuadradas cerradas. Se reiniciará la comparación y se descartarán propuestas locales dependientes.</div>
  <p>Para evitar errores, escribe exactamente <strong>${label}</strong>:</p>
  <label>Confirmación<input id="v23DeletePhrase" autocomplete="off" spellcheck="false" aria-label="Escribir confirmación de eliminación"></label>
  <div class="v23DialogActions"><button class="secondary" type="button" onclick="v23CloseDelete()">Cancelar</button><button id="v23RunDeleteButton" class="v23Confirm" type="button" disabled onclick="v23RunDelete('${kind}')">Confirmar</button></div></div>`;
@@ -6061,7 +6036,7 @@ v13ApprovedMovements=function(){
 .v49Group th{background:#e9f7f2;font-size:11px;color:#185e53;}
 .v49Group tbody tr:last-child td{border-bottom:none;}
 .v49Group tbody tr:hover td{background:#edfaf6;}
-.v49Group td:nth-child(4),.v49Group th:nth-child(4) {text-align:right;font-variant-numeric:tabular-nums;}
+.v49Group td:nth-child(5),.v49Group th:nth-child(5) {text-align:right;font-variant-numeric:tabular-nums;}
 .v49Flag {font-size:10px;font-weight:750;border-radius:12px;padding:4px 7px;display:inline-block;white-space:nowrap;background:#e8f4f1;color:#246459;}
 .v49Flag.done {background:#dff8e9;color:#137044;}
 .v49Flag.review {background:#fff1d8;color:#906000;}
@@ -6160,7 +6135,7 @@ function v49SectionHtml(label,icon,category,moves,pending){
  const visible=moves.filter(m=>m.category===category&&(v49Scope==='all'||m.positive&&m.state==='pendiente'||v49IsPendingRow(m,pending)));
  const rows=visible.map(m=>v49RowHtml(m,pending)).join('');
  const note=category==='surplus'&&visible.some(x=>x.positive)?'<p class="v49Foot">Los ajustes positivos sin origen WMS aparecen aquí, pero no se exportan como traslados de cuatro columnas.</p>':'';
- return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} registros</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
+ return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} registros</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Tipo</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
 }
 function v49SetScope(value){v49Scope=value==='all'?'all':'pending';renderReconciliation();}
 renderReconciliation=function(){
@@ -6172,7 +6147,7 @@ renderReconciliation=function(){
   `<div class="v49Controls"><select aria-label="Filtrar movimientos" onchange="v49SetScope(this.value)"><option value="pending" ${v49Scope==='pending'?'selected':''}>Pendientes WMS</option><option value="all" ${v49Scope==='all'?'selected':''}>Todos los movimientos</option></select>`+
   `<button class="primary mini" onclick="v49Copy()">📋 Copiar ${v49Scope==='pending'?'pendientes':'todos'}</button>`+
   `<button class="secondary mini" onclick="v49Download()">⬇️ Descargar ${v49Scope==='pending'?'pendientes':'todos'}</button></div></div>`+
-  v49SectionHtml('Sobrantes','🟢','surplus',moves,pending)+v49SectionHtml('Faltantes','🔴','missing',moves,pending);
+  v49SectionHtml('Todos los ajustes','📦','all',moves,pending);
 };
 // The existing export format stays precisely: Código | Posición Bulk | Pasar | Qty.
 // The original history and reconciliation logic continues to operate in storage.
@@ -7048,10 +7023,10 @@ function v57AuditInfo(groupKey){
 const v57OldRowHtml=v49RowHtml;
 // Los riesgos también se muestran en la pestaña Pendientes, para no ocultarlos.
 v49SectionHtml=function(label,icon,category,moves,pending){
- const visible=moves.filter(m=>m.category===category&&(v49Scope==='all'||m.v57Review||m.positive&&m.state==='pendiente'||v49IsPendingRow(m,pending)));
+ const visible=moves.filter(m=>(category==='all'||m.category===category)&&(v49Scope==='all'||m.v57Review||m.positive&&m.state==='pendiente'||v49IsPendingRow(m,pending)));
  const rows=visible.map(m=>v49RowHtml(m,pending)).join('');
  const note=category==='surplus'&&visible.some(x=>x.positive)?'<p class="v49Foot">Los ajustes positivos se consultan por separado; no se exportan como traslados.</p>':'';
- return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} operaciones</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
+ return `<section class="v49Group"><div class="v49GroupHead"><h3>${icon} ${label}</h3><span class="v49Count">${visible.length} operaciones</span></div><div class="tableWrap"><table><thead><tr><th>Código</th><th>Tipo</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="padding:15px;color:#658078">Sin movimientos en este grupo.</td></tr>'}</tbody></table></div>${note}</section>`;
 };
 v49RowHtml=function(m,pending){
  let html=v57OldRowHtml(m,pending);
@@ -7166,7 +7141,7 @@ function v58BeginReset(){
  // Las diferencias locales pendientes pueden descartarse SOLO tras respaldo y confirmación específica.
  // Nunca se permite mientras haya escrituras en proceso.
 
- if(typeof cloudV9.resetAdministrativeWorkspace!=='function'||typeof cloudV9.archiveAuditRecords!=='function'||typeof cloudV9.retainRecountEvidence!=='function'){
+ if(typeof cloudV9.resetAdministrativeWorkspace!=='function'){
   return perchadoAlert('El módulo de reinicio selectivo no está listo en esta computadora.');
  }
  const plan=v58Plan();v58BackupRequested=false;
@@ -7179,9 +7154,9 @@ function v58BeginReset(){
   <div class="v58Summary"><div><strong>${plan.sessions}</strong><small>Conteos guardados</small></div><div><strong>${plan.sessionLines}</strong><small>Líneas de operarios</small></div><div><strong>${plan.tasks.length}</strong><small>Reconteos conservados</small></div></div>
   <div class="v58Keep"><b>SE CONSERVAN EN HISTÓRICO:</b> todos los conteos y reconteos originales, sus respuestas y evidencias; usuarios y chat. <b>Dejan de marcar ubicaciones como avanzadas.</b></div>
   <div class="v58Remove"><b>SE REINICIAN:</b> avances de todas las ubicaciones (0 procesadas), WMS, movimientos, ajustes, novedades, cierres y estados operativos. <b>${plan.corrections.length}</b> ajustes administrativos salen de la operación; conteos y reconteos anteriores quedan como histórico fuera del nuevo ciclo.</div>
-  <p class="v58Notice">Los conteos y reconteos anteriores pasan a historial (pueden descargarse desde Administración); las ubicaciones comienzan en 0 y requieren conteos NUEVOS para volver a comparar. Detén nuevos ajustes y usa esta versión en todos los dispositivos.</p>
+  <p class="v58Notice">Los conteos y reconteos anteriores no se modifican, pero dejan de contar para el ciclo nuevo; las ubicaciones comienzan en 0 y requieren conteos NUEVOS para volver a comparar. Detén nuevos ajustes y usa esta versión en todos los dispositivos.</p>
   ${(v52Draft||v52Conflict||v52Error)?'<div class="v58Remove">⚠ Hay ajustes locales pendientes o un conflicto. Solo pueden descartarse con tu autorización y después de descargar el respaldo.</div><label class="v58Check"><input type="checkbox" id="v60DiscardAdmin" onchange="v58Validate()"> Autorizo descartar los ajustes sin confirmar (están incluidos en el respaldo).</label>':''}
-  <button type="button" class="v58BackupBtn" id="v58BackupButton" onclick="v58DownloadBackup()">⬇️ Descargar respaldo completo antes del reinicio</button>
+  <button type="button" class="v58BackupBtn" id="v58BackupButton" onclick="v58DownloadBackup()">⬇️ Descargar respaldo de la operación actual</button>
   <label class="v58Check"><input type="checkbox" id="v58BackupOk" onchange="v58Validate()"> Ya descargué y guardé el archivo de respaldo.</label>
   <label>Escribe <b>CONSERVAR CONTEOS Y RECONTEOS</b> para habilitar el reinicio
     <input id="v58ResetPhrase" placeholder="CONSERVAR CONTEOS Y RECONTEOS" autocomplete="off" spellcheck="false" oninput="v58Validate()"></label>
@@ -7213,12 +7188,22 @@ function v58DownloadBackup(){
   const blob=new Blob([data],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob);
   const anchor=document.createElement('a');anchor.href=url;anchor.download='PERCHADO_RESPALDO_TOTAL_ANTES_REINICIO_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
   document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  v58BackupRequested=true;v58Status('Respaldo descargado ('+(blob.size/1024/1024).toFixed(2)+' MB). Verifica el archivo antes de continuar.');v58Validate();
+  v58BackupRequested=true;v58Status('Respaldo local descargado ('+(blob.size/1024/1024).toFixed(2)+' MB). Verifica el archivo antes de continuar.');v58Validate();
  }catch(e){v58Status('No se pudo generar el respaldo: '+(e.message||e));}
 }
 async function v58ClearAdminLocal(stamp,remoteRevision){
- if(!stamp||stamp<=v58LastApplied)return;
- v58LastApplied=stamp;
+ if(!stamp)return;
+  // V62: un navegador puede rehidratar decisiones V51-V57 desde caché tras
+  // haber guardado la marca del reinicio. Vaciar sólo si la nube sigue en
+  // estado SIN WMS de ese reinicio; jamás tocar una tanda posterior publicada.
+  const staleLocal = !!(
+    (approvedMatches||[]).length || (resolutions||[]).length ||
+    (manualTransfersV9||[]).length || (v33Ledger||[]).length ||
+    (document.getElementById('systemData')?.value||'').trim()
+  );
+  const emptyRemoteCycle = !v37Audit.manifest?.version && !v37Audit.remote?.payload;
+  if(stamp<=v58LastApplied && !(stamp===v58LastApplied && staleLocal && emptyRemoteCycle))return;
+  v58LastApplied=stamp;
  // Eliminar temporizadores para que NO se republiquen borradores previos al reinicio.
  for(const t of [v37Audit.timer,v52Timer,v19RefreshTimer,v51PassiveTimer,v51AnalysisTimer])if(t)clearTimeout(t);
  v37Audit.timer=null;v52Timer=null;
@@ -7247,9 +7232,9 @@ async function v58ClearAdminLocal(stamp,remoteRevision){
   confirmations=new Set();approvedMatches=[];resolutions=[];proposals=[];
   reviews=new Set();verifiedMissing=new Set();masterLocations=[];openLocations=new Set();
   manualTransfersV9=[];window.perchadoV9Moves=manualTransfersV9;
-  v18Squares.clear();v33Ledger=[];v12Panel={kind:'',loc:'',code:''};
+  v18Squares.clear();v33Ledger=[];v49Scope='pending';v12Panel={kind:'',loc:'',code:''};
   v37Audit.manifest=null;v37Audit.loadedWms='';v37Audit.wmsLoading=false;v37Audit.localEdit=false;
-  v37Audit.remote=null;v37Audit.lastStateText='';v37Audit.stateReady=true;
+  v37Audit.remote=null;v37Audit.lastStateText='';v52LastKnownRemote=null;v37Audit.stateReady=true;
   if(remoteRevision!=null)v37Audit.stateRevision=Number(remoteRevision);
   v35LastSystemText=null;v35SystemRows=null;v35Catalog=null;
   if(typeof v56InvalidateSearch==='function')v56InvalidateSearch();
@@ -7266,13 +7251,10 @@ async function v58ExecuteReset(){
  v58Busy=true;const plan=v58Plan(),btn=document.getElementById('v58ResetConfirm');
  if(btn){btn.disabled=true;btn.textContent='Reiniciando…';}
  try{
-  // Las correcciones de reconteo ya están presentes y se excluyen de la selección
-  // de archivado. Reescribirlas aquí era innecesario, lento y fallaba si faltaba un ID.
-  v58Status('Conservando correcciones de reconteo sin reescribirlas…');
-  v58Status('Archivando únicamente ajustes administrativos anteriores…');
-  // Requisito incondicional: ni una sesión ni una tarea de reconteo se archivan.
-  await cloudV9.archiveAuditRecords({sessions:[],tasks:[],corrections:plan.corrections},adminIdentityV9||'Administración');
-  v58Status('Reiniciando ajustes y base WMS compartida…');
+  // V61: transacción atómica compartida. No modificar conteos, reconteos NI correcciones.
+  // Un nuevo auditCycle retira los datos del ciclo anterior de las consultas activas.
+  // Evita escrituras masivas y cualquier archivado parcial de evidencias.
+  v58Status('Creando un nuevo ciclo de auditoría en Firebase (sin alterar conteos ni reconteos)…');
   const outcome=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración');
   await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
   document.getElementById('v58Overlay')?.remove();
@@ -7280,7 +7262,7 @@ async function v58ExecuteReset(){
   perchadoAlert('Reinicio finalizado. Avance de ubicaciones a 0; conteos y reconteos anteriores conservados en el histórico. Carga el nuevo WMS y comienza con conteos nuevos.');
   // Tras el reinicio, la escucha de correcciones seleccionará sólo documentos NO archivados.
   if(adminAccessV9&&cloudV9?.ready){try{await cloudV9.enterAdminView();}catch(e){v58Status('Reiniciado, pero no se pudo refrescar la consulta: '+e.message);}}
- }catch(e){v58Status('Reinicio incompleto: '+String(e?.message||e)+'. No repitas la acción sin comprobar el respaldo y la nube. Los conteos y reconteos no fueron archivados por este procedimiento.');perchadoAlert('No se completó el reinicio selectivo: '+String(e?.message||e));}
+ }catch(e){const msg=String(e?.message||e),detail=/permission|insufficient/i.test(msg)?' Permisos de sharedAdmin/current o sharedWms/current: comprueba las reglas complementarias V61 (campos de reinicio y payload nulo).':'';v58Status('Reinicio NO confirmado: '+msg+detail+' No repitas sin revisar el respaldo. No se modificaron conteos/reconteos en este intento.');perchadoAlert('No se completó el reinicio: '+msg+detail);}
  finally{v58Busy=false;if(btn)btn.textContent='Reiniciar sin borrar conteos/reconteos';}
 }
 // El reinicio global antiguo queda bloqueado para proteger evidencias de los operarios.
@@ -7309,7 +7291,7 @@ v37OnSharedState=function(doc){
 };
 </script>
 
-<!-- PERCHADO V60: dos reinicios independientes, ciclo operativo y confirmación segura. -->
+<!-- PERCHADO V61: reinicios atómicos; protección de evidencias y permisos. -->
 <style id="perchado-v60-style">
 .v60ResetActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .v60ResetActions .v16ResetButton{width:auto;white-space:normal;max-width:300px}
@@ -7332,7 +7314,7 @@ function v60CanOperate(){
   v52Sending?'ajustes en sincronización':null,v54Booting?'respaldo local inicializándose':null,v54PendingOps?'guardados locales pendientes: '+v54PendingOps:null,
   ].filter(Boolean);
  if(work.length)return 'No es seguro reiniciar: '+work.join(' · ')+'. Sincroniza o descarga los movimientos pendientes antes.';
- if(typeof cloudV9?.downloadAuditHistory!=='function'||typeof cloudV9?.archiveAllCountsV60!=='function')return 'Actualiza todos los HTML a PERCHADO V60 para habilitar el borrado.';
+ if(typeof cloudV9?.downloadAuditHistory!=='function'||typeof cloudV9?.resetAdministrativeWorkspace!=='function')return 'Actualiza todos los HTML a PERCHADO V62 para habilitar el nuevo ciclo.';
  return '';
 }
 async function v60DownloadHistory(){
@@ -7366,7 +7348,7 @@ function v60BeginDelete(){
  const overlay=document.createElement('div');overlay.id='v60DeleteOverlay';overlay.className='v23Overlay';
  overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
  overlay.innerHTML=`<div class="v23Dialog"><h3>🗑️ Eliminar conteos y reconteos de la operación</h3>
- <div class="v58Remove">Esta opción <b>retira TODOS los conteos y reconteos</b> de la operación (incluidas tareas pendientes y capturas en vivo). Sus documentos quedan <b>archivados en Firebase</b> para recuperación y trazabilidad; no se borran físicamente. Los usuarios y chats permanecen. El avance de ubicaciones volverá a cero.</div>
+ <div class="v58Remove">Esta opción <b>deja de mostrar como activos TODOS los conteos y reconteos anteriores</b> (incluidas tareas pendientes y capturas en vivo). Se crea un <b>nuevo ciclo en Firebase</b>; los documentos anteriores NO se borran ni se reescriben y quedan como histórico. Los usuarios y chats permanecen.</div>
  <p class="v58Notice">Debes descargar un respaldo <b>completo de Firebase</b>, no solo de los registros visibles. Detén los conteos en otros teléfonos y pide que todos recarguen la V60 al terminar.</p>
  <button type="button" class="v58BackupBtn" onclick="v60DownloadHistory()">⬇️ Descargar respaldo completo de Firebase</button>
  <label class="v60Tick"><input type="checkbox" id="v60BackupVerified" onchange="v60ValidateDelete()"> Verifiqué que el archivo JSON quedó guardado.</label>
@@ -7375,7 +7357,7 @@ function v60BeginDelete(){
  <input type="text" id="v60DeletePhrase" autocomplete="off" spellcheck="false" placeholder="ELIMINAR CONTEOS Y RECONTEOS" oninput="v60ValidateDelete()"></label>
  <div id="v60DeleteMsg" role="status" aria-live="polite"></div>
  <div class="v23DialogActions"><button class="secondary" type="button" onclick="v60CloseDelete()">Cancelar</button>
- <button type="button" class="v23Confirm" id="v60DeleteConfirm" disabled onclick="v60ExecuteDelete()">Archivar conteos y reconteos</button></div></div>`;
+ <button type="button" class="v23Confirm" id="v60DeleteConfirm" disabled onclick="v60ExecuteDelete()">Iniciar ciclo sin conteos ni reconteos</button></div></div>`;
  document.body.appendChild(overlay);
  document.getElementById('v60DeletePhrase')?.focus();
 }
@@ -7391,19 +7373,19 @@ async function v60ExecuteDelete(){
  const msg=document.getElementById('v60DeleteMsg'),button=document.getElementById('v60DeleteConfirm');
  v60DeleteBusy=true;button.disabled=true;button.textContent='Procesando…';
  try{
-  msg.textContent='Archivando conteos y reconteos en Firebase. No cierres este proceso.';
-  const data=await cloudV9.archiveAllCountsV60(adminIdentityV9||'Administración');
-  msg.textContent=`Archivados ${data.sessions} conteos, ${data.tasks} reconteos y ${data.corrections} evidencias. Reiniciando el ciclo de ubicación…`;
-  // Tras archivar todos los físicos, se reinicia el estado WMS en la misma rutina transaccional.
+  msg.textContent='Creando un nuevo ciclo de auditoría. No se escriben ni borran registros de otros dispositivos.';
+  // V61: transacción atómica sobre DOS documentos compartidos, sin archivado masivo previo.
+  // Las consultas solo traerán registros de este ciclo; todos los anteriores quedan
+  // como histórico consultable bajo demanda y amparado por el respaldo JSON.
   const outcome=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración',true);
   await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
   v60ClearDrafts(outcome.v58ResetAt);
   document.getElementById('v60DeleteOverlay')?.remove();
   await cloudV9.enterAdminView();
-  perchadoAlert(`Reinicio completado: ${data.sessions} conteos, ${data.tasks} reconteos y ${data.live} capturas en vivo retirados. Las ubicaciones están en 0. Usuarios y chat conservados.`);
+  perchadoAlert('Nuevo ciclo creado. Los conteos, reconteos y capturas anteriores dejaron de mostrarse como activos. Sus documentos permanecen como histórico en Firebase. Usuarios y chat conservados.');
  }catch(e){
   if(msg)msg.textContent='No terminó el proceso: '+(e?.message||e)+'\nNo vuelvas a ejecutar sin verificar en Firebase. El archivo JSON previo conserva la evidencia.';
- }finally{v60DeleteBusy=false;if(button){button.textContent='Archivar conteos y reconteos';v60ValidateDelete();}}
+ }finally{v60DeleteBusy=false;if(button){button.textContent='Iniciar ciclo sin conteos ni reconteos';v60ValidateDelete();}}
 }
 function v60ClearDrafts(stamp){
  const seen=Number(localStorage.getItem('perchado_v60_drafts_cleared_at')||0);
@@ -7419,5 +7401,143 @@ window.addEventListener('perchado-v60-counts-reset',e=>{
 });
 </script>
 
+<!-- PERCHADO V62: una lista única de ajustes, tandas separadas -->
+<style id="perchado-v62-style">
+.v62Type{font-size:11px;font-weight:750;border-radius:12px;padding:5px 8px;white-space:nowrap;display:inline-block}
+.v62Type.surplus{background:#e3f6ef;color:#11654d}.v62Type.missing{background:#fff3e1;color:#8d520e}
+.v62Round{border:1px solid #b0dcd3;background:#f4fffc;color:#076c60;font-size:12px!important;font-weight:800;min-height:35px!important;padding:7px 11px!important}
+.v62Current{font-size:11px;color:#377269;font-weight:750;margin-left:7px}
+#v62RoundOverlay[hidden]{display:none!important}
+#v62RoundOverlay{z-index:150005!important}
+#v62RoundOverlay .v23Dialog{max-width:640px}
+#v62RoundOverlay .v62Check{display:flex;gap:9px;align-items:center;font-size:13px;margin:12px 0}
+#v62RoundOverlay .v62Check input{width:19px;height:19px;min-height:19px;flex:0 0 auto}
+#v62RoundMsg{font-size:12px;color:#8a3e20;min-height:18px;white-space:pre-wrap;margin:10px 0}
+@media(max-width:640px){.v62Round{width:100%}.v62Current{margin:5px 0}}
+</style>
+<script id="perchado-v62-rounds">
+'use strict';
+// V62: La tabla WMS muestra una sola lista para Sobrantes/Faltantes.
+// Los datos del ciclo anterior no se reintroducen en el actual.
+const v62OriginalRowHtml = v49RowHtml;
+v49RowHtml = function(m,pending){
+ const out = v62OriginalRowHtml(m,pending);
+ const type = m.category==='missing'?'Faltante':'Sobrante';
+ const kind = m.category==='missing'?'missing':'surplus';
+ return out.replace('</b></td>', '</b></td><td><span class="v62Type '+kind+'">'+type+'</span></td>');
+};
+const v62OriginalReconciliationRender=renderReconciliation;
+renderReconciliation=function(){
+ const out=v62OriginalReconciliationRender.apply(this,arguments);
+ const panel=document.getElementById('reconciliationPanel');
+ if(panel&&hasCompared&&adminAccessV9){
+  const controls=panel.querySelector('.v49Controls');
+  if(controls&&!panel.querySelector('#v62NewRound')){
+   const btn=document.createElement('button');
+   btn.type='button';btn.id='v62NewRound';btn.className='v62Round';
+   btn.textContent='✓ Cerrar tanda / Nueva tanda';
+   btn.title='Después de ejecutar los ajustes en WMS, iniciar un ciclo limpio sin borrar la evidencia física';
+   btn.onclick=v62BeginRound;
+   controls.append(btn);
+  }
+  const summary=panel.querySelector('.v49Summary');
+  if(summary && !summary.querySelector('.v62Current')){
+   const current=document.createElement('span');current.className='v62Current';
+   const cycle=Number(window.perchadoAuditCycleV60||0);
+   current.textContent=cycle?'· Ciclo '+new Date(cycle).toLocaleDateString('es-EC'):'· Ciclo inicial';
+   summary.append(current);
+  }
+ }
+ return out;
+};
+let v62RoundBusy=false,v62RoundBackupOK=false;
+function v62ActiveCaptureWarning(){
+ const openTasks=(wfV8.tasks||[]).filter(t=>t&&['open','answered'].includes(t.status)).length;
+ const live=(lastLiveV9||[]).filter(x=>x&&x.status==='counting').length;
+ if(openTasks||live)return `Antes de cerrar, termina los ${openTasks} reconteos abiertos y detén las ${live} capturas en curso. No se deben mover al histórico mientras alguien está trabajando.`;
+ return '';
+}
+function v62PendingSummary(){
+ const groups=v57GroupedMovements();
+ return {pending:groups.filter(m=>m.state==='pendiente').length,
+         ambiguous:groups.filter(m=>m.v57Review||m.state==='revisar').length};
+}
+function v62BeginRound(){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v62RoundBusy)return;
+ const error=v60CanOperate()||v62ActiveCaptureWarning();if(error)return perchadoAlert(error);
+ if(v52Draft||v52Conflict)return perchadoAlert('Antes de cerrar, confirma en Firebase los ajustes pendientes o conflictos.');
+ // Los movimientos históricos no pueden ejecutarse dos veces.
+ const p=v62PendingSummary();
+ if(p.pending||p.ambiguous){
+  return perchadoAlert(`No se puede cerrar la tanda con ${p.pending} movimientos pendientes y ${p.ambiguous} ambiguos.\n\nConfirma en PERCHADO únicamente los que YA ejecutaste en WMS y revisa los ambiguos. Si buscas DESCARTAR los movimientos anteriores para empezar desde cero, usa Administración → Reiniciar avances y ajustes, después del respaldo.`);
+ }
+ v62RoundBackupOK=false;
+ document.getElementById('v62RoundOverlay')?.remove();
+ const layer=document.createElement('div');layer.id='v62RoundOverlay';layer.className='v23Overlay';
+ layer.setAttribute('role','dialog');layer.setAttribute('aria-modal','true');
+ layer.innerHTML=`<div class="v23Dialog"><h3>📦 Cerrar tanda e iniciar otra</h3>
+ <div class="v58Keep"><b>Se conservan:</b> los conteos, reconteos y correcciones originales como histórico en Firebase. Los movimientos administrativos de esta tanda se incluyen en el respaldo JSON obligatorio.</div>
+ <div class="v58Remove"><b>La siguiente tanda comienza en cero:</b> no verá movimientos anteriores, ajustes, avances de ubicaciones ni el WMS anterior. Los chicos podrán contar ubicaciones nuevas una vez que todos actualicen la página. Debes cargar el WMS actualizado después de ejecutar los cambios.</div>
+ <p class="v58Notice">Detén temporalmente los conteos y sincroniza todos los equipos antes de continuar. El archivo JSON será tu respaldo de los movimientos anteriores.</p>
+ <button type="button" class="v58BackupBtn" id="v62BackupButton" onclick="v62DownloadRound()">⬇️ Descargar respaldo de la tanda y Firebase</button>
+ <label class="v62Check"><input type="checkbox" id="v62Verified" onchange="v62ValidateRound()"> Verifiqué que el respaldo JSON está guardado.</label>
+ <label>Escribe <b>NUEVA TANDA</b> para confirmar<input type="text" id="v62Phrase" autocomplete="off" spellcheck="false" oninput="v62ValidateRound()" placeholder="NUEVA TANDA"></label>
+ <div id="v62RoundMsg" role="status" aria-live="polite"></div>
+ <div class="v23DialogActions"><button type="button" class="secondary" onclick="v62CloseRound()">Cancelar</button><button type="button" id="v62RoundConfirm" class="v23Confirm" disabled onclick="v62ExecuteRound()">Cerrar tanda e iniciar nueva</button></div></div>`;
+ document.body.appendChild(layer);
+ document.getElementById('v62Phrase')?.focus();
+}
+function v62ValidateRound(){
+ const btn=document.getElementById('v62RoundConfirm');if(!btn)return;
+ btn.disabled=v62RoundBusy||!v62RoundBackupOK||!document.getElementById('v62Verified')?.checked||document.getElementById('v62Phrase')?.value.trim()!=='NUEVA TANDA';
+}
+function v62CloseRound(){if(!v62RoundBusy)document.getElementById('v62RoundOverlay')?.remove();}
+async function v62DownloadRound(){
+ if(!adminAccessV9||!cloudV9?.ready||!cloudV9?.connected)return perchadoAlert('Se necesita Firebase conectado para generar el respaldo.');
+ const msg=document.getElementById('v62RoundMsg'),btn=document.getElementById('v62BackupButton');
+ v62RoundBackupOK=false;v62ValidateRound();if(btn)btn.disabled=true;
+ try{
+  if(msg)msg.textContent='Recopilando conteos, reconteos y correcciones del servidor…';
+  const history=await cloudV9.downloadAuditHistory();
+  const backup={app:'PERCHADO',version:62,type:'cierre_tanda',savedAt:new Date().toISOString(),
+   cycle:Number(window.perchadoAuditCycleV60||0),
+   ...history,users:wfV8.users,
+   adminState:v37PackState(),sharedState:v37Audit.remote,
+   wmsText:document.getElementById('systemData')?.value||'',
+   drafts:{admin:typeof v52BackupContents==='function'?v52BackupContents():null,operator:draftV8},
+   live:lastLiveV9};
+  const blob=new Blob([JSON.stringify(backup)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;
+  link.download='PERCHADO_TANDA_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  v62RoundBackupOK=true;
+  if(msg)msg.textContent=`Respaldo descargado: ${history.sessions.length} conteos, ${history.tasks.length} reconteos y ${history.corrections.length} correcciones. Verifica el archivo antes de confirmar.`;
+  v62ValidateRound();
+ }catch(e){if(msg)msg.textContent='Error generando respaldo: '+(e.message||e);}finally{if(btn)btn.disabled=false;}
+}
+async function v62ExecuteRound(){
+ const btn=document.getElementById('v62RoundConfirm'),msg=document.getElementById('v62RoundMsg');
+ if(v62RoundBusy||!adminAccessV9||!btn||btn.disabled)return;
+ const error=v60CanOperate()||v62ActiveCaptureWarning();
+ if(error){if(msg)msg.textContent=error;return;}
+ // No cerrar si hubo nuevos movimientos desde que se abrió el modal.
+ const p=v62PendingSummary();
+ if(p.pending||p.ambiguous){if(msg)msg.textContent='Aparecieron nuevos movimientos pendientes o ambiguos; revisa antes de cerrar.';return;}
+ if(v52Draft||v52Conflict){if(msg)msg.textContent='Existen ajustes sin confirmar en Firebase. Sincronízalos primero.';return;}
+ v62RoundBusy=true;btn.disabled=true;btn.textContent='Cerrando tanda…';
+ try{
+  if(msg)msg.textContent='Validando revisiones y creando el nuevo ciclo en Firebase…';
+  const result=await cloudV9.resetAdministrativeWorkspace(v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración');
+  await v58ClearAdminLocal(result.v58ResetAt,result.adminRevision);
+  v49Scope='pending';
+  // La recarga hace que todos los listeners usen auditCycle de la nueva tanda.
+  await cloudV9.enterAdminView();
+  document.getElementById('v62RoundOverlay')?.remove();
+  perchadoAlert('Tanda cerrada y nuevo ciclo confirmado en Firebase. Movimientos actuales: 0. Conserva el respaldo anterior y carga el WMS actualizado antes de comparar conteos nuevos.');
+ }catch(e){if(msg)msg.textContent='No se confirmó el cierre: '+(e.message||e)+'\nNo repitas sin verificar el estado compartido en Firebase.';}
+ finally{v62RoundBusy=false;if(btn){btn.textContent='Cerrar tanda e iniciar nueva';v62ValidateRound();}}
+}
+</script>
 </body>
 </html>
