@@ -468,9 +468,24 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 @media(max-width:1080px){.v47MissingPanel .v47MovementGrid{grid-template-columns:minmax(210px,1.5fr) minmax(120px,1fr) minmax(86px,.45fr)}.v47MissingPanel .v47Submit{grid-column:1/-1}}
 @media(max-width:660px){.v47MissingPanel .v47MovementGrid{grid-template-columns:minmax(0,1fr) minmax(88px,.5fr)}.v47MissingPanel .v47SourceArea{grid-column:1/-1}.v47MissingPanel .v47Submit{grid-column:1/-1}}
 </style>
+
+<style id="v78-surplus-ledger-style">
+#surplusLedger .v78Summary{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 16px}
+#surplusLedger .v78Metric{min-width:145px;flex:1;background:#eefaf5;border:1px solid #c6e7dd;border-radius:12px;padding:12px}
+#surplusLedger .v78Metric b{display:block;color:#07584a;font-size:22px}
+#surplusLedger .v78Metric small{font-size:12px;color:#3e6c64;font-weight:700}
+#surplusLedger .v78Tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+#surplusLedger .v78Tools input{max-width:420px;width:100%;flex:1;min-width:180px}
+#surplusLedger .v78Table{width:100%;min-width:850px;table-layout:auto}
+#surplusLedger .v78Table th,#surplusLedger .v78Table td{padding:11px 12px;white-space:nowrap}
+#surplusLedger .v78Table td:nth-child(4){font-weight:900;color:#067563}
+#surplusLedger .v78Info{font-size:12px;line-height:1.5;color:#426d66;background:#f1fbf7;padding:11px 13px;border-radius:10px}
+#surplusLedger .v78Notice{color:#975909;background:#fff8eb;border:1px solid #f1d99f;padding:10px 12px;border-radius:9px;font-size:12px}
+#surplusLedger .v78Legacy{color:#94611a;background:#fff5df;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V77</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V78</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -8683,6 +8698,196 @@ setCloudDataV9=function(group,docs){
  if(group==='tasks'&&hasCompared&&adminAccessV9){v40RefreshIndex();v69Invalidate();}
  return result;
 };
+</script>
+
+
+<script id="perchado-v78-approved-surplus">
+'use strict';
+/* V78: Diario independiente de SOBRANTES APROBADOS. No crea ajustes, modifica WMS,
+   altera conteos, cierra tandas ni cambia cálculos de ERI.
+   Cada nueva aprobación guarda un documento inmutable en corrections.
+   Se reutiliza la escucha existente de corrections, sin listeners adicionales. */
+const V78_KIND='v78_sobrante_aprobado';
+const v78Unsynced=new Map();
+let v78Search='',v78LogBusy=false;
+const v78Esc=x=>escapeHtml(String(x??''));
+function v78Hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+function v78Event(approved){
+ const loc=String(approved.location||''),code=String(approved.code||''),qty=Number(approved.qty),at=String(approved.at||new Date().toISOString());
+ if(!loc||!code||!Number.isFinite(qty)||qty<=0)return null;
+ const base=[loc,code,qty,at,approved.taskId||'',approved.verificationId||'',approved.by||''].join('|');
+ return {id:'v78_surplus_'+v78Hash(base),kind:V78_KIND,code,location:loc,qty,at,
+  by:String(approved.by||'Administración'),taskId:String(approved.taskId||''),
+  verificationId:String(approved.verificationId||''),source:'confirmed_surplus',
+  wmsUpdated:false};
+}
+async function v78RecordApproval(before,loc,code){
+ const approved=wfV8.corrections?.[v15SurplusKey(loc,code)];
+ if(!approved||approved.kind!=='confirmed_surplus'||approved.status!=='confirmed')return;
+ // No registrar simplemente por abrir la pestaña o volver a pulsar un botón rechazado.
+ if(before && before.at===approved.at && Number(before.qty)===Number(approved.qty)
+   && before.taskId===approved.taskId && before.verificationId===approved.verificationId)return;
+ const doc=v78Event(approved);if(!doc)return;
+ if(wfV8.corrections?.[doc.id])return;
+ if(v78Unsynced.has(doc.id))return;
+ v78Unsynced.set(doc.id,doc);
+ try{
+  if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected)throw Error('Firebase no confirmó el registro histórico.');
+  await cloudV9.persist('corrections',doc);
+  wfV8.corrections[doc.id]=doc;
+  v78Unsynced.delete(doc.id);
+ }catch(e){
+  console.warn('PERCHADO V78: sobrante aprobado pendiente de registrar en historial',e);
+  // Se conserva el evento temporal y la aprobación original. Nunca fingir confirmación.
+ }finally{v78RenderIfActive();}
+}
+function v78WrapApproval(name){
+ const prev=window[name];if(typeof prev!=='function')return;
+ window[name]=async function(loc,code,...rest){
+  const old=wfV8.corrections?.[v15SurplusKey(loc,code)];
+  const answer=await prev.call(this,loc,code,...rest);
+  await v78RecordApproval(old,loc,code);
+  return answer;
+ };
+}
+v78WrapApproval('v19RegisterSurplus');
+v78WrapApproval('v36RegisterRecountSurplus');
+v78WrapApproval('v15RegisterSurplus');
+function v78Rows(){
+ const docs=Object.values(wfV8.corrections||{});
+ const events=new Map();
+ for(const d of docs){if(d?.kind===V78_KIND&&!d.archived&&d.id)events.set(d.id,{...d,legacy:false});}
+ for(const d of v78Unsynced.values())if(!events.has(d.id))events.set(d.id,{...d,pending:true});
+ // Los registros anteriores a V78 solo conservaban la última aprobación por código/ubicación.
+ // Mostrarla, pero no presentarla como histórico completo de aprobaciones pasadas.
+ for(const s of docs){
+  if(s?.kind!=='confirmed_surplus'||s.status!=='confirmed'||!s.location||!s.code||!(Number(s.qty)>0))continue;
+  const matching=[...events.values()].some(e=>e.code===String(s.code)&&e.location===String(s.location)
+    &&String(e.at||'')===String(s.at||'')&&Math.abs(Number(e.qty)-Number(s.qty))<0.000001);
+  if(!matching){const id='legacy_'+String(s.id||v78Hash(String(s.location)+String(s.code)));
+   events.set(id,{id,kind:V78_KIND,code:String(s.code),location:String(s.location),qty:Number(s.qty),
+    at:s.at||'',by:s.by||'',legacy:true});}
+ }
+ return [...events.values()].filter(x=>Number.isFinite(Number(x.qty))&&Number(x.qty)>0)
+  .sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))||String(a.code).localeCompare(String(b.code),undefined,{numeric:true}));
+}
+function v78RenderIfActive(){if(document.getElementById('surplusLedger')?.classList.contains('active'))v78Render();}
+function v78SetSearch(s){v78Search=String(s||'').trim().toLowerCase();v78Render();}
+function v78Render(){
+ const root=document.getElementById('v78LedgerBody');if(!root||!adminAccessV9)return;
+ const all=v78Rows(),shown=v78Search?all.filter(x=>[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search))):all;
+ const total=shown.reduce((n,r)=>n+Number(r.qty),0),positions=new Set(shown.map(r=>r.location)).size;
+ const pending=v78Unsynced.size;
+ const fmt=typeof fmtQty==='function'?fmtQty:x=>String(x);
+ root.innerHTML=`${pending?`<div class="v78Notice">⚠ ${pending} aprobación(es) guardada(s) como novedad, pero con el registro histórico pendiente de sincronizar. <button class="secondary mini" onclick="v78Retry()" ${v78LogBusy?'disabled':''}>Reintentar historial</button></div>`:''}
+ <div class="v78Summary"><div class="v78Metric"><b>${shown.length}</b><small>Registros visibles</small></div><div class="v78Metric"><b>${fmt(total)}</b><small>Unidades aprobadas en los registros visibles</small></div><div class="v78Metric"><b>${positions}</b><small>Ubicaciones</small></div></div>
+ <div class="tableWrap"><table class="v78Table"><thead><tr><th>Fecha</th><th>Código</th><th>Ubicación física</th><th>Unidades</th><th>Responsable</th><th>Registro</th></tr></thead><tbody>${shown.slice(0,300).map(x=>`<tr><td>${v78Esc(x.at?wfFormatDate(x.at):'—')}</td><td><b>${v78Esc(x.code)}</b></td><td>${v78Esc(x.location)}</td><td>${fmt(Number(x.qty))}</td><td>${v78Esc(x.by||'—')}</td><td>${x.pending?'⚠ Pendiente Firebase':x.legacy?'<span class="v78Legacy">Última aprobación anterior</span>':'✓ Historial Firebase'}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Todavía no hay sobrantes aprobados registrados.</td></tr>'}</tbody></table></div>
+ ${shown.length>300?'<p class="v78Info">Mostrando 300 registros recientes. Filtra por código o ubicación para consultar el resto.</p>':''}`;
+}
+async function v78Retry(){
+ if(v78LogBusy)return;v78LogBusy=true;
+ try{
+  if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected){perchadoAlert('Firebase debe estar conectado para completar el historial.');return;}
+  for(const d of [...v78Unsynced.values()]){
+   try{await cloudV9.persist('corrections',d);wfV8.corrections[d.id]=d;v78Unsynced.delete(d.id);}catch(e){console.warn('V78',e);}
+  }
+ }finally{v78LogBusy=false;v78RenderIfActive();}
+}
+function v78CopyReport(){
+ const arr=v78Rows().filter(x=>!v78Search||[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search)));
+ if(!arr.length){toast('Sin sobrantes aprobados para copiar.');return;}
+ const data=[['Fecha','Código','Ubicación física','Unidades aprobadas','Responsable','Estado'],
+  ...arr.map(x=>[x.at,x.code,x.location,Number(x.qty),x.by,x.pending?'Pendiente sincronización':x.legacy?'Último registro anterior':'Firebase'])];
+ void v72WriteClipboard(data.map(r=>r.join('\t')).join('\n')).then(()=>toast('✓ Registro de sobrantes copiado.')).catch(e=>perchadoAlert(e.message));
+}
+// Pestaña de consulta independiente: no se integra al cierre de tandas.
+(function(){
+ const nav=document.querySelector('#perchadoStickyNavV15 .tabs');
+ const destination=document.getElementById('decisions');if(!nav||!destination)return;
+ const b=document.createElement('button');b.type='button';b.className='tab';b.dataset.tab='surplusLedger';
+ b.setAttribute('aria-label','Sobrantes aprobados');b.setAttribute('onclick',"openTab('surplusLedger')");
+ b.innerHTML='<span class="v43TabIcon" aria-hidden="true">📈</span><span class="v43TabLabel">Sobrantes aprobados</span>';
+ nav.insertBefore(b,nav.querySelector('[data-tab="adminPortal"]'));
+ const section=document.createElement('section');section.className='section';section.id='surplusLedger';
+ section.innerHTML=`<div class="mainSectionHead"><div><h2>📈 Sobrantes aprobados</h2></div></div>
+ <p class="v78Info">Registro de cantidades físicas aprobadas por código y ubicación. No son traslados ni comprobantes de ingreso al WMS. No cambia el stock, el ERI ni las tandas. Las aprobaciones anteriores a esta versión pueden mostrar únicamente el último registro disponible por código y ubicación.</p>
+ <div class="v78Tools"><input type="search" id="v78Find" placeholder="Buscar código, ubicación o responsable" oninput="v78SetSearch(this.value)"/><button class="secondary mini" onclick="v78CopyReport()">📋 Copiar registro</button></div>
+ <div id="v78LedgerBody"></div>`;
+ destination.insertAdjacentElement('afterend',section);
+ const prior=openTab;openTab=function(id){if(id==='surplusLedger'&&!adminAccessV9)return;const ret=prior.apply(this,arguments);if(id==='surplusLedger')v78Render();return ret;};
+ const oldData=setCloudDataV9;
+ setCloudDataV9=function(group,docs){const ret=oldData.apply(this,arguments);if(group==='corrections'){
+  for(const d of docs||[])if(d?.kind===V78_KIND)v78Unsynced.delete(d.id);
+  v78RenderIfActive();
+ }return ret;};
+})();
+</script>
+
+<script id="perchado-v78-positive-proposals">
+'use strict';
+/* Ingresos positivos preparados por sobrantes sin origen WMS.
+   Historial independiente de tandas, sin contarlos dos veces como físico aprobado. */
+const V78_POSITIVE_KIND='v78_ingreso_positivo';
+function v78PositiveRows(){
+ const source=new Map();
+ for(const d of Object.values(wfV8.corrections||{}))if(d?.kind===V78_POSITIVE_KIND&&!d.archived&&d.id)source.set(d.id,d);
+ for(const d of v78Unsynced.values())if(d?.kind===V78_POSITIVE_KIND&&d.id&&!source.has(d.id))source.set(d.id,{...d,pending:true});
+ for(const r of resolutions||[]){
+  if(r?.type!=='SOBRANTE'||!r.code||!r.location||!(Number(r.qty)>0))continue;
+  const id='v78_pos_'+String(r.id||v78Hash([r.code,r.location,r.qty,r.at].join('|')));
+  if(!source.has(id))source.set(id,{id,kind:V78_POSITIVE_KIND,code:String(r.code),location:String(r.location),qty:Number(r.qty),
+   at:r.at||'',by:r.by||'',legacy:true});
+ }
+ return [...source.values()].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+}
+function v78PositiveRender(){
+ const target=document.getElementById('v78PositiveBody');if(!target)return;
+ const all=v78PositiveRows();const shown=v78Search?all.filter(x=>[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search))):all;
+ target.innerHTML=`<div class="v78Summary"><div class="v78Metric"><b>${shown.length}</b><small>Ingresos positivos preparados</small></div><div class="v78Metric"><b>${fmtQty(shown.reduce((n,x)=>n+Number(x.qty),0))}</b><small>Unidades propuestas para ingreso</small></div></div>
+ <div class="tableWrap"><table class="v78Table"><thead><tr><th>Fecha</th><th>Código</th><th>Ubicación</th><th>Unidades</th><th>Responsable</th><th>Registro</th></tr></thead><tbody>${shown.slice(0,300).map(x=>`<tr><td>${v78Esc(x.at?wfFormatDate(x.at):'—')}</td><td><b>${v78Esc(x.code)}</b></td><td>${v78Esc(x.location)}</td><td>${fmtQty(Number(x.qty))}</td><td>${v78Esc(x.by||'—')}</td><td>${x.pending?'⚠ Pendiente Firebase':x.legacy?'Registro activo anterior':'✓ Historial Firebase'}</td></tr>`).join('')||'<tr><td colspan="6">Sin ingresos positivos preparados.</td></tr>'}</tbody></table></div>`;
+}
+const v78RenderBase=v78Render;
+v78Render=function(){v78RenderBase();v78PositiveRender();};
+const v78ReportBase=v78CopyReport;
+v78CopyReport=function(){
+ const approved=v78Rows().filter(x=>!v78Search||[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search)));
+ const positives=v78PositiveRows().filter(x=>!v78Search||[x.code,x.location,x.by].some(v=>String(v||'').toLowerCase().includes(v78Search)));
+ if(!approved.length&&!positives.length){toast('Sin sobrantes para copiar.');return;}
+ const data=[['Tipo','Fecha','Código','Ubicación','Cantidad','Responsable','Registro'],
+ ...approved.map(x=>['Sobrante aprobado',x.at,x.code,x.location,Number(x.qty),x.by,x.pending?'Pendiente Firebase':x.legacy?'Última aprobación anterior':'Firebase']),
+ ...positives.map(x=>['Ingreso positivo preparado',x.at,x.code,x.location,Number(x.qty),x.by,x.pending?'Pendiente Firebase':x.legacy?'Registro activo anterior':'Firebase'])];
+ void v72WriteClipboard(data.map(r=>r.join('\t')).join('\n')).then(()=>toast('✓ Registro de sobrantes copiado.')).catch(e=>perchadoAlert(e.message));
+};
+const v78PositiveBox=document.createElement('div');v78PositiveBox.id='v78PositivePanel';
+v78PositiveBox.innerHTML='<h3 class="wfSectionTitle" style="margin-top:26px">＋ Ingresos positivos preparados</h3><p class="v78Info">Propuestas por sobrantes sin origen WMS. Estos valores se muestran separados de las aprobaciones físicas para evitar sumarlos dos veces. No implica que ya estén ingresados al sistema.</p><div id="v78PositiveBody"></div>';
+document.getElementById('surplusLedger')?.appendChild(v78PositiveBox);
+function v78PositiveWrap(name){
+ const prev=window[name];if(typeof prev!=='function')return;
+ window[name]=async function(...args){
+  const before=new Set((resolutions||[]).map(x=>String(x.id)));
+  const answer=await prev.apply(this,args);
+  const added=(resolutions||[]).filter(x=>x.type==='SOBRANTE'&&!before.has(String(x.id))&&x.id);
+  for(const r of added){
+   const doc={id:'v78_pos_'+String(r.id),kind:V78_POSITIVE_KIND,code:String(r.code),location:String(r.location),
+    qty:Number(r.qty),at:r.at||new Date().toISOString(),by:r.by||adminIdentityV9||'Administración',sourceId:String(r.id),
+    status:'preparado'};
+   if(wfV8.corrections?.[doc.id]||v78Unsynced.has(doc.id))continue;
+   v78Unsynced.set(doc.id,doc);
+   try{
+    if(!cloudEnabledV9||!cloudV9?.connected||!cloudV9?.ready)throw Error('Sincronización no confirmada');
+    await cloudV9.persist('corrections',doc);wfV8.corrections[doc.id]=doc;v78Unsynced.delete(doc.id);
+   }catch(e){console.warn('V78: historial de ingreso positivo pendiente',e);}
+  }
+  v78RenderIfActive();return answer;
+ };
+}
+v78PositiveWrap('v38Positive');
+v78PositiveWrap('v13Positive');
+const v78PrevCloud=setCloudDataV9;
+setCloudDataV9=function(group,docs){const out=v78PrevCloud.apply(this,arguments);if(group==='corrections'){
+ for(const d of docs||[])if(d?.kind===V78_POSITIVE_KIND)v78Unsynced.delete(d.id);
+ v78RenderIfActive();
+ }return out;};
 </script>
 
 </body>
