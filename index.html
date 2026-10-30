@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V91 · Destinos nuevos con conteo válido</title>
+<title>PERCHADO V93 · Rendimiento y tandas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V92</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V93</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9554,6 +9554,10 @@ function v90ApplyFrozen(){
   if(!r?.locValid||typeof v18Square==='function'&&v18Square(r.ubicacionNormalizada))continue;
   const snap=v90Closed(r.ubicacionNormalizada,r.codigo);
   if(!snap||Math.abs(Number(r.qtyOperador)-Number(snap.qty))>0.000001)continue;
+  // V93: una fila ya congelada NO es un cambio nuevo; evitar un render por
+  // cada notificación de Firebase de otro código.
+  if(r._v90Closed===snap.id && r.estado==='OK' && Number(r.diferencia)===0 &&
+     Math.abs(Number(r.qtySistema)-Number(snap.qty))<0.000001)continue;
   // Conservar el WMS realmente vigente en metadatos, NO alterarlo ni reescribirlo.
   r._v90ActualWmsQty=Number.isFinite(Number(r.qtySistema))?Number(r.qtySistema):0;
   r._v90Closed=snap.id;r._v90Snapshot=snap;
@@ -9583,7 +9587,9 @@ setCloudDataV9=function(group,docs){
  const out=v90PreviousCloudData.apply(this,arguments);
  if(group==='corrections'){
   v90RefreshLocks();
-  if(hasCompared && v90ApplyFrozen()){
+  // Durante captura o recuperación, consolidar el resultado sin recalcular
+ // filas en cada notificación individual del servidor.
+ if(hasCompared && !v90Capturing && !v90Recovering && v90ApplyFrozen()){
    if(typeof v69Invalidate==='function')v69Invalidate();
    renderAll();
   }
@@ -9601,7 +9607,11 @@ async function v90PersistCode(loc,code,qty,proof,base){
  // No ocultar la novedad hasta recibir confirmación de escritura de Firebase.
  await cloudV9.persist('corrections',snap);
  wfV8.corrections[id]=snap;v90Locks.set(v90Key(loc,code),snap);
- if(hasCompared){v90ApplyFrozen();if(typeof v69Invalidate==='function')v69Invalidate();renderAll();}
+ if(hasCompared && !v90Capturing && !v90Recovering){
+   v90ApplyFrozen();
+   if(typeof v69Invalidate==='function')v69Invalidate();
+   renderAll();
+ }
  return true;
 }
 function v90HistoricCandidate(r,requireProofBeforeCurrentWms=true){
@@ -9645,7 +9655,11 @@ async function v90RecoverCodeFromPreviousWms(){
    }catch(e){console.warn('Cierre histórico por código pendiente',r.codigo,e);}
   }
   v90LastVersion=live.version;
-  if(done){const node=document.getElementById('v66ComparisonState');if(node)node.textContent='✓ '+done+' código(s) cuadrados con WMS anterior conservados';}
+  if(done){
+    if(hasCompared){v90ApplyFrozen();if(typeof v69Invalidate==='function')v69Invalidate();renderAll();}
+    const node=document.getElementById('v66ComparisonState');
+    if(node)node.textContent='✓ '+done+' código(s) cuadrados con WMS anterior conservados';
+  }
  }catch(e){console.warn('No se pudo recuperar cierre anterior por código',e);}
  finally{v90Recovering=false;}
 }
@@ -9663,15 +9677,23 @@ async function v90CaptureCurrentMatched(){
    !!v90Verified(r.ubicacionNormalizada,r.codigo));
  if(!matched.length)return;
  v90Capturing=true;
+ let saved=0;
  try{
   for(const r of matched.slice(0,30)){
    if(v37Audit.manifest?.version!==live.version)break;
    const verified=v90Verified(r.ubicacionNormalizada,r.codigo);
    if(!verified||Math.abs(verified.qty-Number(r.qtySistema))>0.000001)continue;
-   try{await v90PersistCode(r.ubicacionNormalizada,r.codigo,verified.qty,'FISICO_VALIDADO_WMS_VIGENTE',live);}
+   try{if(await v90PersistCode(r.ubicacionNormalizada,r.codigo,verified.qty,'FISICO_VALIDADO_WMS_VIGENTE',live))saved++;}
    catch(e){console.warn('No se guardó el cierre de código',r.codigo,e);}
   }
- }finally{v90Capturing=false;}
+ }finally{
+   if(saved&&hasCompared){
+     v90ApplyFrozen();
+     if(typeof v69Invalidate==='function')v69Invalidate();
+     renderAll(); // una sola actualización visual por lote confirmado
+   }
+   v90Capturing=false;
+ }
 }
 let v90ScanTimer=null;
 function v90ScanAfterCompare(){
@@ -9892,3 +9914,5 @@ v20SelectAdminChat = function(){
 };
 
 </script>
+
+<!-- V93: repintados agrupados durante la protección automática de códigos; sin alteraciones de stock, ERI, o lotes. -->
