@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V94 · Índices de rendimiento</title>
+<title>PERCHADO V96 · Cierre de tandas ágil</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V94</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V96</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -2525,8 +2525,10 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         .map(x=>[String(x.id),x])).values()];
      if(followups.length>250)throw Error('Demasiados estados de novedades para un cierre atómico. Divide los pases en tandas menores.');
      const followRefs=followups.map(x=>ref('corrections',String(x.id)));
-     const followSnaps=[];
-     for(const ptr of followRefs)followSnaps.push(await tx.get(ptr));
+     // V96: las lecturas de seguimiento son independientes. Ejecutarlas en
+     // paralelo DENTRO de la misma transacción, siempre antes de escribir.
+     // Mantener orden de followRefs y la validación transaccional de Firestore.
+     const followSnaps=await Promise.all(followRefs.map(ptr=>tx.get(ptr)));
      const stamp=Date.now();
      // V68: archivado atómico de esta tanda (sin tocar conteos, reconteos ni el stock).
      // El archivo usa el mismo esquema permitido de sharedAdmin: revision,updatedAt,payload.
@@ -7761,16 +7763,33 @@ async function v62ExecuteRound(){
    v62ValidateRound();return;
  }
  v62RoundBusy=true;btn.disabled=true;btn.textContent='Cerrando tanda…';
+ const v96Start=performance.now();let v96Phase='Preparación';
+ let v96PrepareMs=0,v96CloudMs=0,v96CleanMs=0;
  try{
-  if(msg)msg.textContent='Cerrando los movimientos actuales en Firebase sin modificar el stock WMS…';
-  const result=await cloudV9.closeAdjustmentsBatch(v37Audit.stateRevision,adminIdentityV9||'Administración',v70DeriveStatuses(true));
+  // Fotografiar la tanda una sola vez; no recalcular todos los seguimientos
+  // dentro de la transacción ni incluir revisiones ajenas a estos pases.
+  const followups=v70DeriveStatuses(true);
+  v96PrepareMs=performance.now()-v96Start;
+  if(msg)msg.textContent='Guardando '+followups.length+' seguimientos de pases y cerrando la tanda en Firebase…';
+  v96Phase='Transacción Firebase';
+  const v96CloudStart=performance.now();
+  const result=await cloudV9.closeAdjustmentsBatch(v37Audit.stateRevision,adminIdentityV9||'Administración',followups);
+  v96CloudMs=performance.now()-v96CloudStart;
   v37Audit.stateRevision=result.revision;
   v37Audit.remote={revision:result.revision,payload:result.payload};
+  v96Phase='Actualización local';
+  if(msg)msg.textContent='Tanda archivada. Limpiando los pases en esta pantalla…';
+  const v96CleanStart=performance.now();
   await v64ClearAdjustmentsOnly(result.stamp);
+  v96CleanMs=performance.now()-v96CleanStart;
   v49Scope='pending';
+  window.perchadoCierreV96={ok:true,followups:followups.length,prepareMs:Math.round(v96PrepareMs),firebaseMs:Math.round(v96CloudMs),cleanupMs:Math.round(v96CleanMs),totalMs:Math.round(performance.now()-v96Start),at:new Date().toISOString()};
   document.getElementById('v62RoundOverlay')?.remove();
   perchadoAlert('✓ Tanda cerrada y archivada en Firebase ('+(result.batchId||'')+'). Lista activa: 0 pases. WMS, conteos, reconteos y ubicaciones cuadradas intactos.');
- }catch(e){if(msg)msg.textContent='No se confirmó el cierre: '+(e.message||e)+'\nNo repitas sin verificar el estado compartido en Firebase.';}
+ }catch(e){
+  window.perchadoCierreV96={ok:false,phase:v96Phase,prepareMs:Math.round(v96PrepareMs),firebaseMs:Math.round(v96CloudMs),cleanupMs:Math.round(v96CleanMs),totalMs:Math.round(performance.now()-v96Start),error:String(e?.message||e),at:new Date().toISOString()};
+  if(msg)msg.textContent='No se confirmó el cierre: '+(e.message||e)+'\nNo repitas sin verificar el estado compartido en Firebase.';
+ }
  finally{v62RoundBusy=false;if(btn){btn.textContent='Cerrar tanda e iniciar nueva';v62ValidateRound();}}
 }
 
@@ -8047,7 +8066,7 @@ function v68PhysicalSignature(){
  for(const s of wfV8.sessions||[]){put(s.id);put(s.status);put(s.location);put(s.complete);put(s.reviewedAt);for(const e of s.entries||[]){put(e.id);put(e.code);put(e.qty);put(e.type);}}
  for(const t of wfV8.tasks||[]){put(t.id);put(t.status);put(t.location);put(t.response?.code);put(t.response?.qty);put(t.response?.type);put(t.response?.at);}
  const corrections=Object.values(wfV8.corrections||{});
- for(const c of corrections){if(c.kind==='v70_novelty_followup')continue;put(c.id);put(c.kind);put(c.code);put(c.qty);put(c.approved);put(c.archived);put(c.updatedAt);put(c.closedAt);put(c.rows?.length);
+ for(const c of corrections){if(['v70_novelty_followup','v90_code_closed'].includes(c.kind))continue;put(c.id);put(c.kind);put(c.code);put(c.qty);put(c.approved);put(c.archived);put(c.updatedAt);put(c.closedAt);put(c.rows?.length);
   if(c.kind==='v18_square_closed')for(const r of c.rows||[]){put(r.codigo);put(r.qtyOperador);put(r.qtySistema);}}
  put(v18Squares?.size||0);
  return String(hash);
@@ -8258,6 +8277,8 @@ function v70DeriveStatuses(closeBatch=false){
   if(older&&(levels[older.status]||0)>=(levels[status]||0))return;
   indexed.set(id,{id,kind:V70_KIND,location:String(loc),code:String(code),status,manual:false,by:adminIdentityV9||'Administración'});
  };
+ // Mantener las revisiones aún no persistidas: pueden haberse revisado
+ // segundos antes de cerrar. v70DeriveStatuses filtra las ya guardadas.
  for(const key of reviews||[]){const at=String(key).lastIndexOf('||');if(at>0)add(key.slice(at+2),key.slice(0,at),'REVISADO');}
  for(const move of approvedMatches||[]){
   add(move.from,move.code,closeBatch||move.executedAt?'EJECUTADO_WMS':'AJUSTE_PREPARADO');
@@ -9760,6 +9781,14 @@ v90RefreshLocks();
   overflow:visible!important;
 }
 </style>
+<script id="perchado-v96-diagnostico-cierre">
+'use strict';
+// No obtiene datos ni invoca Firebase; lee únicamente el último tiempo medido.
+window.perchadoDiagnosticoCierreV96=function(){
+ const c=window.perchadoCierreV96||null;
+ return {cierre:c,render:typeof window.perchadoPerfV94==='function'?window.perchadoPerfV94():null};
+};
+</script>
 </body>
 </html>
 
@@ -9996,11 +10025,65 @@ const v94PreviousWFStore=wfStore;
 wfStore=function(){v94ClearTasks();v94ClearRows();return v94PreviousWFStore.apply(this,arguments);};
 const v94PreviousRenderAll=renderAll;
 renderAll=function(){
- v94ClearRows();v94ClearTasks();
+ // V95: mantener los índices durante repintados sin modificaciones de datos.
+ // setCloudDataV9, wfStore y la referencia de results ya invalidan correctamente.
  const start=performance.now();
  try{return v94PreviousRenderAll.apply(this,arguments);}
  finally{const ms=performance.now()-start;v94Stats.renderCount++;v94Stats.renderTotalMs+=ms;v94Stats.slowestRenderMs=Math.max(v94Stats.slowestRenderMs,ms);}
 };
 window.perchadoPerfV94=()=>({renders:v94Stats.renderCount,avgRenderMs:Number((v94Stats.renderTotalMs/Math.max(1,v94Stats.renderCount)).toFixed(1)),maxRenderMs:Number(v94Stats.slowestRenderMs.toFixed(1)),wmsLookups:v94Stats.wmsLookups,wmsRebuilds:v94Stats.wmsRebuilds,codeLookups:v94Stats.rowLookups,codeRebuilds:v94Stats.rowRebuilds,recountLookups:v94Stats.taskLookups,recountRebuilds:v94Stats.taskRebuilds,rows:results?.length||0,stockRows:allSystemRows?.length||0,tasks:wfV8.tasks?.length||0});
 
+</script>
+
+<script id="perchado-v95-firebase-cycle-guard">
+'use strict';
+/* V95: un cierre certificado por código NO es una nueva evidencia física.
+   No reabrir el proceso de recuperación/captura después de cada respuesta
+   de la propia escritura Firestore. Las capturas válidas continúan guardándose. */
+let v95LastPhysicalScan='',v95MoreTimer=null,v95ScanRuns=0,v95SkippedScans=0;
+const v95OriginalScan=v90ScanAfterCompare;
+v90ScanAfterCompare=function(){
+  const signature=v68PhysicalSignature();
+  if(signature===v95LastPhysicalScan){v95SkippedScans++;return;}
+  v95LastPhysicalScan=signature;
+  v95ScanRuns++;
+  return v95OriginalScan.apply(this,arguments);
+};
+// Si hay más de treinta cierres físicos validados, continuar con los
+// siguientes sin descargar de nuevo toda la auditoría ni re-comparar el WMS.
+const v95OriginalCapture=v90CaptureCurrentMatched;
+v90CaptureCurrentMatched=async function(){
+  const before=v90Locks.size;
+  const result=await v95OriginalCapture.apply(this,arguments);
+  if(v90Locks.size>before&&!v90Capturing&&hasCompared&&adminAccessV9){
+    clearTimeout(v95MoreTimer);
+    v95MoreTimer=setTimeout(()=>{
+      v95MoreTimer=null;
+      if(!hasCompared||v37Audit.wmsLoading||!cloudV9?.connected)return;
+      const pending=results.some(r=>!v18Square(r.ubicacionNormalizada)&&
+        !v90Closed(r.ubicacionNormalizada,r.codigo)&&r.locValid&&!r.duplicado&&r.hasOperator&&
+        !v40Open(r.ubicacionNormalizada,r.codigo)&&Number(r.qtySistema)>0&&
+        Math.abs(Number(r.diferencia))<0.000001&&!!v90Verified(r.ubicacionNormalizada,r.codigo));
+      if(pending)void v90CaptureCurrentMatched();
+    },1800);
+  }
+  return result;
+};
+// Medición de origen de actualizaciones; no añade ninguna lectura ni escritura.
+const v95Incoming={};
+const v95OldSetCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const stat=v95Incoming[group]||(v95Incoming[group]={updates:0,maxDocs:0,lastDocs:0,totalMs:0});
+ stat.updates++;stat.lastDocs=docs?.length||0;stat.maxDocs=Math.max(stat.maxDocs,stat.lastDocs);
+ const started=performance.now();
+ try{return v95OldSetCloudData.apply(this,arguments);}
+ finally{stat.totalMs+=performance.now()-started;}
+};
+window.perchadoDiagnosticoV95=()=>({
+ firebaseUpdates:Object.fromEntries(Object.entries(v95Incoming).map(([k,v])=>[k,{
+  updates:v.updates,lastDocs:v.lastDocs,maxDocs:v.maxDocs,processingMs:Math.round(v.totalMs)
+ }])),
+ comparisonScans:v95ScanRuns,skippedScans:v95SkippedScans,
+ renders:typeof window.perchadoPerfV94==='function'?window.perchadoPerfV94():null
+});
 </script>
