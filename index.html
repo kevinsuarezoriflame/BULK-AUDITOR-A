@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V88 · Orígenes compactos</title>
+<title>PERCHADO V89 · Cuadradas protegidas y chat reciente</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V88</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V89</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9494,3 +9494,153 @@ v15Confirmed=function(loc,code){
 </html>
 
 <!-- PERCHADO V83: Operarios con consultas filtradas y capturas en vivo sin escrituras repetidas. No altera datos ni reglas Firebase. -->
+
+<script id="perchado-v89-cierres-y-chat">
+'use strict';
+/* PERCHADO V89: preservar cuadrados confirmados al cambiar WMS y recuperar
+   cierres demostrables desde la base WMS inmediatamente anterior.
+   NO atribuye movimientos a PL solo por una reducción de stock. */
+const v89RecoveredVersions = new Set();
+let v89Recovering = false;
+let v89LastAttemptAt = 0;
+
+function v89CompareFullLocation(previousRows, physicalRows, loc) {
+  const aggregateLoc = (rows, mergeRepeatedWmsRows) => {
+    const map = new Map();
+    for (const item of rows) {
+      if (String(item?.locNorm || '') !== loc) continue;
+      if (!item.code || !Number.isFinite(Number(item.qty)) || Number(item.qty) < 0 || item.locValid === false) return null;
+      const code = String(item.code);
+      if (map.has(code) && !mergeRepeatedWmsRows) return null; // Duplicado físico: no cerrar.
+      map.set(code, (map.get(code)||0) + Number(item.qty));
+    }
+    return map;
+  };
+  const sys = aggregateLoc(previousRows,true), phys = aggregateLoc(physicalRows,false);
+  if (!sys || !phys || !sys.size || sys.size !== phys.size) return null;
+  for (const [code, qty] of sys) {
+    if (!phys.has(code) || Math.abs(phys.get(code) - qty) > 0.000001) return null;
+  }
+  return [...sys.entries()].map(([codigo,qty])=>({
+    codigo, ubicacionNormalizada:loc, ubicacionOperador:loc,
+    ubicacionSistema:loc, qtyOperador:qty, qtySistema:qty,
+    diferencia:0, estado:'OK', locValid:true, duplicado:false, hasOperator:true,
+    observacion:'Cuadrada con el WMS anterior; cierre conservado tras actualización de stock.',
+    lineaOperador:'', lineaSistema:''
+  }));
+}
+function v89CompletedLocation(loc, currentWmsPublishedAt) {
+  const currentMs = Date.parse(String(currentWmsPublishedAt||''));
+  const complete = wfV8.sessions.some(s => {
+    if (String(s.location)!==loc || ['rejected','archived'].includes(s.status) ||
+        s.complete===false || !Array.isArray(s.entries) || !s.entries.length) return false;
+    const submitted=Date.parse(String(s.submittedAt||''));
+    // Una captura posterior al WMS vigente NO puede probar un cierre antiguo.
+    return Number.isFinite(currentMs) && Number.isFinite(submitted) && submitted <= currentMs;
+  });
+  const pendingRecount = wfV8.tasks.some(t => String(t.location)===loc &&
+    ['open','answered'].includes(t.status));
+  return complete && !pendingRecount;
+}
+async function v89RestoreSquareFromPreviousWms() {
+  if (v89Recovering || !adminAccessV9 || !hasCompared || v37Audit.wmsLoading ||
+      !cloudV9?.ready || !cloudV9?.connected || !v66LiveDataReady()) return;
+  if(Date.now()-v89LastAttemptAt<60000)return;
+  const live = v37Audit.manifest;
+  if (!live?.version || v89RecoveredVersions.has(live.version) ||
+      typeof cloudV9.getPreviousWmsManifest!=='function') return;
+  const eligible = results.some(r=>r.hasOperator && !v18Square(r.ubicacionNormalizada) &&
+    Math.abs(Number(r.diferencia))>0.000001 &&
+    v89CompletedLocation(String(r.ubicacionNormalizada),live.updatedAt));
+  if(!eligible){v89RecoveredVersions.add(live.version);return;}
+  v89Recovering = true;v89LastAttemptAt=Date.now();
+  try {
+    const prev = await cloudV9.getPreviousWmsManifest();
+    if (!prev?.version || Number(prev.revision)!==Number(live.revision)-1) {
+      v89RecoveredVersions.add(live.version);
+      return;
+    }
+    const previousText = await cloudV9.readSharedWms(prev);
+    if (v37TextHash(previousText)!==prev.hash) throw Error('La huella del WMS anterior no coincide.');
+    if (v37Audit.manifest?.version !== live.version) return; // Se actualizó el WMS mientras leíamos.
+    const previous = parseLines(previousText,'SISTEMA');
+    const physical = parseLines(document.getElementById('operatorData')?.value||'','OPERADOR');
+    if (previous.errors.length || physical.errors.length) {
+      // Nunca inventar cierres con información incompleta o inválida.
+      v89RecoveredVersions.add(live.version);return;
+    }
+    const possible = new Set(physical.filter(x=>x.locValid).map(x=>x.locNorm));
+    let recovered = 0, failed = 0;
+    for (const loc of possible) {
+      if (v18Square(loc) || !v89CompletedLocation(loc, live.updatedAt)) continue;
+      const rows = v89CompareFullLocation(previous,physical,loc);
+      if (!rows) continue;
+      const id = 'v18_square_' + encodeURIComponent(loc).replace(/%/g,'_');
+      const snap = {id,kind:'v18_square_closed',location:loc,rows,
+        closedAt:new Date().toISOString(),closedBy:'PERCHADO · recuperación verificada',
+        systemSignature:checksum(previousText),recoveredFromWmsVersion:String(prev.version),
+        recoveredAt:new Date().toISOString()};
+      // Cierre solo después de la confirmación del servidor, nunca antes.
+      try {
+        await cloudV9.persist('corrections',snap);
+        if (!v18Square(loc)) {
+          wfV8.corrections[id]=snap;v18Squares.set(loc,snap);recovered++;
+        }
+      }catch(err){failed++;console.warn('No se pudo guardar cierre verificado',loc,err);}
+    }
+    if(recovered){
+      v18WriteLocks();v18ApplyFrozen();renderAll();
+      const status=document.getElementById('v66ComparisonState');
+      if(status)status.textContent='✓ '+recovered+' ubicación(es) cuadradas recuperadas del WMS anterior y protegidas';
+    }
+    if(failed){
+      const status=document.getElementById('v66ComparisonState');
+      if(status)status.textContent='⚠ '+failed+' cierres verificados no pudieron guardarse en Firebase. Revisa sincronización.';
+    } else {
+      v89RecoveredVersions.add(live.version);
+    }
+  }catch(error){
+    // No modificar ni ocultar diferencias si falta una base anterior verificada.
+    console.warn('PERCHADO: no se pudo comprobar cierres previos',error);
+  }finally{v89Recovering=false;}
+}
+
+const v89PreviousRecompare = v66RecompareWms;
+v66RecompareWms = async function(origin) {
+  await v89PreviousRecompare.apply(this,arguments);
+  if (!v66CompareBusy && hasCompared && !v37Audit.wmsLoading) {
+    await v89RestoreSquareFromPreviousWms();
+  }
+};
+
+// El chat suele cargarse mientras está oculto: scrollHeight es 0 al abrir.
+// Ajustar tras mostrarlo, sin nuevas consultas ni escrituras Firebase.
+function v89ChatBottom(id) {
+  const el=document.getElementById(id);
+  if(!el)return;
+  const putAtBottom=()=>{
+    if(!el.isConnected || !el.getClientRects().length) return;
+    el.scrollTop=el.scrollHeight;
+  };
+  requestAnimationFrame(()=>{putAtBottom();requestAnimationFrame(putAtBottom);});
+}
+const v89PreviousAdminChatToggle = v22ToggleAdminChat;
+v22ToggleAdminChat = function(){
+  const result=v89PreviousAdminChatToggle.apply(this,arguments);
+  if(v20Chat.adminOpen)v89ChatBottom('v20ChatAdminMessages');
+  return result;
+};
+const v89PreviousOperatorChatToggle = v20ToggleOperatorChat;
+v20ToggleOperatorChat = function(){
+  const result=v89PreviousOperatorChatToggle.apply(this,arguments);
+  if(v20Chat.operatorOpen)v89ChatBottom('v20OpChatMessages');
+  return result;
+};
+const v89PreviousSelectAdminChat = v20SelectAdminChat;
+v20SelectAdminChat = function(){
+  const result=v89PreviousSelectAdminChat.apply(this,arguments);
+  if(v20Chat.adminOpen)v89ChatBottom('v20ChatAdminMessages');
+  return result;
+};
+
+</script>
