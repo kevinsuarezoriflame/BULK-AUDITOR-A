@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V93 · Rendimiento y tandas</title>
+<title>PERCHADO V94 · Índices de rendimiento</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V93</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V94</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9916,3 +9916,91 @@ v20SelectAdminChat = function(){
 </script>
 
 <!-- V93: repintados agrupados durante la protección automática de códigos; sin alteraciones de stock, ERI, o lotes. -->
+
+<script id="perchado-v94-fast-indexes">
+/* PERCHADO V94 — ÍNDICES EFÍMEROS DE CONSULTA. No modifican las datas. */
+'use strict';
+const v94Stats={wmsLookups:0,wmsRebuilds:0,rowLookups:0,rowRebuilds:0,taskLookups:0,taskRebuilds:0,renderCount:0,renderTotalMs:0,slowestRenderMs:0};
+let v94StockRef=null,v94StockLength=-1,v94StockMap=new Map();
+let v94RowsRef=null,v94RowsLength=-1,v94RowsMap=new Map(),v94DuplicateRows=new Set();
+let v94TasksRef=null,v94TasksLength=-1,v94TasksDirty=true;
+let v94OpenByKey=new Map(),v94OpenExact=new Set(),v94FinishedByKey=new Map();
+const v94K=(a,b)=>String(a)+'\u001f'+String(b);
+const v94ToMs=v=>{const n=Date.parse(String(v||''));return Number.isFinite(n)?n:0;};
+function v94ClearRows(){v94RowsRef=null;v94RowsLength=-1;}
+function v94ClearTasks(){v94TasksDirty=true;}
+function v94WmsIndex(){
+ const list=allSystemRows||[];
+ if(v94StockRef===list&&v94StockLength===list.length)return v94StockMap;
+ const m=new Map();
+ // Misma suma y conversión numérica del motor original.
+ for(const x of list){
+  const k=v94K(x.code,x.locNorm);
+  m.set(k,(m.get(k)||0)+Number(x.qty||0));
+ }
+ v94StockRef=list;v94StockLength=list.length;v94StockMap=m;
+ v94Stats.wmsRebuilds++;
+ return m;
+}
+function v94RowsIndex(){
+ const list=results||[];
+ if(v94RowsRef===list&&v94RowsLength===list.length)return v94RowsMap;
+ const m=new Map(),duplicates=new Set();
+ for(const r of list){const k=v94K(r.ubicacionNormalizada,r.codigo);if(m.has(k))duplicates.add(k);else m.set(k,r);}
+ v94RowsRef=list;v94RowsLength=list.length;v94RowsMap=m;v94DuplicateRows=duplicates;
+ v94Stats.rowRebuilds++;
+ return m;
+}
+function v94TaskIndex(){
+ const list=wfV8.tasks||[];
+ if(!v94TasksDirty&&v94TasksRef===list&&v94TasksLength===list.length)return;
+ const active=new Map(),finished=new Map(),exact=new Set();
+ for(const t of list){
+  const loc=String(t.location),keys=new Set([String(t.code),String(t.response?.code)]);
+  if(t.status==='open')exact.add(v94K(loc,t.code));
+  for(const code of keys){
+   const k=v94K(loc,code);
+   if(t.status==='open'){
+    if(!active.has(k))active.set(k,[]);
+    active.get(k).push(v94ToMs(t.createdAt));
+   }else if(['answered','closed'].includes(t.status)&&t.response&&t.response.qty!==undefined){
+    const when=Math.max(v94ToMs(t.answeredAt),v94ToMs(t.response?.at),v94ToMs(t.closedAt),v94ToMs(t.updatedAt));
+    if(when>(finished.get(k)||0))finished.set(k,when);
+   }
+  }
+ }
+ v94OpenByKey=active;v94OpenExact=exact;v94FinishedByKey=finished;
+ v94TasksRef=list;v94TasksLength=list.length;v94TasksDirty=false;v94Stats.taskRebuilds++;
+}
+// Estas funciones se consultan cientos de veces en Novedades. Consultar índices
+// en memoria, no volver a recorrer WMS / todas las tareas para cada fila.
+v13ForCode=function(code,loc){v94Stats.wmsLookups++;const m=v94WmsIndex(),k=v94K(code,loc);return m.has(k)?m.get(k):0;};
+v13Row=function(loc,code){v94Stats.rowLookups++;const m=v94RowsIndex(),k=v94K(loc,code);return v94DuplicateRows.has(k)?results.find(r=>r.ubicacionNormalizada===loc&&String(r.codigo)===String(code)):m.get(k);};
+v40Open=function(loc,code){
+ v94Stats.taskLookups++;
+ v94TaskIndex();
+ const k=v94K(loc,code),opens=v94OpenByKey.get(k);
+ if(!opens?.length)return false;
+ const readyTime=v94FinishedByKey.get(k)||0;
+ if(!readyTime)return v94OpenExact.has(k); // Mismo fallback de V77 sin fecha.
+ return opens.some(ms=>!ms||ms>readyTime);
+};
+const v94PreviousSetCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ if(group==='tasks')v94ClearTasks();
+ // El render de correcciones puede añadir o modificar filas sin reemplazar el array.
+ if(['tasks','sessions','corrections'].includes(group))v94ClearRows();
+ return v94PreviousSetCloudData.apply(this,arguments);
+};
+const v94PreviousWFStore=wfStore;
+wfStore=function(){v94ClearTasks();v94ClearRows();return v94PreviousWFStore.apply(this,arguments);};
+const v94PreviousRenderAll=renderAll;
+renderAll=function(){
+ v94ClearRows();v94ClearTasks();
+ const start=performance.now();
+ try{return v94PreviousRenderAll.apply(this,arguments);}
+ finally{const ms=performance.now()-start;v94Stats.renderCount++;v94Stats.renderTotalMs+=ms;v94Stats.slowestRenderMs=Math.max(v94Stats.slowestRenderMs,ms);}
+};
+window.perchadoPerfV94=()=>({renders:v94Stats.renderCount,avgRenderMs:Number((v94Stats.renderTotalMs/Math.max(1,v94Stats.renderCount)).toFixed(1)),maxRenderMs:Number(v94Stats.slowestRenderMs.toFixed(1)),wmsLookups:v94Stats.wmsLookups,wmsRebuilds:v94Stats.wmsRebuilds,codeLookups:v94Stats.rowLookups,codeRebuilds:v94Stats.rowRebuilds,recountLookups:v94Stats.taskLookups,recountRebuilds:v94Stats.taskRebuilds,rows:results?.length||0,stockRows:allSystemRows?.length||0,tasks:wfV8.tasks?.length||0});
+
+</script>
