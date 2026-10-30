@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V89 · Cuadradas protegidas y chat reciente</title>
+<title>PERCHADO V91 · Destinos nuevos con conteo válido</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V89</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V91</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9293,13 +9293,18 @@ async function v81SaveTransfer(loc,code){
   return perchadoAlert('El físico debe estar registrado y los reconteos pendientes terminados antes de crear un pase.');
  if(!src||!qty||qty<=0||qty>src.available+1e-8||qty>Math.max(0,remaining(r))+1e-8)
   return perchadoAlert('Selecciona un origen con saldo disponible y una cantidad válida.');
- if(!v13ValidLocation(from)||!v13ValidLocation(loc))return perchadoAlert('El origen y el destino deben existir en la base WMS.');
+ // V91: el origen sí necesita existir en WMS. El destino puede ser nuevo,
+ // siempre que el código esté contado allí y la ubicación tenga formato válido.
+ if(!v13ValidLocation(from)||!v48KnownDestination(loc,code)||!normalizeLocation(loc).valid||normalizeLocation(loc).value!==loc)
+  return perchadoAlert('Origen sin WMS o destino sin conteo físico válido. Revisa ambas ubicaciones.');
+ // Un destino nuevo no recibe stock artificial en PERCHADO:
+ // el traslado se ejecutará en el WMS oficial después de exportarlo.
  const lock=String(code)+'|'+from+'|'+loc+'|'+qty;
  if(v81MoveBusy.has(lock))return;
  if(v57AlreadyProposed(code,from,loc,qty))return perchadoAlert('Este pase ya existe en Ajustes WMS. No se duplicó.');
  v81MoveBusy.add(lock);
  try{
-  manualTransfersV9.push({id:wfId(),code:String(code),from,to:loc,qty,originVerified:!src.unchecked,adminApproved:true,sourceUncounted:src.unchecked,v38:true,wmsOriginBefore:v38SystemQty(code,from),wmsDestBefore:v38SystemQty(code,loc),createdAt:wfToday(),by:adminIdentityV9,kind:src.isCW?'RECUPERACION_CW':'CONCILIACION_BULK',executedAt:null});
+  manualTransfersV9.push({id:wfId(),code:String(code),from,to:loc,qty,originVerified:!src.unchecked,adminApproved:true,sourceUncounted:src.unchecked,v38:true,v48:!v13ValidLocation(loc),v91NewDestination:!v13ValidLocation(loc),wmsOriginBefore:v38SystemQty(code,from),wmsDestBefore:v38SystemQty(code,loc),createdAt:wfToday(),by:adminIdentityV9,kind:src.isCW?'RECUPERACION_CW':'CONCILIACION_BULK',executedAt:null});
   window.perchadoV9Moves=manualTransfersV9;
   saveDecisions();v46MovementDrafts.delete(v46MovementKey(loc,code));v12Panel={kind:'',loc:'',code:''};renderAll();
   if(typeof toast==='function')toast('✓ Pase registrado en Ajustes WMS.');
@@ -9490,6 +9495,213 @@ v15Confirmed=function(loc,code){
 #issuesLocations .v81Bottom .v81Real{margin-left:0!important}
 @media(max-width:650px){#issuesLocations .v81Origins{max-width:none!important}#issuesLocations .v81Origin{grid-template-columns:18px minmax(0,1fr)!important;padding:6px 7px!important}#issuesLocations .v87OriginTag{margin-left:0!important}}
 </style>
+<style id="perchado-v90-lock-style">
+/* V90: estado de auditoría para códigos sellados con WMS anterior. */
+.v90HistoricClosed{display:inline-block;font-size:10px;font-weight:800;color:#08765d;background:#e1f8ea;border:1px solid #a6e5c7;border-radius:999px;padding:3px 7px}
+.v90RestoreButton{font-size:11px!important;padding:5px 8px!important;min-height:28px!important;border:1px solid #a9dace!important;background:#f2fffa!important;color:#126a56!important}
+</style>
+<script id="perchado-v90-cierres-por-codigo">
+'use strict';
+/* PERCHADO V90: el cierre por código+ubicación es independiente de una ubicación
+   completamente cuadrada y de los pases/stock WMS posteriores. Solo se crea
+   con evidencia física validada y stock anterior coincidente; si falta la foto
+   WMS histórica, requiere confirmación específica del administrador. */
+const v90Locks=new Map();
+const v90Key=(loc,code)=>String(loc)+'\u001f'+String(code);
+const v90LockId=(loc,code)=>'v90_code_closed_'+encodeURIComponent(String(loc)+'|'+String(code)).replace(/%/g,'_');
+let v90Recovering=false,v90LastVersion='',v90LastTry=0,v90Capturing=false;
+function v90RefreshLocks(){
+ const map=new Map();
+ for(const d of Object.values(wfV8.corrections||{})){
+  if(d?.kind==='v90_code_closed'&&d.location&&d.code&&Number.isFinite(Number(d.qty))&&Number(d.qty)>=0){
+   const k=v90Key(d.location,d.code),old=map.get(k);
+   if(!old||String(old.closedAt||'')<String(d.closedAt||''))map.set(k,d);
+  }
+ }
+ v90Locks.clear();for(const [k,d] of map)v90Locks.set(k,d);
+}
+function v90Closed(loc,code){
+ const snap=v90Locks.get(v90Key(loc,code))||null;
+ if(!snap)return null;
+ // Una captura más reciente con otra cantidad exige revisar de nuevo el código.
+ if(typeof v40Open==='function'&&v40Open(loc,code))return null;
+ const proof=v90Verified(loc,code);
+ if(proof&&Math.abs(proof.qty-Number(snap.qty))>0.000001)return null;
+ return snap;
+}
+function v90Verified(loc,code){
+ if(typeof v40Open==='function'&&v40Open(loc,code))return null;
+ const verified=typeof v17Verified==='function'?v17Verified(loc,code):null;
+ if(!verified||!verified.approved||!Number.isFinite(Number(verified.qty)))return null;
+ const qty=Number(verified.qty);
+ return qty>=0?{qty,at:String(verified.at||''),evidence:String(verified.source||verified.id||'verificado')}:null;
+}
+function v90ApplyFrozen(){
+ if(!hasCompared||!Array.isArray(results)||!v90Locks.size)return 0;
+ let n=0;
+ for(const r of results){
+  if(!r?.locValid||typeof v18Square==='function'&&v18Square(r.ubicacionNormalizada))continue;
+  const snap=v90Closed(r.ubicacionNormalizada,r.codigo);
+  if(!snap||Math.abs(Number(r.qtyOperador)-Number(snap.qty))>0.000001)continue;
+  // Conservar el WMS realmente vigente en metadatos, NO alterarlo ni reescribirlo.
+  r._v90ActualWmsQty=Number.isFinite(Number(r.qtySistema))?Number(r.qtySistema):0;
+  r._v90Closed=snap.id;r._v90Snapshot=snap;
+  r.qtyOperador=Number(snap.qty);r.qtySistema=Number(snap.qty);
+  r.diferencia=0;r.estado='OK';r.duplicado=false;r.hasOperator=true;
+  r.observacion='Código validado con el WMS anterior. Traslado posterior no genera sobrante. Cierre '+String(snap.closedAt||'')+'.';
+  n++;
+ }
+ return n;
+}
+const v90PreviousSquareEligible=v18SquareEligible;
+v18SquareEligible=function(loc){
+ // Un cierre por código del WMS anterior no certifica el WMS actual de TODA la ubicación.
+ if(v18Rows(loc).some(r=>r._v90Closed))return false;
+ return v90PreviousSquareEligible.apply(this,arguments);
+};
+const v90PreviousSync=v15SyncApprovedRows;
+v15SyncApprovedRows=function(){const out=v90PreviousSync.apply(this,arguments);v90ApplyFrozen();return out;};
+const v90PreviousNeedsAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,r){if(r&&v90Closed(loc,r.codigo)&&Number(r.qtyOperador)===Number(v90Closed(loc,r.codigo).qty))return false;return v90PreviousNeedsAttention.apply(this,arguments);};
+const v90PreviousExtraAttention=v71ExtraNeedsAttention;
+v71ExtraNeedsAttention=function(loc,code){if(v90Closed(loc,code))return false;return v90PreviousExtraAttention.apply(this,arguments);};
+const v90PreviousRowStatus=rowStatus;
+rowStatus=function(r){if(r&&v90Closed(r.ubicacionNormalizada,r.codigo))return 'CUADRADO ANTERIORMENTE';return v90PreviousRowStatus.apply(this,arguments);};
+const v90PreviousCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const out=v90PreviousCloudData.apply(this,arguments);
+ if(group==='corrections'){
+  v90RefreshLocks();
+  if(hasCompared && v90ApplyFrozen()){
+   if(typeof v69Invalidate==='function')v69Invalidate();
+   renderAll();
+  }
+ }
+ return out;
+};
+async function v90PersistCode(loc,code,qty,proof,base){
+ if(v90Locks.has(v90Key(loc,code)))return false;
+ if(!adminAccessV9||!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected||!cloudWritableV9())
+  throw Error('Firebase no está listo para guardar un cierre permanente.');
+ const id=v90LockId(loc,code);
+ const snap={id,kind:'v90_code_closed',location:String(loc),code:String(code),qty:Number(qty),
+  closedAt:new Date().toISOString(),closedBy:String(adminIdentityV9||'Administración'),
+  proof:String(proof),wmsVersion:String(base?.version||''),wmsHash:String(base?.hash||'')};
+ // No ocultar la novedad hasta recibir confirmación de escritura de Firebase.
+ await cloudV9.persist('corrections',snap);
+ wfV8.corrections[id]=snap;v90Locks.set(v90Key(loc,code),snap);
+ if(hasCompared){v90ApplyFrozen();if(typeof v69Invalidate==='function')v69Invalidate();renderAll();}
+ return true;
+}
+function v90HistoricCandidate(r,requireProofBeforeCurrentWms=true){
+ if(!r||!r.locValid||r.duplicado||v90Closed(r.ubicacionNormalizada,r.codigo)||v18Square(r.ubicacionNormalizada))return false;
+ const proof=v90Verified(r.ubicacionNormalizada,r.codigo);
+ if(!proof||proof.qty<=0||Math.abs(proof.qty-Number(r.qtyOperador))>0.000001)return false;
+ const current=Number(v13ForCode(r.codigo,r.ubicacionNormalizada));
+ if(!Number.isFinite(current)||current>=proof.qty-0.000001)return false;
+ // Un recuento posterior a la publicación no demuestra un cierre previo.
+ const publish=Date.parse(v37Audit.manifest?.updatedAt||''),measured=Date.parse(proof.at||'');
+ return !requireProofBeforeCurrentWms||(Number.isFinite(publish)&&Number.isFinite(measured)&&measured<=publish);
+}
+async function v90RecoverCodeFromPreviousWms(){
+ if(v90Recovering||v90Capturing||!adminAccessV9||!hasCompared||v37Audit.wmsLoading||
+    !cloudV9?.connected||!v66LiveDataReady())return;
+ const live=v37Audit.manifest;
+ if(!live?.version||v90LastVersion===live.version||Date.now()-v90LastTry<12000)return;
+ const candidates=results.filter(v90HistoricCandidate);
+ if(!candidates.length){v90LastVersion=live.version;return;}
+ v90Recovering=true;v90LastTry=Date.now();
+ try{
+  const prev=await cloudV9.getPreviousWmsManifest();
+  if(!prev?.version||Number(prev.revision)!==Number(live.revision)-1){v90LastVersion=live.version;return;}
+  const text=await cloudV9.readSharedWms(prev);
+  if(v37TextHash(text)!==prev.hash)throw Error('La versión anterior no pasó la comprobación de integridad.');
+  if(v37Audit.manifest?.version!==live.version)return;
+  const parsed=parseLines(text,'SISTEMA');
+  if(parsed.errors?.length){v90LastVersion=live.version;return;}
+  const old=new Map();
+  for(const p of parsed){const k=v90Key(p.locNorm,p.code);old.set(k,(old.get(k)||0)+Number(p.qty));}
+  let done=0;
+  for(const r of candidates.slice(0,100)){
+   if(v37Audit.manifest?.version!==live.version)break;
+   if(v90Closed(r.ubicacionNormalizada,r.codigo))continue;
+   const proof=v90Verified(r.ubicacionNormalizada,r.codigo);
+   const yesterday=old.get(v90Key(r.ubicacionNormalizada,r.codigo));
+   if(!proof||yesterday===undefined||Math.abs(Number(yesterday)-proof.qty)>0.000001)continue;
+   try{
+    if(await v90PersistCode(r.ubicacionNormalizada,r.codigo,proof.qty,
+      'RECONTEO_VERIFICADO_WMS_ANTERIOR',prev))done++;
+   }catch(e){console.warn('Cierre histórico por código pendiente',r.codigo,e);}
+  }
+  v90LastVersion=live.version;
+  if(done){const node=document.getElementById('v66ComparisonState');if(node)node.textContent='✓ '+done+' código(s) cuadrados con WMS anterior conservados';}
+ }catch(e){console.warn('No se pudo recuperar cierre anterior por código',e);}
+ finally{v90Recovering=false;}
+}
+// Guardar los códigos efectivamente validados cuando todavía coinciden con el WMS;
+// así siguen sellados aunque mañana el stock se consuma. No cerrar sin evidencia.
+async function v90CaptureCurrentMatched(){
+ if(v90Capturing||v90Recovering||!adminAccessV9||!hasCompared||
+    !cloudEnabledV9||!cloudV9?.connected||!v66LiveDataReady()||v37Audit.wmsLoading)return;
+ const live=v37Audit.manifest,text=document.getElementById('systemData')?.value||'';
+ if(!live?.version||v37TextHash(text)!==live.hash)return;
+ const matched=results.filter(r=>!v18Square(r.ubicacionNormalizada)&&
+   !v90Closed(r.ubicacionNormalizada,r.codigo)&&r.locValid&&!r.duplicado&&r.hasOperator&&
+   !v40Open(r.ubicacionNormalizada,r.codigo)&&
+   Number(r.qtySistema)>0&&Math.abs(Number(r.diferencia))<0.000001&&
+   !!v90Verified(r.ubicacionNormalizada,r.codigo));
+ if(!matched.length)return;
+ v90Capturing=true;
+ try{
+  for(const r of matched.slice(0,30)){
+   if(v37Audit.manifest?.version!==live.version)break;
+   const verified=v90Verified(r.ubicacionNormalizada,r.codigo);
+   if(!verified||Math.abs(verified.qty-Number(r.qtySistema))>0.000001)continue;
+   try{await v90PersistCode(r.ubicacionNormalizada,r.codigo,verified.qty,'FISICO_VALIDADO_WMS_VIGENTE',live);}
+   catch(e){console.warn('No se guardó el cierre de código',r.codigo,e);}
+  }
+ }finally{v90Capturing=false;}
+}
+let v90ScanTimer=null;
+function v90ScanAfterCompare(){
+ clearTimeout(v90ScanTimer);
+ v90ScanTimer=setTimeout(async()=>{
+  if(!hasCompared||v37Audit.wmsLoading)return;
+  await v90RecoverCodeFromPreviousWms();
+  await v90CaptureCurrentMatched();
+ },800);
+}
+const v90PreviousRecompare=v66RecompareWms;
+v66RecompareWms=async function(origin){
+ const result=await v90PreviousRecompare.apply(this,arguments);
+ if(!v66CompareBusy&&hasCompared){v90RefreshLocks();v90ApplyFrozen();v90ScanAfterCompare();}
+ return result;
+};
+const v90PreviousCompare=compareData;
+compareData=async function(){
+ const result=await v90PreviousCompare.apply(this,arguments);
+ if(hasCompared){v90RefreshLocks();v90ApplyFrozen();v90ScanAfterCompare();}
+ return result;
+};
+// Si el último WMS anterior ya no está accesible, permitir recuperar un cierre
+// declarado por Administración, SOLO para un físico reconteado antes de actualizar.
+async function v90ManualSeal(loc,code){
+ const r=results.find(x=>String(x.ubicacionNormalizada)===String(loc)&&String(x.codigo)===String(code));
+ if(!r||!v90HistoricCandidate(r,false))return perchadoAlert('No existe un reconteo validado para respaldar este cierre.');
+ const proof=v90Verified(loc,code);
+ const ok=await perchadoConfirm('¿Confirmas que el código '+code+' en '+loc+' estaba CUADRADO con '+fmtQty(proof.qty)+' unidades antes de actualizar el WMS? Esto protegerá el cierre histórico, sin alterar el stock actual ni generar un sobrante.');
+ if(!ok)return;
+ try{await v90PersistCode(loc,code,proof.qty,'CONFIRMACION_EXPRESA_ADMIN_WMS_ANTERIOR',null);}
+ catch(e){perchadoAlert('No se pudo guardar el cierre en Firebase: '+(e?.message||e));}
+}
+const v90PreviousRowAction=v12RowAction;
+v12RowAction=function(idx,loc,code,delta,latest){
+ const html=v90PreviousRowAction.apply(this,arguments);
+ const r=results.find(x=>String(x.ubicacionNormalizada)===String(loc)&&String(x.codigo)===String(code));
+ return r&&v90HistoricCandidate(r,false)?html+` <button type="button" class="v90RestoreButton" onclick='v90ManualSeal(${JSON.stringify(String(loc))},${JSON.stringify(String(code))})' title="Recuperar un cierre cuadrado con el WMS anterior">🔒 Cierre anterior</button>`:html;
+};
+v90RefreshLocks();
+</script>
 </body>
 </html>
 
