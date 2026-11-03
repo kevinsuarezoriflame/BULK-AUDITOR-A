@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V101 · Novedades optimizadas</title>
+<title>PERCHADO V102 · Novedades optimizadas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V101</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V102</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9883,6 +9883,23 @@ window.perchadoDiagnosticoCierreV96=function(){
  window.perchadoRendimientoV99=()=>Object.fromEntries(Object.entries(stats).map(([k,x])=>[k,{veces:x.calls,promedioMs:+(x.total/x.calls).toFixed(1),maximoMs:+x.max.toFixed(1)}]));
 })();
 </script>
+
+<script id="perchado-v102-medir-y-aliviar-novedades">
+'use strict';
+/* V102: diagnóstico consolidado, sin consultas extra ni modificaciones de datos.
+   La eliminación de O(n²) y la decoración de la vista activa se aplican
+   directamente sobre los módulos V100 ya existentes. */
+window.perchadoDiagnosticoV102=function(){
+ const id=['results','squared','settled','decisions','map'].find(x=>document.getElementById(x)?.classList.contains('active'))||'otra';
+ return {version:'V102',pantalla:id,filasComparadas:results?.length||0,
+   movimientosHistorial:v33Ledger?.length||0,
+   capturas:wfV8.sessions?.length||0,reconteos:wfV8.tasks?.length||0,
+   correcciones:Object.keys(wfV8.corrections||{}).length,
+   rendimiento:typeof perchadoDiagnosticoV101==='function'?perchadoDiagnosticoV101():null,
+   render:typeof perchadoPerfV94==='function'?perchadoPerfV94():null,
+   cierre:typeof perchadoDiagnosticoCierreV96==='function'?perchadoDiagnosticoCierreV96():null};
+};
+</script>
 </body>
 </html>
 
@@ -10246,7 +10263,8 @@ function v100IncrementalSection(id,markup){
    if(node===cursor){cursor=cursor.nextElementSibling;continue;}
    target.insertBefore(node,cursor);
   }
-  for(const old of Array.from(target.children))if(!finalNodes.includes(old))old.remove();
+  const v102KeepNodes = new Set(finalNodes);
+  for(const old of Array.from(target.children))if(!v102KeepNodes.has(old))old.remove();
   v100SourceBySection.set(id,{parts:nextSource,empty:null});
   v50SectionsBase.set(id,'v100');
   v100DOMStats.updates++;
@@ -10271,7 +10289,7 @@ function v100GroupTasks(){
 v37DecorateLocationStates=function(){
  if(!adminAccessV9)return;
  const grouped=v100GroupTasks();
- for(const card of document.querySelectorAll('#issuesLocations .locCard,#settledLocations .locCard,#squaredLocations .locCard')){
+ for(const card of document.querySelectorAll('#results.active #issuesLocations .locCard,#decisions.active #settledLocations .locCard,#squared.active #squaredLocations .locCard')){
   const loc=v100LocationKey(card);if(!loc)continue;
   const tasks=(grouped.get(loc)||[]).filter(t=>(t.status==='answered'||t.status==='closed')&&t.response);
   if(!tasks.length)continue;
@@ -10289,7 +10307,7 @@ v37DecorateLocationStates=function(){
 v40DecorateResults=function(){
  if(!adminAccessV9)return;
  const grouped=v100GroupTasks();
- for(const card of document.querySelectorAll('#issuesLocations .locCard,#settledLocations .locCard,#squaredLocations .locCard')){
+ for(const card of document.querySelectorAll('#results.active #issuesLocations .locCard,#decisions.active #settledLocations .locCard,#squared.active #squaredLocations .locCard')){
   const loc=v100LocationKey(card);if(!loc)continue;
   const tasks=(grouped.get(loc)||[]).filter(t=>['open','answered','closed'].includes(t.status));
   const recounted=tasks.filter(t=>t.response&&['answered','closed'].includes(t.status));
