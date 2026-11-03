@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V102 · Novedades optimizadas</title>
+<title>PERCHADO V103 · Recuperación de Novedades y Auditoría</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V102</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V103</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -9900,6 +9900,108 @@ window.perchadoDiagnosticoV102=function(){
    cierre:typeof perchadoDiagnosticoCierreV96==='function'?perchadoDiagnosticoCierreV96():null};
 };
 </script>
+
+<!-- PERCHADO V103 — Recuperar conteos ocultos por historial sin pase vivo. -->
+<style id="perchado-v103-safety-style">
+ #v103AuditBox{border:1px solid #e5a340;background:#fff9ed;color:#743e05;border-radius:10px;padding:11px 13px;margin:9px 0;font-size:12px}
+ #v103AuditBox .v103Title{font-size:13px;font-weight:850;margin-bottom:5px}
+ #v103AuditBox .v103Meta{color:#795b33;line-height:1.45;margin:3px 0 7px}
+ #v103AuditBox summary{cursor:pointer;font-weight:800;margin:6px 0}
+ #v103AuditBox .v103List{max-height:290px;overflow:auto;border:1px solid #ead6ae;border-radius:6px;background:#fff}
+ #v103AuditBox table{width:100%;border-collapse:collapse;font-size:11px}
+ #v103AuditBox th,#v103AuditBox td{text-align:left;padding:5px 7px;border-bottom:1px solid #f2e7d7}
+ #v103AuditBox th{background:#fff1d5;position:sticky;top:0}
+ #v103AuditBox button{font-size:11px;min-height:26px;padding:4px 8px;margin:3px}
+</style>
+<script id="perchado-v103-safety-net">
+'use strict';
+/* Un registro histórico no equivale a un pase actual. NO se altera un solo
+   registro; la auditoría muestra excepciones, nunca ejecuta ajustes WMS. */
+let v103LastAudit=[];
+function v103AuditUnlinked(){
+ if(!hasCompared||!Array.isArray(results))return [];
+ const k=(loc,code)=>String(loc)+'\u0000'+String(code);
+ const active=new Set();
+ const add=(loc,code)=>{if(loc&&code!==undefined&&code!==null)active.add(k(loc,code));};
+ for(const m of approvedMatches||[]){add(m.from,m.code);add(m.to,m.code);}
+ for(const m of resolutions||[])add(m.location,m.code);
+ for(const m of manualTransfersV9||[]){
+   if(m.v38&&typeof v38MovementReflected==='function'&&v38MovementReflected(m))continue;
+   add(m.from,m.code);add(m.to,m.code);
+ }
+ const historical=new Map();
+ for(const m of v33Ledger||[]){
+  if(!m||!m.code||m.status==='discarded')continue;
+  for(const loc of [m.from,m.to]){
+   if(!loc)continue;
+   const id=k(loc,m.code),arr=historical.get(id)||[];
+   arr.push({id:m.id,status:m.status||'sin estado',qty:m.qty});historical.set(id,arr);
+  }
+ }
+ const found=[];
+ for(const r of results){
+  if(!r||!r.ubicacionNormalizada||!r.codigo||!r.hasOperator)continue;
+  const pending=Number(remaining(r));
+  if(!Number.isFinite(pending)||Math.abs(pending)<0.000001)continue;
+  const id=k(r.ubicacionNormalizada,r.codigo);
+  if(active.has(id))continue;
+  const follow=typeof v70Doc==='function'?v70Doc(r.ubicacionNormalizada,r.codigo):null;
+  const ledger=historical.get(id)||[];
+  // Caso seguro: había propuesta o historial de pase, pero ahora no hay pase activo.
+  if(follow?.status!=='AJUSTE_PREPARADO' && !ledger.some(m=>['pending','manual','review'].includes(m.status)))continue;
+  found.push({ubicacion:r.ubicacionNormalizada,codigo:String(r.codigo),fisico:r.qtyOperador,
+   wms:r.qtySistema,pendiente:pending,seguimiento:follow?.status||'—',
+   historial:ledger.map(m=>m.status).join(', ')||'—'});
+ }
+ return found.sort((a,b)=>a.ubicacion.localeCompare(b.ubicacion)||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}));
+}
+function v103CopyAudit(){
+ const rows=v103AuditUnlinked();
+ if(!rows.length){toast('No hay excepciones de este tipo.');return;}
+ const tsv=[['Ubicación','Código','Físico','WMS','Diferencia','Seguimiento','Estado histórico'].join('\t'),
+  ...rows.map(x=>[x.ubicacion,x.codigo,x.fisico??'',x.wms??'',x.pendiente,x.seguimiento,x.historial].join('\t'))].join('\n');
+ copyText(tsv,rows.length+' conteos con ajuste no visible copiados');
+}
+function v103GoLocation(loc){
+ openLocations.add(loc);
+ if(!document.getElementById('results')?.classList.contains('active'))openTab('results');
+ renderLocations();
+ const card=[...document.querySelectorAll('#issuesLocations .locCard')].find(x=>
+  x.querySelector('.fullLoc')?.textContent?.trim()===loc);
+ if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
+ else toast('Consulta la ubicación en el mapeo. No se modificó ningún registro.');
+}
+function v103ShowAudit(){
+ const anchor=document.getElementById('alerts'),section=document.getElementById('results');
+ if(!anchor||!section)return;
+ let box=document.getElementById('v103AuditBox');
+ if(!hasCompared||!adminAccessV9){if(box)box.remove();return;}
+ const data=v103AuditUnlinked();v103LastAudit=data;
+ if(!data.length){if(box)box.remove();return;}
+ if(!box){box=document.createElement('div');box.id='v103AuditBox';anchor.insertAdjacentElement('afterend',box);}
+ const oldOpen=box.querySelector('details')?.open||false;
+ const total=data.reduce((n,x)=>n+Math.abs(x.pendiente),0);
+ const rows=data.slice(0,120).map(r=>`<tr><td><button class="secondary mini" onclick='v103GoLocation(${JSON.stringify(r.ubicacion)})'>${escapeHtml(r.ubicacion)}</button></td><td><b>${escapeHtml(r.codigo)}</b></td><td>${r.fisico==null?'—':fmtQty(r.fisico)}</td><td>${r.wms==null?'—':fmtQty(r.wms)}</td><td>${r.pendiente>0?'+':''}${fmtQty(r.pendiente)}</td><td>${escapeHtml(r.seguimiento)}</td><td>${escapeHtml(r.historial)}</td></tr>`).join('');
+ box.innerHTML=`<div class="v103Title">⚠ ${data.length} código(s) con conteo y seguimiento histórico, pero sin ajuste activo</div>
+  <p class="v103Meta">No se borró ningún conteo. Ahora quedan visibles en Novedades si tienen diferencia. Antes de crear otro pase, verifica si el anterior se ejecutó en WMS para evitar duplicados. Diferencia absoluta por revisar: <b>${fmtQty(total)} u</b> (no es inventario adicional).</p>
+  <details ${oldOpen?'open':''}><summary>Ver códigos y ubicaciones afectados</summary><button class="secondary mini" onclick="v103CopyAudit()">📋 Copiar auditoría completa</button>
+   <div class="v103List"><table><thead><tr><th>Ubicación</th><th>Código</th><th>Físico</th><th>WMS</th><th>Pendiente</th><th>Seguimiento</th><th>Historial</th></tr></thead><tbody>${rows}</tbody></table></div>
+   ${data.length>120?'<small>Se muestran 120 casos. Copia la auditoría para obtener todos.</small>':''}</details>`;
+}
+// Actualiza una alerta LIVIANA después de que se dibujan las tarjetas.
+// Los conteos y el estado Firebase siguen bajo control de sus funciones originales.
+const v103RenderBase=renderLocations;
+renderLocations=function(){
+ const out=v103RenderBase.apply(this,arguments);
+ if(document.getElementById('results')?.classList.contains('active'))v103ShowAudit();
+ return out;
+};
+window.perchadoDiagnosticoV103=()=>({version:'V103',conteosSinPaseActivo:v103AuditUnlinked(),
+ cantidades:results?.length||0,tiempos:typeof perchadoDiagnosticoV102==='function'?perchadoDiagnosticoV102():null});
+// El DOM ya existía al cargar esta versión: presentar las excepciones de inmediato.
+try{if(adminAccessV9&&hasCompared)v103ShowAudit();}catch(e){console.warn('V103: aviso de auditoría no disponible',e);}
+</script>
+
 </body>
 </html>
 
@@ -10381,15 +10483,17 @@ function v101HistoryPreparedKeys(){
  memo.wms=stock;memo.wmsLength=stock.length;memo.keys=keys;
  return keys;
 }
-// V77 ya calcula el índice de movimientos activos. Se conserva; únicamente
-// se evita volver a recorrer WMS + histórico para cada clic de visualización.
+// V103: V50 ya indexa movimientos activos. El historial solo da evidencia,
+// nunca debe convertir una novedad sin movimiento vivo en una novedad oculta.
 const v101OriginalIndexBase=v77PreviousIndex;
 v50BuildRenderIndexes=function(){
  const start=performance.now();
  try{
+   // V103: solo movimientos ACTIVOS pueden ocultar un código de Novedades.
+   // No marcar el historial WMS como ajuste vivo: el ledger puede haber quedado
+   // sin propuesta activa después de cerrar una tanda, perder un enlace o actualizar WMS.
+   // Conservar el ledger intacto para auditoría y bloqueo de duplicados.
    v101OriginalIndexBase();
-   if(!v71PreparedSet||!hasCompared)return;
-   for(const key of v101HistoryPreparedKeys())v71PreparedSet.add(key);
  }finally{v101Perf.indexCalls++;v101Perf.indexMs+=performance.now()-start;}
 };
 // Si el HTML calculado es idéntico y las tarjetas siguen montadas, evitar
