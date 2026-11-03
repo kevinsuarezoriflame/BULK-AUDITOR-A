@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V103 · Recuperación de Novedades y Auditoría</title>
+<title>PERCHADO V104 · Novedades rápidas y conteos protegidos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V103</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V104</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -1144,7 +1144,7 @@ function renderDrawer(){
   if(canAdjust)adjustChoiceChanged();
 }
 function goToLocation(loc){const k=locationKind(loc),tab=k==='cuadrada'?'squared':k==='conciliada'?'settled':'results';openLocations.add(loc);closeDrawer();openTab(tab);renderLocations();const el=$('location-'+auditScope.mappedLocations.indexOf(loc));if(el)el.scrollIntoView({block:'nearest'});}
-function renderAll(){rebuildProposals();renderKpis();renderAlerts();renderLocations();if(document.getElementById('map')?.classList.contains('active'))renderMap();if(document.getElementById('decisions')?.classList.contains('active'))renderReconciliation();if(document.getElementById('results')?.classList.contains('active'))renderTable();}
+function renderAll(){rebuildProposals();renderKpis();renderAlerts();renderLocations();if(document.getElementById('map')?.classList.contains('active'))renderMap();if(document.getElementById('decisions')?.classList.contains('active'))renderReconciliation();if(document.getElementById('decisions')?.classList.contains('active'))renderTable();}
 function renderTable(){
   const f=$('statusFilter').value,q=$('searchBox').value.toLowerCase().trim(),sort=$('sortFilter').value;
   let rows=results.filter(r=>(f==='ALL'||r.estado===f)&&JSON.stringify(r).toLowerCase().includes(q));
@@ -4201,6 +4201,13 @@ renderAdminV8=function(){
 // La papelera en Novedades y en Monitoreo usa el mecanismo de exclusión auditada V29.
 function v30CountEntries(loc,code){
   if(!adminAccessV9)return [];
+  // V104: durante el render, usar el último conteo ya indexado por ubicación.
+  // Fuera de un render se conserva exactamente el recorrido original.
+  if(window.__v104RenderContext){
+    const newest=window.__v104RenderContext.lastSessionByLocation.get(loc);
+    return newest?(newest.entries||[]).filter(e=>String(e.code)===String(code)&&!v29IsRemoved(e.id))
+      .map(e=>({entry:e,session:newest})):[];
+  }
   const sessions=(wfV8.sessions||[]).filter(s=>s.location===loc&&s.status!=='archived'&&s.status!=='rejected')
     .sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||'')));
   const newest=sessions[0];
@@ -5017,7 +5024,7 @@ openTab=function(id){
  // El contenido se genera al abrir la pestaña, no cada vez que otra recibe un cambio.
  if(id==='adminPortal'){renderAdminV8();renderLiveMonitoringV9();}
  if(id==='map'&&hasCompared)renderMap();
- if(id==='results'&&hasCompared)renderTable();
+ if(id==='decisions'&&hasCompared)renderTable();
  if(id==='decisions'&&hasCompared)renderReconciliation();
 };
 </script>
@@ -5056,6 +5063,8 @@ openTab=function(id){
 /* V36: reconteo recibido = visible y accionable; la cantidad sólo impacta la auditoría
    tras confirmación administrativa, nunca genera un movimiento WMS automático. */
 function v36LatestRecount(loc,code){
+  // V104: índice efímero del render; misma prioridad por fecha y desempate.
+  if(window.__v104RenderContext)return window.__v104RenderContext.latestRecount.get(String(loc)+'\u001f'+String(code))||null;
   const matches=wfV8.tasks.filter(t=>t.location===loc&&String(t.code)===String(code)&&
     (t.status==='answered'||t.status==='closed')&&t.response&&
     Number.isFinite(Number(t.response.qty))&&Number(t.response.qty)>=0);
@@ -5066,7 +5075,8 @@ function v36LatestRecount(loc,code){
 function v36RecountState(loc,code){
   const task=v36LatestRecount(loc,code);
   if(!task)return null;
-  const open=wfV8.tasks.some(t=>t.location===loc&&String(t.code)===String(code)&&t.status==='open');
+  const open=window.__v104RenderContext?window.__v104RenderContext.openRecounts.has(String(loc)+'\u001f'+String(code)):
+    wfV8.tasks.some(t=>t.location===loc&&String(t.code)===String(code)&&t.status==='open');
   const answered=task.status==='answered'&&!open;
   const qty=Number(task.response.qty),sys=v13ForCode(code,loc);
   const surplus=answered&&!sourceDirty&&hasCompared&&qty>sys&&
@@ -9901,7 +9911,7 @@ window.perchadoDiagnosticoV102=function(){
 };
 </script>
 
-<!-- PERCHADO V103 — Recuperar conteos ocultos por historial sin pase vivo. -->
+<!-- PERCHADO V104 — Recuperar conteos ocultos por historial sin pase vivo. -->
 <style id="perchado-v103-safety-style">
  #v103AuditBox{border:1px solid #e5a340;background:#fff9ed;color:#743e05;border-radius:10px;padding:11px 13px;margin:9px 0;font-size:12px}
  #v103AuditBox .v103Title{font-size:13px;font-weight:850;margin-bottom:5px}
@@ -9982,11 +9992,12 @@ function v103ShowAudit(){
  const oldOpen=box.querySelector('details')?.open||false;
  const total=data.reduce((n,x)=>n+Math.abs(x.pendiente),0);
  const rows=data.slice(0,120).map(r=>`<tr><td><button class="secondary mini" onclick='v103GoLocation(${JSON.stringify(r.ubicacion)})'>${escapeHtml(r.ubicacion)}</button></td><td><b>${escapeHtml(r.codigo)}</b></td><td>${r.fisico==null?'—':fmtQty(r.fisico)}</td><td>${r.wms==null?'—':fmtQty(r.wms)}</td><td>${r.pendiente>0?'+':''}${fmtQty(r.pendiente)}</td><td>${escapeHtml(r.seguimiento)}</td><td>${escapeHtml(r.historial)}</td></tr>`).join('');
- box.innerHTML=`<div class="v103Title">⚠ ${data.length} código(s) con conteo y seguimiento histórico, pero sin ajuste activo</div>
+ const v104Markup=`<div class="v103Title">⚠ ${data.length} código(s) con conteo y seguimiento histórico, pero sin ajuste activo</div>
   <p class="v103Meta">No se borró ningún conteo. Ahora quedan visibles en Novedades si tienen diferencia. Antes de crear otro pase, verifica si el anterior se ejecutó en WMS para evitar duplicados. Diferencia absoluta por revisar: <b>${fmtQty(total)} u</b> (no es inventario adicional).</p>
   <details ${oldOpen?'open':''}><summary>Ver códigos y ubicaciones afectados</summary><button class="secondary mini" onclick="v103CopyAudit()">📋 Copiar auditoría completa</button>
    <div class="v103List"><table><thead><tr><th>Ubicación</th><th>Código</th><th>Físico</th><th>WMS</th><th>Pendiente</th><th>Seguimiento</th><th>Historial</th></tr></thead><tbody>${rows}</tbody></table></div>
    ${data.length>120?'<small>Se muestran 120 casos. Copia la auditoría para obtener todos.</small>':''}</details>`;
+ if(box.__v104Markup!==v104Markup){box.innerHTML=v104Markup;box.__v104Markup=v104Markup;}
 }
 // Actualiza una alerta LIVIANA después de que se dibujan las tarjetas.
 // Los conteos y el estado Firebase siguen bajo control de sus funciones originales.
@@ -10321,11 +10332,15 @@ function v100IncrementalSection(id,markup){
  const started=performance.now();
  try{
   const previous=v100SourceBySection.get(id);
+  if(previous&&previous.raw===markup&&target.children.length===(previous.parts?.size||1)){
+    v100DOMStats.unchanged++;
+    return;
+  }
   // El estado vacío sigue el camino original (una sola sustitución).
   if(!markup.includes('class="locCard"')){
    if(!previous || previous.empty!==markup || target.querySelector('.locCard')){
     target.innerHTML=markup;
-    v100SourceBySection.set(id,{empty:markup,parts:new Map()});
+    v100SourceBySection.set(id,{empty:markup,parts:new Map(),raw:markup});
     v100DOMStats.mounts++;
    }else v100DOMStats.unchanged++;
    v50SectionsBase.set(id,'v100');
@@ -10367,7 +10382,7 @@ function v100IncrementalSection(id,markup){
   }
   const v102KeepNodes = new Set(finalNodes);
   for(const old of Array.from(target.children))if(!v102KeepNodes.has(old))old.remove();
-  v100SourceBySection.set(id,{parts:nextSource,empty:null});
+  v100SourceBySection.set(id,{parts:nextSource,empty:null,raw:markup});
   v50SectionsBase.set(id,'v100');
   v100DOMStats.updates++;
  }finally{
@@ -10537,4 +10552,55 @@ window.perchadoDiagnosticoV101=()=>({
  reconteos:{reutilizaciones:v101Perf.tasksHits,reconstrucciones:v101Perf.tasksMisses},
  anterior:typeof perchadoDiagnosticoNovedadesV100==='function'?perchadoDiagnosticoNovedadesV100():null
 });
+</script>
+
+
+<!-- PERCHADO V104: índices temporales de conteos/reconteos usados exclusivamente al dibujar Novedades. -->
+<script id="perchado-v104-performance-context">
+'use strict';
+window.__v104RenderContext=null;
+const v104Perf={renders:0,contextBuildMs:0,contextMaxMs:0,latestSessions:0,recounts:0};
+function v104BuildContext(){
+ const lastSessionByLocation=new Map(),latestRecount=new Map(),openRecounts=new Set();
+ // Equivale al .filter(...).sort(desc)[0] de v30CountEntries. Ante empate,
+ // .sort es estable: permanece la primera sesión en el orden original.
+ for(const s of wfV8.sessions||[]){
+  if(!s||!s.location||s.status==='archived'||s.status==='rejected')continue;
+  const old=lastSessionByLocation.get(s.location);
+  if(!old || String(s.submittedAt||'')>String(old.submittedAt||''))lastSessionByLocation.set(s.location,s);
+ }
+ // Equivale a v36LatestRecount, sin ordenar todas las tareas por cada código.
+ for(const t of wfV8.tasks||[]){
+  if(!t||!t.location||t.code==null)continue;
+  const key=String(t.location)+'\u001f'+String(t.code);
+  if(t.status==='open')openRecounts.add(key);
+  if((t.status!=='answered'&&t.status!=='closed')||!t.response||
+     !Number.isFinite(Number(t.response.qty))||Number(t.response.qty)<0)continue;
+  const old=latestRecount.get(key);
+  if(!old){latestRecount.set(key,t);continue;}
+  const stamp=String(t.response?.at||t.closedAt||t.createdAt||'');
+  const prior=String(old.response?.at||old.closedAt||old.createdAt||'');
+  const made=String(t.createdAt||''),prevMade=String(old.createdAt||'');
+  if(stamp>prior || (stamp===prior&&made>prevMade))latestRecount.set(key,t);
+ }
+ return {lastSessionByLocation,latestRecount,openRecounts};
+}
+const v104PreviousRenderLocations=renderLocations;
+renderLocations=function(){
+ if(window.__v104RenderContext)return v104PreviousRenderLocations.apply(this,arguments);
+ const start=performance.now();
+ window.__v104RenderContext=v104BuildContext();
+ const ms=performance.now()-start;
+ v104Perf.renders++;v104Perf.contextBuildMs+=ms;v104Perf.contextMaxMs=Math.max(v104Perf.contextMaxMs,ms);
+ v104Perf.latestSessions=window.__v104RenderContext.lastSessionByLocation.size;
+ v104Perf.recounts=window.__v104RenderContext.latestRecount.size;
+ try{return v104PreviousRenderLocations.apply(this,arguments);}
+ finally{window.__v104RenderContext=null;}
+};
+window.perchadoDiagnosticoV104=()=>({version:'V104',indicesNovedades:{veces:v104Perf.renders,
+  promedioMs:+(v104Perf.contextBuildMs/Math.max(1,v104Perf.renders)).toFixed(2),
+  maximoMs:+v104Perf.contextMaxMs.toFixed(2),ubicaciones:v104Perf.latestSessions,
+  reconteosIndexados:v104Perf.recounts,tarjetasSinCambios:v100DOMStats.unchanged},
+  diagnosticoAnterior:typeof perchadoDiagnosticoV102==='function'?perchadoDiagnosticoV102():null,
+  excepcionesSinPaseActivo:typeof v103AuditUnlinked==='function'?v103AuditUnlinked().length:null});
 </script>
