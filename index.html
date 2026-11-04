@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V105 · Catálogo Firebase sin bucles</title>
+<title>PERCHADO V106 · Ajustes protegidos y Novedades coherentes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -831,6 +831,11 @@ function restoreDecisions(){
   }catch(e){}
 }
 async function compareData(){
+ // V106: las comparaciones automáticas de conteos NO deben reponer una copia
+ // local firmada por un físico anterior y borrar los ajustes de la tanda viva.
+ // La lectura de respaldo original sigue operando en la primera comparación
+ // y en las comparaciones manuales explícitas.
+ const v106KeepActiveDecisions=!!window.perchadoSilentSyncV29&&hasCompared;
   const op=parseLines($('operatorData').value,'OPERADOR'),sys=parseLines($('systemData').value,'SISTEMA');
   parsedErrors=[...op.errors,...sys.errors];
   if(!op.length||!sys.length){perchadoAlert('Se necesitan datos válidos en ambos cuadros. Revisa columnas y encabezados.');return;}
@@ -861,7 +866,7 @@ async function compareData(){
   }
   results.sort((a,b)=>a.ubicacionNormalizada.localeCompare(b.ubicacionNormalizada,undefined,{numeric:true})||a.codigo.localeCompare(b.codigo,undefined,{numeric:true}));
   hasCompared=true;sourceDirty=false;masterLocations=parseMasterLocations($('masterData').value);currentSignature=decisionKey();if(!window.perchadoSilentSyncV29){openLocations=new Set();closeDrawer();}
-  restoreDecisions();savePaste();renderAll();if(!window.perchadoSilentSyncV29){openTab(auditScope.mappedLocations.some(l=>locationKind(l)==='novedad')?'results':'squared');toast('Auditoría lista · mapa y decisiones locales disponibles');}
+  if(!v106KeepActiveDecisions)restoreDecisions();savePaste();renderAll();if(!window.perchadoSilentSyncV29){openTab(auditScope.mappedLocations.some(l=>locationKind(l)==='novedad')?'results':'squared');toast('Auditoría lista · mapa y decisiones locales disponibles');}
 }
 function baseEligible(r){return r.locValid&&!r.duplicado&&(r.hasOperator||confirmations.has(r.ubicacionNormalizada)||verifiedMissing.has(reviewKey(r)));}
 function remaining(r){
@@ -10679,4 +10684,136 @@ window.perchadoDiagnosticoV104=()=>({version:'V104',indicesNovedades:{veces:v104
   reconteosIndexados:v104Perf.recounts,tarjetasSinCambios:v100DOMStats.unchanged},
   diagnosticoAnterior:typeof perchadoDiagnosticoV102==='function'?perchadoDiagnosticoV102():null,
   excepcionesSinPaseActivo:typeof v103AuditUnlinked==='function'?v103AuditUnlinked().length:null});
+</script>
+
+
+<!-- PERCHADO V106: no perder ajustes al llegar conteos nuevos / sincronizar Firebase. -->
+<script id="perchado-v106-tanda-sin-retrocesos">
+'use strict';
+/* Principio: Novedades reconoce ÚNICAMENTE pases válidos de la tanda vigente,
+   no todo el ledger histórico (que puede conservar movimientos de otras tandas).
+   Un cambio en evidencia física no puede reemplazar los ajustes que el
+   administrador todavía no ha ejecutado en WMS. */
+const v106Stats={pendingRebuilds:0,pendingHits:0,avoidedSameRemotePaints:0};
+let v106PendingCache=null;
+function v106ExportableIndex(){
+ const rev=typeof v69DataRevision==='number'?v69DataRevision:0;
+ const state=[rev,allSystemRows,allSystemRows?.length,approvedMatches,approvedMatches?.length,
+  resolutions,resolutions?.length,manualTransfersV9,manualTransfersV9?.length,
+  v33Ledger,v33Ledger?.length,hasCompared];
+ if(v106PendingCache && state.length===v106PendingCache.state.length &&
+    state.every((x,i)=>x===v106PendingCache.state[i])){
+   v106Stats.pendingHits++;return v106PendingCache.value;
+ }
+ const byLocCode=new Map(),active=new Set();
+ const k=(loc,code)=>v71PreparedKey(loc,code);
+ for(const m of approvedMatches||[]){active.add(k(m.from,m.code));active.add(k(m.to,m.code));}
+ for(const m of resolutions||[])active.add(k(m.location,m.code));
+ for(const m of manualTransfersV9||[]){
+  if(m.v38&&v38MovementReflected(m))continue;
+  active.add(k(m.from,m.code));active.add(k(m.to,m.code));
+ }
+ if(hasCompared){
+  // La misma validación que usa "Pendientes WMS" al generar los pases.
+  // Los dos movimientos ambiguos quedan FUERA de este índice y exigen revisión.
+  let rows=[];
+  try{rows=v13Rows()||[];}catch(error){
+   // Ante un estado parcial de sincronización, NO bloquear Novedades ni
+   // inferir que hay pases listos: mostrar diferencias para revisión.
+   console.warn('V106: pendientes WMS temporalmente no disponibles',error);
+  }
+  for(const r of rows){
+   if(!Array.isArray(r)||r.length<4)continue;
+   const code=String(r[0]),qty=Number(r[3]);
+   if(!Number.isFinite(qty)||qty<=0)continue;
+   for(const loc of [String(r[1]),String(r[2])]){
+    if(!loc)continue;
+    const key=k(loc,code);
+    byLocCode.set(key,(byLocCode.get(key)||0)+qty);
+   }
+  }
+ }
+ const value={byLocCode,active};v106Stats.pendingRebuilds++;
+ v106PendingCache={state,value};return value;
+}
+// Sólo rescatar pendientes del ledger que SI aparecen como pases válidos
+// en "Ajustes WMS". No volver a ocultar los conteos huérfanos de V103.
+const v106PrevBuild=v50BuildRenderIndexes;
+v50BuildRenderIndexes=function(){
+ v106PrevBuild.apply(this,arguments);
+ if(!hasCompared||!v71PreparedSet)return;
+ const {byLocCode,active}=v106ExportableIndex();
+ for(const [key,covered] of byLocCode){
+  if(active.has(key)||v71PreparedSet.has(key))continue;
+  const sep=key.indexOf('\u0000');
+  if(sep<0)continue;
+  const loc=key.slice(0,sep),code=key.slice(sep+1);
+  const row=(v50RowsForLocation(loc)||[]).find(x=>String(x.codigo)===code);
+  if(!row||!row.locValid||row.duplicado||!row.hasOperator)continue;
+  // Nunca esconder una diferencia que supere el pase existente. Si llegó un
+  // nuevo conteo posterior al registro del pase, vuelve a requerir revisión.
+  const pending=Math.abs(Number(remaining(row)));
+  if(!Number.isFinite(pending)||pending>covered+0.000001)continue;
+  const ledgers=(v33Ledger||[]).filter(m=>m&&m.status==='pending'&&String(m.code)===code&&
+   (String(m.from)===loc||String(m.to)===loc));
+  if(!ledgers.length)continue;
+  const newestMove=Math.max(...ledgers.map(m=>Date.parse(m.createdAt||'')||0));
+  const latest=v50LatestForLocation(loc).get(code)?.session;
+  const newestCount=Date.parse(latest?.submittedAt||'')||0;
+  if(newestMove>0&&newestCount>newestMove)continue;
+  v71PreparedSet.add(key);
+ }
+};
+// Si el código tiene un pase activo, enseñar SOLO una diferencia residual real.
+// No desactivar los cierres anteriores, los sobrantes aprobados ni reconteos.
+const v106PrevNeedsAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,r){
+ if(r&&v71IsPrepared(loc,r.codigo)&&r.locValid&&!r.duplicado&&r.hasOperator&&
+    !v40Open(loc,r.codigo)&&!v79SurplusApproved(loc,r.codigo)&&!v90Closed(loc,r.codigo)){
+  const balance=Number(remaining(r));
+  if(Number.isFinite(balance)){
+   const key=v71PreparedKey(loc,r.codigo),index=v106ExportableIndex();
+   // Si el pase sólo vive en el ledger, la diferencia bruta NO descuenta ese
+   // movimiento todavía. No ofrecerlo de nuevo mientras esté en la tanda.
+   // Si existen movimientos activos en memoria, remaining() ya los descuenta.
+   if(!index.active.has(key))return Math.abs(balance)>Number(index.byLocCode.get(key)||0)+0.000001;
+   return Math.abs(balance)>0.000001;
+  }
+ }
+ return v106PrevNeedsAttention.apply(this,arguments);
+};
+// La alerta de V103 debe identificar verdaderos pases huérfanos: un movimiento
+// exportable de la tanda actual NO es un ajuste perdido.
+const v106PrevAudit=v103AuditUnlinked;
+v103AuditUnlinked=function(){
+ const ready=v106ExportableIndex().byLocCode;
+ return v106PrevAudit.apply(this,arguments).filter(r=>
+  !ready.has(v71PreparedKey(r.ubicacion,r.codigo)));
+};
+// Evitar renders por ecos de Firebase que repiten EXACTAMENTE el estado que
+// ya está en memoria. Los estados nuevos o distintas revisiones se procesan
+// como antes. Un borrador local protegido NUNCA se salta ni se sustituye.
+const v106PreviousRemote=v37ApplyRemoteState;
+v37ApplyRemoteState=function(){
+ const doc=v37Audit.remote;
+ if(adminAccessV9&&!v37Audit.applying&&!v37Audit.wmsLoading&&v37Audit.stateReady&&
+  !v52Draft&&!v52Sending&&!v52Conflict&&doc?.payload&&
+  doc.payload.wmsHash===v37TextHash(document.getElementById('systemData')?.value)){
+  const incoming=JSON.stringify(doc.payload),current=JSON.stringify(v37PackState());
+  if(incoming===current){
+   v37Audit.lastStateText=incoming;
+   v106Stats.avoidedSameRemotePaints++;
+   return;
+  }
+ }
+ return v106PreviousRemote.apply(this,arguments);
+};
+window.perchadoDiagnosticoV106=()=>({version:'V106',
+ pasesExportables:v106ExportableIndex().byLocCode.size,
+ ajustesEnMemoria:(approvedMatches?.length||0)+(resolutions?.length||0)+(manualTransfersV9?.length||0),
+ ledger:v33Ledger?.length||0,estadisticas:{...v106Stats},
+ excepcionesSinPaseActivo:v103AuditUnlinked().length,
+ revisionFirebase:v37Audit.stateRevision,
+ pendientesLocal:!!v52Draft,
+ aclaracion:'Los pases exportables incluyen origen y destino; no son movimientos duplicados.'});
 </script>
