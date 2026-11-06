@@ -10094,6 +10094,89 @@ window.perchadoDiagnosticoV103=()=>({version:'V103',conteosSinPaseActivo:v103Aud
 try{if(adminAccessV9&&hasCompared)v103ShowAudit();}catch(e){console.warn('V103: aviso de auditoría no disponible',e);}
 </script>
 
+
+<!-- PERCHADO V109: cierre administrativo manual permanente; no modifica V108 ni datos previos. -->
+<style id="v109ManualStyle">
+#v109ManualPanel{margin:11px 0 15px;padding:13px;border:1px solid #a9dccc;border-radius:11px;background:#f4fbf8}
+#v109ManualPanel .v109Title{font-size:14px;font-weight:800;color:#146657;margin-bottom:7px}
+#v109ManualPanel .v109Row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#v109ManualLoc{width:min(360px,100%);min-width:190px;flex:1;padding:10px;border:1px solid #9bcbbf;border-radius:8px;font-size:15px}
+#v109ManualPanel p{font-size:12px;line-height:1.45;color:#426b62;margin:8px 0 0}
+.v109Badge{display:inline-block;background:#e5f1fb;color:#23547d;border-radius:6px;padding:3px 6px;font-size:11px;font-weight:800}
+</style>
+<script id="perchado-v109-manual-square-locks">
+'use strict';
+/* El cierre MANUAL es una decisión administrativa, no la comprobación de stock.
+   Se almacena en la colección de correcciones ya existente; sin listeners extra. */
+function v109EnsurePanel(){
+ const target=document.getElementById('squaredCount');
+ if(!target||document.getElementById('v109ManualPanel'))return;
+ const panel=document.createElement('div');panel.id='v109ManualPanel';
+ panel.innerHTML='<div class="v109Title">🔒 Cierre manual de ubicación</div><div class="v109Row"><input id="v109ManualLoc" aria-label="Ubicación para cierre manual" placeholder="Ej. 30-04 o 01-30-030-04" autocomplete="off"><button type="button" class="primary mini" id="v109CloseButton">🔒 Marcar como cuadrada</button></div><p>Decisión de Administración: cierra la ubicación definitivamente para esta auditoría, aunque tenga diferencias. No confirma existencias físicas ni ejecuta movimientos WMS. Las evidencias anteriores permanecen registradas.</p>';
+ target.insertAdjacentElement('beforebegin',panel);
+ document.getElementById('v109CloseButton').addEventListener('click',v109ManualClose);
+ document.getElementById('v109ManualLoc').addEventListener('keydown',e=>{if(e.key==='Enter')v109ManualClose();});
+}
+function v109Evidence(loc){
+ return (results||[]).filter(r=>r.ubicacionNormalizada===loc).map(r=>({
+  codigo:String(r.codigo||''),qtyOperador:r.qtyOperador==null?null:Number(r.qtyOperador),
+  qtySistema:r.qtySistema==null?null:Number(r.qtySistema),
+  diferencia:r.diferencia==null?null:Number(r.diferencia),
+  estado:String(r.estado||''),observacion:String(r.observacion||'')
+ }));
+}
+async function v109ManualClose(){
+ if(!adminAccessV9)return showAdminGateV9();
+ const inp=document.getElementById('v109ManualLoc'),button=document.getElementById('v109CloseButton');
+ const raw=(inp?.value||'').trim();
+ const loc=wfNormalLocation(raw);
+ if(!loc)return perchadoAlert('Ingresa una ubicación válida (ej. 01-30-030-04).');
+ if(v18Square(loc))return perchadoAlert('🔒 '+loc+' ya está cerrada. No se realizará ningún cambio.');
+ if(!hasCompared)return perchadoAlert('Primero carga y compara el WMS para dejar evidencia de la auditoría.');
+ const evidence=v109Evidence(loc);
+ const msg='¿Cerrar MANUALMENTE la ubicación '+loc+'?'+(evidence.length?' Se conservará evidencia de '+evidence.length+' código(s), sin considerarlos físicamente cuadrados.':' No existe conteo comparado para esta ubicación.')+' Este cierre no generará pases ni reabrirá la ubicación al cambiar el WMS.';
+ if(!await perchadoConfirm(msg))return;
+ if(v18Square(loc))return;
+ const now=new Date().toISOString();
+ const id='v18_square_'+encodeURIComponent(loc).replace(/%/g,'_');
+ const snap={id,kind:'v18_square_closed',manual:true,manualReason:'Cierre administrativo solicitado',
+  location:loc,rows:[],originalEvidence:evidence,closedAt:now,closedBy:adminIdentityV9||'Administración',
+  systemSignature:checksum(document.getElementById('systemData')?.value||''),
+  note:'Cierre manual: no acredita cuadre físico ni cambia cantidades WMS.'};
+ button.disabled=true;
+ try{
+  if(cloudEnabledV9){
+   if(!cloudV9?.ready||!cloudWritableV9())throw Error('Firebase no está listo para registrar el cierre. No se aplicó ningún cambio.');
+   await cloudV9.persist('corrections',snap);
+  }
+  wfV8.corrections[id]=snap;
+  v18Squares.set(loc,snap);
+  v18WriteLocks();
+  // Mantener el snapshot para futuras recargas en el navegador habitual.
+  wfStore('manual_square_close',loc);
+  v18ApplyFrozen();
+  if(inp)inp.value='';
+  renderAll();
+  perchadoAlert('🔒 '+loc+' cerrada MANUALMENTE'+(cloudEnabledV9?' y sincronizada en Firebase.': ' en este navegador (Firebase deshabilitado).'));
+ }catch(e){perchadoAlert('No se aplicó el cierre manual: '+(e?.message||e));}
+ finally{button.disabled=false;}
+}
+// Distinción visual clara: las cantidades en un cierre manual NO se inventan.
+const v109PriorOne=renderOneLocation;
+renderOneLocation=function(loc){
+ let html=v109PriorOne.apply(this,arguments);
+ const snap=v18Squares.get(String(loc));
+ if(!snap?.manual)return html;
+ const n=(snap.originalEvidence||[]).length;
+ html=html.replace(/CUADRADA · 🔒|CUADRADA/g,'CIERRE MANUAL 🔒');
+ html=html.replace(/<span class="small">\d+ códigos<\/span>/,'<span class="small">'+n+' códigos históricos · Cierre administrativo</span>');
+ return html;
+};
+// Agregar solo interfaz nueva, sin nuevos listeners de Firestore.
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',v109EnsurePanel,{once:true});else v109EnsurePanel();
+window.perchadoDiagnosticoV109=()=>({version:'V109',cierresManuales:[...v18Squares.values()].filter(x=>x.manual).map(x=>({ubicacion:x.location,fecha:x.closedAt,codigosHistoricos:x.originalEvidence?.length||0})),cierresTotales:v18Squares.size});
+</script>
+
 </body>
 </html>
 
