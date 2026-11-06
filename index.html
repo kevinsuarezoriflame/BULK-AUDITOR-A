@@ -10157,24 +10157,30 @@ async function v109ManualClose(){
   v18ApplyFrozen();
   if(inp)inp.value='';
   renderAll();
-  perchadoAlert('🔒 '+loc+' cerrada MANUALMENTE'+(cloudEnabledV9?' y sincronizada en Firebase.': ' en este navegador (Firebase deshabilitado).'));
+  // V110: el repintado ordinario puede diferirse mientras llegan datos de nube.
+  // Tras persistir el cierre, reconstruir las listas de inmediato con la protección activa.
+  const priorFlush=v108Flushing;
+  try{v108Flushing=true;renderLocations();}finally{v108Flushing=priorFlush;}
+  perchadoAlert('🔒 '+loc+' pasó de Novedades a Cuadradas'+(cloudEnabledV9?' y quedó sincronizada en Firebase.': ' en este navegador (Firebase deshabilitado).'));
  }catch(e){perchadoAlert('No se aplicó el cierre manual: '+(e?.message||e));}
  finally{button.disabled=false;}
 }
 // Distinción visual clara: las cantidades en un cierre manual NO se inventan.
 const v109PriorOne=renderOneLocation;
 renderOneLocation=function(loc){
- let html=v109PriorOne.apply(this,arguments);
  const snap=v18Squares.get(String(loc));
- if(!snap?.manual)return html;
- const n=(snap.originalEvidence||[]).length;
- html=html.replace(/CUADRADA · 🔒|CUADRADA/g,'CIERRE MANUAL 🔒');
- html=html.replace(/<span class="small">\d+ códigos<\/span>/,'<span class="small">'+n+' códigos históricos · Cierre administrativo</span>');
- return html;
+ if(!snap?.manual)return v109PriorOne.apply(this,arguments);
+ // Los cierres administrativos tienen evidencia histórica, pero no un conteo
+ // físico validado. Mostrarla sin convertir cantidades anteriores en 0.
+ const idx=auditScope.mappedLocations.indexOf(loc),open=openLocations.has(loc);
+ const evidence=Array.isArray(snap.originalEvidence)?snap.originalEvidence:[];
+ const rows=evidence.map(r=>`<tr><td><b>${escapeHtml(r.codigo)}</b></td><td>${r.qtyOperador==null?'—':fmtQty(r.qtyOperador)}</td><td>${r.qtySistema==null?'—':fmtQty(r.qtySistema)}</td><td>${r.diferencia==null?'—':fmtQty(r.diferencia)}</td><td><span class="badge square">Cierre administrativo 🔒</span></td></tr>`).join('');
+ const details=open?`<div class="locDetails"><div class="locTools"><span class="v109Badge">Cierre manual · ${escapeHtml(snap.closedAt||'')}</span><span class="small">Stock histórico mostrado solo como referencia; no certifica cuadre físico.</span></div>${evidence.length?`<div class="responsiveRows"><table class="locTable"><thead><tr><th>Código</th><th>Físico anterior</th><th>WMS anterior</th><th>Diferencia anterior</th><th>Estado actual</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="emptyState">Ubicación cerrada administrativamente, sin códigos en la comparación anterior.</div>'}</div>`:'';
+ return `<article class="locCard" data-kind="cuadrada" id="location-${idx}"><button class="locToggle" onclick="toggleLocation(${idx})" aria-expanded="${open}"><span class="locName"><span class="chevron">${open?'▾':'▸'}</span><b>📍 ${escapeHtml(shortLoc(loc))}</b><span class="muted fullLoc">${escapeHtml(loc)}</span></span><span class="locCounter"><span class="badge square">CUADRADA · 🔒 MANUAL</span><span class="small">${evidence.length} códigos históricos</span></span></button>${details}</article>`;
 };
 // Agregar solo interfaz nueva, sin nuevos listeners de Firestore.
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',v109EnsurePanel,{once:true});else v109EnsurePanel();
-window.perchadoDiagnosticoV109=()=>({version:'V109',cierresManuales:[...v18Squares.values()].filter(x=>x.manual).map(x=>({ubicacion:x.location,fecha:x.closedAt,codigosHistoricos:x.originalEvidence?.length||0})),cierresTotales:v18Squares.size});
+window.perchadoDiagnosticoV109=()=>({version:'V110',cierresManuales:[...v18Squares.values()].filter(x=>x.manual).map(x=>({ubicacion:x.location,fecha:x.closedAt,codigosHistoricos:x.originalEvidence?.length||0})),cierresTotales:v18Squares.size});
 </script>
 
 </body>
