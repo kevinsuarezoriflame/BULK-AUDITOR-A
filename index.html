@@ -10951,3 +10951,151 @@ window.perchadoDiagnosticoV107=function(){
    regla:'Un cierre v18_square_closed se conserva aunque el WMS actual cambie.'};
 };
 </script>
+
+<!-- PERCHADO V108 — Novedades estables; no reabrir gestiones por WMS ni ecos Firestore. -->
+<style id="perchado-v108-ui">
+#v108FollowupNote{border:1px solid #cbded7;border-radius:9px;background:#f4faf7;color:#34645a;padding:9px 12px;margin:8px 0 10px;font-size:12px;line-height:1.45}
+#v108FollowupNote strong{color:#155849}
+</style>
+<script id="perchado-v108-novedades-sin-reapariciones">
+'use strict';
+/* Esta versión NO escribe ni borra documentos, movimientos o conteos.
+   1. Una evidencia física NUEVA (nueva captura/reconteo) sí puede reabrir
+      la revisión de un código; un WMS nuevo por sí solo NO.
+   2. Una orden ENVIADA al WMS NO equivale a una orden EJECUTADA: se muestra
+      la advertencia de pendientes, sin proponer el mismo movimiento otra vez.
+   3. Los eventos de Firebase se agrupan al pintar la pantalla, nunca al
+      guardar los datos. Si hay una comparación activa, no mostrar medias tablas.
+   4. Un cierre de ubicación V107 mantiene prioridad absoluta. */
+const v108Stats={snapshotDuplicates:0,cloudPaintsDeferred:0,comparesDeferred:0,stablePaints:0};
+let v108CloudApplying=0,v108PaintTimer=null,v108NeedPaint=false,v108Flushing=false;
+const v108Groups=new Map();
+let v108Context='';
+// No saltar estados distintos; solo eventos con contenido EXACTAMENTE idéntico.
+// Se incluye el rol para no reutilizar la caché entre Operarios y Administración.
+const v108PriorCloudData=setCloudDataV9;
+setCloudDataV9=function(group,docs){
+ const role=[adminAccessV9,profileV8,!!cloudV9?.admin,!!cloudV9?.connected].join('|');
+ if(role!==v108Context){v108Context=role;v108Groups.clear();}
+ if(['sessions','tasks','corrections','operators','liveCounts'].includes(group)&&Array.isArray(docs)){
+  // Firestore puede dar objetos nuevos con los mismos valores tras reconectar.
+  // Respetar el orden original de las sesiones y tareas que usa Perchado.
+  const fingerprint=checksum(JSON.stringify(docs));
+  if(v108Groups.get(group)===fingerprint){v108Stats.snapshotDuplicates++;return;}
+  v108Groups.set(group,fingerprint);
+ }
+ v108CloudApplying++;
+ try{return v108PriorCloudData.apply(this,arguments);}
+ finally{v108CloudApplying--;if(v108NeedPaint)v108QueuePaint();}
+};
+function v108Date(x){const n=Date.parse(String(x||''));return Number.isFinite(n)?n:0;}
+function v108LatestPhysicalAt(loc,code){
+ const locKey=String(loc),codeKey=String(code);
+ let latest=0;
+ for(const s of wfV8.sessions||[]){
+  if(String(s.location)!==locKey||['archived','rejected'].includes(s.status))continue;
+  if(!(s.entries||[]).some(e=>String(e.code)===codeKey))continue;
+  latest=Math.max(latest,v108Date(s.submittedAt||s.createdAt));
+ }
+ for(const t of wfV8.tasks||[]){
+  if(String(t.location)!==locKey||!['answered','closed'].includes(t.status)||!t.response)continue;
+  if(String(t.code)!==codeKey&&String(t.response.code)!==codeKey)continue;
+  latest=Math.max(latest,v108Date(t.response.at||t.answeredAt||t.closedAt));
+ }
+ for(const c of Object.values(wfV8.corrections||{})){
+  if(c?.kind!=='physical_verified'||!c.approved||String(c.location)!==locKey||String(c.code)!==codeKey)continue;
+  latest=Math.max(latest,v108Date(c.at||c.updatedAt));
+ }
+ return latest;
+}
+const v108FinalStatuses=new Set(['ENVIADO_WMS','EJECUTADO_WMS','VERIFICADO']);
+function v108Managed(loc,code){
+ if(v18Square(loc))return {status:'UBICACION_CUADRADA',closedAt:0};
+ const doc=typeof v70Doc==='function'?v70Doc(loc,code):null;
+ if(!doc||doc.archived||!v108FinalStatuses.has(doc.status))return null;
+ const stamp=v108Date(doc.updatedAt);
+ // Un seguimiento sin fecha no demuestra que sea posterior al conteo físico.
+ if(!stamp)return null;
+ const physical=v108LatestPhysicalAt(loc,code);
+ // Cualquier conteo o reconteo nuevo tras la gestión es evidencia para revisar.
+ if(physical>stamp+1000)return null;
+ return {status:doc.status,closedAt:stamp};
+}
+const v108PriorAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,row){
+ if(v18Square(loc))return false;
+ if(row&&v108Managed(loc,row.codigo))return false;
+ return v108PriorAttention.apply(this,arguments);
+};
+const v108PriorExtra=v71ExtraNeedsAttention;
+v71ExtraNeedsAttention=function(loc,code){
+ if(v18Square(loc)||v108Managed(loc,code))return false;
+ return v108PriorExtra.apply(this,arguments);
+};
+// La advertencia V103 mantiene casos sin pase o seguimiento confirmados.
+// Sólo se retira de ella una gestión WMS definitivamente ejecutada/verificada.
+const v108PriorAudit=v103AuditUnlinked;
+v103AuditUnlinked=function(){
+ const rows=v108PriorAudit.apply(this,arguments);
+ return rows.filter(r=>!['EJECUTADO_WMS','VERIFICADO'].includes(v108Managed(r.ubicacion,r.codigo)?.status));
+};
+// Alertas diferenciadas: enviado NO significa ejecutado; permanecen visibles
+// para control, sin pedir un segundo ajuste sobre la misma evidencia física.
+function v108PaintManagedNotice(){
+ const anchor=document.getElementById('alerts');if(!anchor||!hasCompared||!adminAccessV9)return;
+ let sent=0,executed=0;
+ for(const r of results||[]){
+  if(!r||v18Square(r.ubicacionNormalizada)||!r.codigo)continue;
+  const status=v108Managed(r.ubicacionNormalizada,r.codigo)?.status;
+  if(!status)continue;
+  const delta=Number(remaining(r));
+  if(!Number.isFinite(delta)||Math.abs(delta)<0.000001)continue;
+  if(status==='ENVIADO_WMS')sent++;else executed++;
+ }
+ let el=document.getElementById('v108FollowupNote');
+ if(!sent&&!executed){if(el)el.remove();return;}
+ if(!el){el=document.createElement('div');el.id='v108FollowupNote';anchor.insertAdjacentElement('afterend',el);}
+ const copy=`<strong>Seguimientos anteriores protegidos:</strong> ${sent} código(s) enviado(s) pendientes de validar en WMS; ${executed} ejecutado(s)/verificado(s) cuyo WMS actual difiere del conteo anterior. No se generan nuevos pases automáticamente. Si existe un conteo posterior, se mostrará como novedad nueva.`;
+ if(el.innerHTML!==copy)el.innerHTML=copy;
+}
+const v108PreviousRenderLocations=renderLocations;
+function v108AwaitingEvidence(){
+ return !!(cloudEnabledV9&&adminAccessV9&&cloudV9?.ready&&
+   typeof v66LiveDataReady==='function'&&!v66LiveDataReady());
+}
+renderLocations=function(){
+ if(!v108Flushing&&(v108CloudApplying>0||v66CompareBusy||v108AwaitingEvidence())){
+  v108NeedPaint=true;
+  if(v108CloudApplying>0)v108Stats.cloudPaintsDeferred++;
+  else v108Stats.comparesDeferred++;
+  if(!v108AwaitingEvidence())v108QueuePaint();return;
+ }
+ const out=v108PreviousRenderLocations.apply(this,arguments);
+ v108Stats.stablePaints++;
+ if(document.getElementById('results')?.classList.contains('active'))v108PaintManagedNotice();
+ return out;
+};
+function v108QueuePaint(){
+ if(v108PaintTimer)clearTimeout(v108PaintTimer);
+ if(v108AwaitingEvidence())return; // conservar vista previa hasta confirmar todos los grupos
+ v108PaintTimer=setTimeout(()=>{
+  v108PaintTimer=null;
+  if(v108AwaitingEvidence())return;
+  if(v108CloudApplying||v66CompareBusy){v108QueuePaint();return;}
+  if(!v108NeedPaint)return;
+  v108NeedPaint=false;v108Flushing=true;
+  try{renderLocations();}finally{v108Flushing=false;}
+ },180);
+}
+// Garantizar el repintado final aunque el comparador no emitiera otro evento.
+const v108PriorRecompare=v66RecompareWms;
+v66RecompareWms=async function(){
+ try{return await v108PriorRecompare.apply(this,arguments);}
+ finally{if(v108NeedPaint)v108QueuePaint();}
+};
+window.perchadoDiagnosticoV108=()=>({version:'V108',...v108Stats,
+ indiciosDeTrabajoGestionado:(results||[]).filter(r=>v108Managed(r.ubicacionNormalizada,r.codigo)&&
+ !v18Square(r.ubicacionNormalizada)&&Math.abs(Number(remaining(r)))>0.000001).length,
+ avisosPendientesSinBorrar:typeof v103AuditUnlinked==='function'?v103AuditUnlinked().length:0,
+ cloudApplying:v108CloudApplying,pendingPaint:v108NeedPaint});
+</script>
