@@ -10817,3 +10817,137 @@ window.perchadoDiagnosticoV106=()=>({version:'V106',
  pendientesLocal:!!v52Draft,
  aclaracion:'Los pases exportables incluyen origen y destino; no son movimientos duplicados.'});
 </script>
+
+
+<!-- PERCHADO V107: blindaje final del cierre histórico de ubicaciones.
+     Mantiene íntegro V106 y no cambia datos, tandas, movimientos ni reglas Firebase. -->
+<style id="perchado-v107-closed-style">
+#squaredLocations .locCard[data-kind="cuadrada"] .locToggle .badge.square{white-space:nowrap}
+#squaredLocations .v107Sealed{font-size:11px;font-weight:800;color:#168266;margin-left:6px;white-space:nowrap}
+@media(max-width:620px){#squaredLocations .v107Sealed{font-size:10px;margin-left:3px}}
+</style>
+<script id="perchado-v107-irreversible-square-closures">
+'use strict';
+/* REGLA INVIOLABLE:
+   Un v18_square_closed auditable es una fotografía HISTÓRICA, nunca una
+   lectura del inventario actual. Nuevos WMS, abastecimientos, transferencias
+   a PL/Bulk o movimientos pendientes NO pueden degradar su estado.
+   Solo el reinicio TOTAL y explícito de auditoría conserva la facultad de
+   eliminar históricamente cierres (funcionalidad existente, sin modificar).
+   Sin nuevas consultas ni escrituras en Firebase. */
+const v107Counters={blockedActions:0,blockedRecounts:0,blockedCaptures:0};
+const v107OriginalSquare=v18Square;
+// Normalización defensiva: una ubicación abreviada y su clave WMS completa
+// han de respetar el mismo cierre. Se consulta solo el mapa ya cargado.
+v18Square=function(loc){
+ const key=String(loc??'').trim();
+ if(!key)return false;
+ if(v107OriginalSquare(key))return true;
+ // En la auditoría normal todas las ubicaciones ya son canónicas: no
+ // ejecutar normalizadores por cada fila renderizada ni por cada búsqueda.
+ if(/^\d{2}-\d{2}-\d{3}-\d{2}$/.test(key))return false;
+ let normalized='';
+ try{normalized=wfNormalLocation(key)||'';}catch(e){}
+ return !!(normalized&&normalized!==key&&v107OriginalSquare(normalized));
+};
+function v107Blocked(loc,kind){
+ if(!v18Square(loc))return false;
+ if(kind==='recount')v107Counters.blockedRecounts++;
+ else if(kind==='capture')v107Counters.blockedCaptures++;
+ else v107Counters.blockedActions++;
+ perchadoAlert('🔒 '+String(loc)+' ya está cuadrada y cerrada. Su cierre histórico permanece intacto; no requiere nuevo conteo ni reconteo.');
+ return true;
+}
+// La clasificación de V38/V69 puede pasar de "cuadrada" a "ajustada" al
+// encontrar traslados activos. El cierre definitivo SIEMPRE gana.
+const v107PriorLocationKind=locationKind;
+locationKind=function(loc){
+ if(v18Square(loc))return 'cuadrada';
+ return v107PriorLocationKind.apply(this,arguments);
+};
+const v107PriorMapKind=mapKind;
+mapKind=function(loc){
+ if(v18Square(loc))return 'cuadrada';
+ return v107PriorMapKind.apply(this,arguments);
+};
+// Nunca repoblar Novedades por cambios en WMS, registros extra de sesiones,
+// reconteos antiguos, pases o historiales. No oculta otros códigos abiertos.
+const v107PriorAttention=v71NeedsAttention;
+v71NeedsAttention=function(loc,row){
+ if(v18Square(loc))return false;
+ return v107PriorAttention.apply(this,arguments);
+};
+const v107PriorExtraAttention=v71ExtraNeedsAttention;
+v71ExtraNeedsAttention=function(loc,code){
+ if(v18Square(loc))return false;
+ return v107PriorExtraAttention.apply(this,arguments);
+};
+const v107PriorUnlinked=v103AuditUnlinked;
+v103AuditUnlinked=function(){
+ const rows=v107PriorUnlinked.apply(this,arguments);
+ return rows.filter(r=>!v18Square(r.ubicacion));
+};
+// El detalle histórico sigue disponible en Cuadradas, pero jamás sugiere
+// investigar, aprobar sobrantes, recontar ni generar nuevas acciones.
+const v107PriorRowAction=v12RowAction;
+v12RowAction=function(idx,loc,code,delta,latest){
+ if(v18Square(loc))return '<span class="v107Sealed">🔒 Cierre protegido</span>';
+ return v107PriorRowAction.apply(this,arguments);
+};
+const v107PriorInline=v12Inline;
+v12Inline=function(loc,code){
+ if(v18Square(loc))return '';
+ return v107PriorInline.apply(this,arguments);
+};
+const v107PriorChoose=v12Choose;
+v12Choose=function(kind,loc,code){
+ if(v107Blocked(loc,kind==='recount'?'recount':'action'))return;
+ return v107PriorChoose.apply(this,arguments);
+};
+// Protección sobre ambos accesos a reconteos: individual y por ubicación.
+// No se elimina la evidencia de reconteos que ya existían en Firebase.
+const v107PriorRecount=v13RequestRecount;
+v13RequestRecount=function(loc,code,reason){
+ if(v107Blocked(loc,'recount'))return false;
+ return v107PriorRecount.apply(this,arguments);
+};
+const v107PriorBulkRecount=v34SendLocationIssues;
+v34SendLocationIssues=async function(loc){
+ if(v107Blocked(loc,'recount'))return false;
+ return v107PriorBulkRecount.apply(this,arguments);
+};
+// Bloqueo de última línea al registrar y enviar conteos desde móvil, incluso
+// si el operario tenía abierta la pantalla cuando llegó la sincronización.
+const v107PriorAddDraft=addDraftV8;
+addDraftV8=function(){
+ const raw=document.getElementById('opLocation')?.value||'';
+ let loc='';
+ try{loc=v25ManualCandidate(raw)||wfNormalLocation(raw)||raw;}catch(e){loc=raw;}
+ if(v107Blocked(loc,'capture'))return;
+ return v107PriorAddDraft.apply(this,arguments);
+};
+const v107PriorSubmitDraft=submitDraftV8;
+submitDraftV8=async function(){
+ if(v107Blocked(draftContextV8.location,'capture'))return;
+ return v107PriorSubmitDraft.apply(this,arguments);
+};
+// Reforzar que un cierre cuadrado ya reconocido se conserva al repintar:
+// los estados y las cifras históricas se toman de la foto original V18.
+// El WMS actualizado mantiene su contenido para todas las ubicaciones abiertas.
+const v107PriorRenderOne=renderOneLocation;
+renderOneLocation=function(loc){
+ const markup=v107PriorRenderOne.apply(this,arguments);
+ if(!v18Square(loc))return markup;
+ return markup.replace(/(<span class="badge square">)(CUADRADA)(<\/span>)/,
+   '$1CUADRADA · 🔒$3');
+};
+window.perchadoDiagnosticoV107=function(){
+ const closed=[...v18Squares.keys()];
+ const pending=(wfV8.tasks||[]).filter(t=>v18Square(t.location)&&['open','answered'].includes(t.status)).length;
+ return {version:'V107',ubicacionesCerradas:closed.length,
+   cierres:closed,pendientesHistoricosSinReabrir:pending,
+   bloqueosEnEstaSesion:{...v107Counters},
+   movimientosV106:typeof perchadoDiagnosticoV106==='function'?perchadoDiagnosticoV106().pasesExportables:null,
+   regla:'Un cierre v18_square_closed se conserva aunque el WMS actual cambie.'};
+};
+</script>
