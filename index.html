@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V106 · Ajustes protegidos y Novedades coherentes</title>
+<title>PERCHADO V110 · Conteo individual independiente</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -483,9 +483,36 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 #surplusLedger .v78Notice{color:#975909;background:#fff8eb;border:1px solid #f1d99f;padding:10px 12px;border-radius:9px;font-size:12px}
 #surplusLedger .v78Legacy{color:#94611a;background:#fff5df;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
 </style>
+
+<style id="perchado-v110-individual-style">
+.ciSection{min-width:0}.ciSub{margin:5px 0 0;color:#54766f;font-size:13px}
+.ciSection .ciPanel{background:#fff;border:1px solid #cce7df;border-radius:12px;padding:15px;margin:14px 0}
+.ciSection .ciInfo{padding:13px;background:#effbf7;border:1px solid #c3e7dc;border-radius:11px;font-size:13px;line-height:1.55;margin:13px 0}
+.ciSection label{font-weight:800;font-size:13px;display:block;margin-bottom:8px}
+.ciSection input,.ciSection textarea{border:1px solid #a4cbc1;border-radius:9px;padding:12px;width:100%;font-size:16px;background:#fff;color:#143b35}
+.ciSection textarea{font:13px/1.5 ui-monospace,Consolas,monospace;min-height:166px;resize:vertical}
+.ciSection h3{font-size:15px;margin:0 0 14px}.ciSection .ciActions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.ciSection .ciActions button{min-height:42px}.ciSection .ciHint{font-size:12px;color:#506f69;line-height:1.5;margin-top:10px}
+.ciSection .ciHint.ciError{color:#a32727}.ciSection .ciHint.ciSuccess{color:#07614c}
+.ciMetrics{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.ciMetric{flex:1;min-width:105px;background:#f2fbf8;border:1px solid #d5e9e3;border-radius:9px;padding:10px}
+.ciMetric strong{display:block;font-size:21px;color:#087e68}.ciMetric span{display:block;font-size:11px;color:#4c6d64;margin-top:3px}
+.ciScroll{width:100%;overflow-x:auto}.ciTable{border-collapse:collapse;width:100%;font-size:12px;min-width:670px}
+.ciTable th,.ciTable td{text-align:left;border-bottom:1px solid #e2eee9;padding:10px 8px;vertical-align:top}
+.ciTable th{color:#335f55;font-size:12px}.ciTable td button{font-size:12px;white-space:nowrap}
+.ciTag{display:inline-block;background:#eef7f4;color:#1a6253;border-radius:7px;font-size:11px;padding:5px 7px;font-weight:700}
+.ciTag.ciTaken{background:#fff1d8;color:#8b5714}.ciTag.ciDone{background:#dff7e7;color:#087141}
+.ciLocationList{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:10px}
+.ciLocation{border:1px solid #d4e9e2;background:#fff;padding:13px;border-radius:11px;display:flex;flex-direction:column;gap:8px}
+.ciLocation strong{font-size:17px}.ciLocation small{font-size:12px;color:#536f67}.ciLocation button{margin-top:auto;min-height:45px}
+.ciCodeRow{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:10px;padding:12px 0;border-bottom:1px solid #e0eee9;align-items:center}
+.ciCodeRow strong{font-size:17px}.ciCodeRow label{margin:0}.ciCodeRow input{font-size:19px;text-align:right;font-variant-numeric:tabular-nums}
+.ciDetailHead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.ciDetailHead h3{margin:0}.ciErrorNote{padding:10px 12px;background:#fff4e6;border:1px solid #eed5a5;border-radius:9px;color:#86510a;font-size:12px}
+@media(max-width:540px){.ciSection .ciPanel{padding:11px}.ciSection .ciActions button{width:100%}.ciLocationList{grid-template-columns:1fr}.ciCodeRow{grid-template-columns:minmax(0,1fr) 120px}}
+</style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V105</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V109</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -505,6 +532,8 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <button class="tab" data-tab="decisions" onclick="openTab('decisions')">📦 Movimientos y ajustes</button>
 <button class="tab" data-tab="operatorPortal" hidden="" onclick="openTab('operatorPortal')">👷 Captura operarios</button>
 <button class="tab" data-tab="adminPortal" onclick="openTab('adminPortal')">🛡 Gestión de conteos</button>
+<button class="tab" id="ciTabAdmin" data-tab="individualAdmin" onclick="ciOpen('admin')" hidden>📋 Conteo individual · Admin</button>
+<button class="tab" id="ciTabOperator" data-tab="individualOperator" onclick="ciOpen('operator')">🔢 Conteo individual</button>
 </div></div>
 <section class="section active" id="paste">
 <h2 class="title">Actualizar stock de bodega</h2>
@@ -588,6 +617,25 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <div id="opMySessions" hidden></div>
 </div>
 </div>
+</section>
+
+<!-- V110: MÓDULO INDEPENDIENTE. No escribe en la auditoría de Perchado. -->
+<section class="section ciSection" id="individualAdmin">
+ <div class="mainSectionHead"><div><h2>📋 Conteo individual · Administración</h2><p class="ciSub">Listado independiente de auditoría, WMS, Novedades y Reconteos.</p></div></div>
+ <div class="ciInfo">Pega la tabla de Excel con columnas <b>Bodega | Variante | Zona | Ubicación | Caja | Physical Quantity</b>. Los códigos de la misma ubicación se agrupan. La cantidad de referencia solo se muestra en esta pantalla administrativa.</div>
+ <div class="ciPanel"><h3>1. Cargar listado de códigos y ubicaciones</h3>
+  <textarea id="ciPaste" rows="8" spellcheck="false" placeholder="Bodega&#9;Variante&#9;Zona&#9;Ubicación&#9;Caja&#9;Physical Quantity&#10;14&#9;832156&#9;Bulk&#9;01-30-014-05&#9;&#9;5" oninput="ciPreviewPaste()"></textarea>
+  <div id="ciPreviewMsg" class="ciHint">Pega una tabla para ver una vista previa.</div>
+  <div class="ciActions"><button class="primary" id="ciPublish" type="button" onclick="ciPublish()">📤 Publicar nuevo listado para operarios</button><button class="secondary" type="button" onclick="ciDownload('csv')">⬇ Resultados CSV</button><button class="secondary" type="button" onclick="ciDownload('json')">💾 Respaldo JSON del módulo</button></div>
+  <div class="ciHint">Publicar crea una tanda nueva. Las anteriores permanecen en Firebase y no se borran, pero dejan de mostrarse a los operarios. No reemplaza la data WMS.</div>
+ </div>
+ <div class="ciPanel"><h3>2. Seguimiento del conteo individual</h3><div id="ciAdminStatus" class="ciHint">Conectando…</div><div id="ciAdminSummary" class="ciMetrics"></div><div class="ciScroll"><table class="ciTable"><thead><tr><th>Ubicación</th><th>Códigos</th><th>Estado</th><th>Operario</th><th>Resultado</th><th>Acción</th></tr></thead><tbody id="ciAdminRows"></tbody></table></div></div>
+</section>
+<section class="section ciSection" id="individualOperator">
+ <div class="mainSectionHead"><div><h2>🔢 Conteo individual</h2><p class="ciSub">Solo las ubicaciones asignadas desde Administración.</p></div></div>
+ <div class="ciPanel"><label for="ciOperatorName">Nombre del operario</label><input id="ciOperatorName" type="text" maxlength="80" placeholder="Escribe tu nombre y apellido" autocomplete="name" oninput="ciSetName(this.value)"><div id="ciOperatorStatus" class="ciHint">Conectando…</div><div id="ciOperatorSummary" class="ciMetrics"></div></div>
+ <div class="ciPanel"><h3>Ubicaciones disponibles</h3><div id="ciOperatorRows" class="ciLocationList"></div></div>
+ <div class="ciPanel" id="ciOperatorDetailPanel" hidden><div id="ciOperatorDetail"></div></div>
 </section>
 <section class="section" id="adminPortal">
 <div class="mainSectionHead"><div><h2>🛡 Administración · Auditoría operativa</h2></div><button class="secondary mini" onclick="exportWorkflowV8()">⬇️ Descargar historial Excel</button></div>
@@ -10095,94 +10143,187 @@ try{if(adminAccessV9&&hasCompared)v103ShowAudit();}catch(e){console.warn('V103: 
 </script>
 
 
-<!-- PERCHADO V109: cierre administrativo manual permanente; no modifica V108 ni datos previos. -->
-<style id="v109ManualStyle">
-#v109ManualPanel{margin:11px 0 15px;padding:13px;border:1px solid #a9dccc;border-radius:11px;background:#f4fbf8}
-#v109ManualPanel .v109Title{font-size:14px;font-weight:800;color:#146657;margin-bottom:7px}
-#v109ManualPanel .v109Row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#v109ManualLoc{width:min(360px,100%);min-width:190px;flex:1;padding:10px;border:1px solid #9bcbbf;border-radius:8px;font-size:15px}
-#v109ManualPanel p{font-size:12px;line-height:1.45;color:#426b62;margin:8px 0 0}
-.v109Badge{display:inline-block;background:#e5f1fb;color:#23547d;border-radius:6px;padding:3px 6px;font-size:11px;font-weight:800}
-</style>
-<script id="perchado-v109-manual-square-locks">
+<script id="perchado-v110-individual-ui">
 'use strict';
-/* El cierre MANUAL es una decisión administrativa, no la comprobación de stock.
-   Se almacena en la colección de correcciones ya existente; sin listeners extra. */
-function v109EnsurePanel(){
- const target=document.getElementById('squaredCount');
- if(!target||document.getElementById('v109ManualPanel'))return;
- const panel=document.createElement('div');panel.id='v109ManualPanel';
- panel.innerHTML='<div class="v109Title">🔒 Cierre manual de ubicación</div><div class="v109Row"><input id="v109ManualLoc" aria-label="Ubicación para cierre manual" placeholder="Ej. 30-04 o 01-30-030-04" autocomplete="off"><button type="button" class="primary mini" id="v109CloseButton">🔒 Marcar como cuadrada</button></div><p>Decisión de Administración: cierra la ubicación definitivamente para esta auditoría, aunque tenga diferencias. No confirma existencias físicas ni ejecuta movimientos WMS. Las evidencias anteriores permanecen registradas.</p>';
- target.insertAdjacentElement('beforebegin',panel);
- document.getElementById('v109CloseButton').addEventListener('click',v109ManualClose);
- document.getElementById('v109ManualLoc').addEventListener('keydown',e=>{if(e.key==='Enter')v109ManualClose();});
+/* Independent operational module. Absolutely no calls to WMS, adjustments,
+   historical closing, reconteos, or the previous audit tables. */
+const ci={meta:null,records:[],ready:false,error:'',active:'',operator:'',busy:false,api:null,shownKey:'',seenRun:'',lastPreview:null};
+const ciEl=id=>document.getElementById(id);
+const ciEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ciState=x=>x==='DONE'?'Finalizada':x==='TAKEN'?'En conteo':'Disponible';
+const ciStatus=x=>'<span class="ciTag '+(x==='DONE'?'ciDone':x==='TAKEN'?'ciTaken':'')+'">'+ciState(x)+'</span>';
+function ciNormLocation(raw){const v=String(raw??'').trim().toUpperCase();return /^\d{2}-\d{2}-\d{3}-\d{2}$/.test(v)?v:'';}
+function ciQty(value){const x=String(value??'').trim().replace(',','.');if(!/^\d+(?:\.\d+)?$/.test(x))return null;const n=Number(x);return Number.isFinite(n)&&n>=0&&n<=100000000?n:null;}
+function ciParse(text){
+ const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+ if(lines.length>3501)throw Error('Límite de 3.500 filas por listado. Divídelo en tandas.');
+ if(!lines.length)throw Error('Pega primero la tabla de códigos.');
+ const split=row=>row.includes('\t')?row.split('\t'):row.includes(';')?row.split(';'):row.split(/ {2,}/);
+ const hdr=split(lines[0]).map(x=>x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
+ const find=(...names)=>hdr.findIndex(x=>names.includes(x));
+ const index={wh:find('bodega'),code:find('variante','codigo','code'),zone:find('zona'),loc:find('ubicacion','ubicación'),box:find('caja'),qty:find('physical quantity','cantidad fisica','cantidad','qty')};
+ if(index.code<0||index.loc<0||index.qty<0)throw Error('Faltan las columnas Variante, Ubicación o Physical Quantity. Pega el encabezado original.');
+ const locations=new Map(),errors=[];let valid=0,duplicates=0;
+ for(let n=1;n<lines.length;n++){
+  const cells=split(lines[n]),cell=i=>i<0?'':String(cells[i]??'').trim();
+  const code=cell(index.code),loc=ciNormLocation(cell(index.loc)),qty=ciQty(cell(index.qty));
+  if(!code||code.length>50||!loc||qty===null){errors.push('Fila '+(n+1)+': código, ubicación o cantidad inválida');continue;}
+  let item=locations.get(loc);
+  if(!item){item={location:loc,warehouse:cell(index.wh),zone:cell(index.zone),codes:[]};locations.set(loc,item);}
+  const existing=item.codes.find(c=>c.code===code);
+  if(existing){existing.expected+=qty;duplicates++;}
+  else item.codes.push({code,expected:qty});
+  valid++;
+ }
+ if(errors.length)throw Error(errors.slice(0,6).join(' · ')+(errors.length>6?' · y '+(errors.length-6)+' errores más':''));
+ if(!valid)throw Error('No se encontraron filas válidas.');
+ if(locations.size>400)throw Error('Máximo 400 ubicaciones por tanda.');
+ if([...locations.values()].some(x=>x.codes.length>250))throw Error('Máximo 250 códigos por ubicación.');
+ return {locations:[...locations.values()].sort((a,b)=>a.location.localeCompare(b.location,undefined,{numeric:true})),valid,duplicates};
 }
-function v109Evidence(loc){
- return (results||[]).filter(r=>r.ubicacionNormalizada===loc).map(r=>({
-  codigo:String(r.codigo||''),qtyOperador:r.qtyOperador==null?null:Number(r.qtyOperador),
-  qtySistema:r.qtySistema==null?null:Number(r.qtySistema),
-  diferencia:r.diferencia==null?null:Number(r.diferencia),
-  estado:String(r.estado||''),observacion:String(r.observacion||'')
- }));
+function ciPreviewPaste(){let e=ciEl('ciPreviewMsg');try{ci.lastPreview=ciParse(ciEl('ciPaste').value);e.className='ciHint ciSuccess';e.textContent=ci.lastPreview.valid+' filas; '+ci.lastPreview.locations.length+' ubicaciones; '+ci.lastPreview.duplicates+' códigos duplicados sumados por ubicación.';}catch(err){ci.lastPreview=null;e.className='ciHint ciError';e.textContent=err.message;}}
+function ciSyncTabs(){
+ const admin=typeof adminAccessV9!=='undefined'&&!!adminAccessV9&&typeof profileV8!=='undefined'&&profileV8==='admin';
+ for(const [id,show] of [['ciTabAdmin',admin],['ciTabOperator',!admin]]){const b=ciEl(id);if(b&&b.hidden===show)b.hidden=!show;}
+ if(ciEl('individualAdmin')?.classList.contains('active')&&!admin)openTab('operatorPortal');
+ if(ciEl('individualOperator')?.classList.contains('active')&&admin)openTab('adminPortal');
 }
-async function v109ManualClose(){
- if(!adminAccessV9)return showAdminGateV9();
- const inp=document.getElementById('v109ManualLoc'),button=document.getElementById('v109CloseButton');
- const raw=(inp?.value||'').trim();
- const loc=wfNormalLocation(raw);
- if(!loc)return perchadoAlert('Ingresa una ubicación válida (ej. 01-30-030-04).');
- if(v18Square(loc))return perchadoAlert('🔒 '+loc+' ya está cerrada. No se realizará ningún cambio.');
- if(!hasCompared)return perchadoAlert('Primero carga y compara el WMS para dejar evidencia de la auditoría.');
- const evidence=v109Evidence(loc);
- const msg='¿Cerrar MANUALMENTE la ubicación '+loc+'?'+(evidence.length?' Se conservará evidencia de '+evidence.length+' código(s), sin considerarlos físicamente cuadrados.':' No existe conteo comparado para esta ubicación.')+' Este cierre no generará pases ni reabrirá la ubicación al cambiar el WMS.';
- if(!await perchadoConfirm(msg))return;
- if(v18Square(loc))return;
- const now=new Date().toISOString();
- const id='v18_square_'+encodeURIComponent(loc).replace(/%/g,'_');
- const snap={id,kind:'v18_square_closed',manual:true,manualReason:'Cierre administrativo solicitado',
-  location:loc,rows:[],originalEvidence:evidence,closedAt:now,closedBy:adminIdentityV9||'Administración',
-  systemSignature:checksum(document.getElementById('systemData')?.value||''),
-  note:'Cierre manual: no acredita cuadre físico ni cambia cantidades WMS.'};
- button.disabled=true;
- try{
-  if(cloudEnabledV9){
-   if(!cloudV9?.ready||!cloudWritableV9())throw Error('Firebase no está listo para registrar el cierre. No se aplicó ningún cambio.');
-   await cloudV9.persist('corrections',snap);
-  }
-  wfV8.corrections[id]=snap;
-  v18Squares.set(loc,snap);
-  v18WriteLocks();
-  // Mantener el snapshot para futuras recargas en el navegador habitual.
-  wfStore('manual_square_close',loc);
-  v18ApplyFrozen();
-  if(inp)inp.value='';
-  renderAll();
-  // V110: el repintado ordinario puede diferirse mientras llegan datos de nube.
-  // Tras persistir el cierre, reconstruir las listas de inmediato con la protección activa.
-  const priorFlush=v108Flushing;
-  try{v108Flushing=true;renderLocations();}finally{v108Flushing=priorFlush;}
-  perchadoAlert('🔒 '+loc+' pasó de Novedades a Cuadradas'+(cloudEnabledV9?' y quedó sincronizada en Firebase.': ' en este navegador (Firebase deshabilitado).'));
- }catch(e){perchadoAlert('No se aplicó el cierre manual: '+(e?.message||e));}
- finally{button.disabled=false;}
+function ciOpen(role){
+ ciSyncTabs();if(role==='admin'&&!(typeof adminAccessV9!=='undefined'&&adminAccessV9&&profileV8==='admin'))return;
+ if(role==='operator'&&typeof profileV8!=='undefined'&&profileV8!=='operator')return;
+ openTab(role==='admin'?'individualAdmin':'individualOperator');ciRender();
 }
-// Distinción visual clara: las cantidades en un cierre manual NO se inventan.
-const v109PriorOne=renderOneLocation;
-renderOneLocation=function(loc){
- const snap=v18Squares.get(String(loc));
- if(!snap?.manual)return v109PriorOne.apply(this,arguments);
- // Los cierres administrativos tienen evidencia histórica, pero no un conteo
- // físico validado. Mostrarla sin convertir cantidades anteriores en 0.
- const idx=auditScope.mappedLocations.indexOf(loc),open=openLocations.has(loc);
- const evidence=Array.isArray(snap.originalEvidence)?snap.originalEvidence:[];
- const rows=evidence.map(r=>`<tr><td><b>${escapeHtml(r.codigo)}</b></td><td>${r.qtyOperador==null?'—':fmtQty(r.qtyOperador)}</td><td>${r.qtySistema==null?'—':fmtQty(r.qtySistema)}</td><td>${r.diferencia==null?'—':fmtQty(r.diferencia)}</td><td><span class="badge square">Cierre administrativo 🔒</span></td></tr>`).join('');
- const details=open?`<div class="locDetails"><div class="locTools"><span class="v109Badge">Cierre manual · ${escapeHtml(snap.closedAt||'')}</span><span class="small">Stock histórico mostrado solo como referencia; no certifica cuadre físico.</span></div>${evidence.length?`<div class="responsiveRows"><table class="locTable"><thead><tr><th>Código</th><th>Físico anterior</th><th>WMS anterior</th><th>Diferencia anterior</th><th>Estado actual</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="emptyState">Ubicación cerrada administrativamente, sin códigos en la comparación anterior.</div>'}</div>`:'';
- return `<article class="locCard" data-kind="cuadrada" id="location-${idx}"><button class="locToggle" onclick="toggleLocation(${idx})" aria-expanded="${open}"><span class="locName"><span class="chevron">${open?'▾':'▸'}</span><b>📍 ${escapeHtml(shortLoc(loc))}</b><span class="muted fullLoc">${escapeHtml(loc)}</span></span><span class="locCounter"><span class="badge square">CUADRADA · 🔒 MANUAL</span><span class="small">${evidence.length} códigos históricos</span></span></button>${details}</article>`;
-};
-// Agregar solo interfaz nueva, sin nuevos listeners de Firestore.
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',v109EnsurePanel,{once:true});else v109EnsurePanel();
-window.perchadoDiagnosticoV109=()=>({version:'V110',cierresManuales:[...v18Squares.values()].filter(x=>x.manual).map(x=>({ubicacion:x.location,fecha:x.closedAt,codigosHistoricos:x.originalEvidence?.length||0})),cierresTotales:v18Squares.size});
+function ciSetName(name){ci.operator=String(name||'').trim().replace(/\s+/g,' ');try{localStorage.setItem('perchado_individual_operator_name_v110',ci.operator);}catch{}ciDrawOperator();}
+function ciGetDraftKey(rec){return 'perchado_individual_draft_v110_'+String(ci.meta?.batchId||'')+'_'+rec.location+'_'+ci.operator.toLowerCase();}
+function ciReadDraft(rec){try{const raw=JSON.parse(localStorage.getItem(ciGetDraftKey(rec))||'{}');return raw&&typeof raw==='object'?raw:{};}catch{return {};}}
+function ciSaveDraft(){const rec=ci.records.find(r=>r.location===ci.active);if(!rec)return;const values={};ciEl('ciOperatorDetail')?.querySelectorAll('input[data-ci-code]').forEach(x=>values[x.dataset.ciCode]=x.value);try{localStorage.setItem(ciGetDraftKey(rec),JSON.stringify(values));}catch{} }
+function ciNote(target,text,error=false){const e=ciEl(target);if(e){e.textContent=text||'';e.className='ciHint '+(error?'ciError':'ciSuccess');}}
+function ciMetrics(records){return [['Ubicaciones',records.length],['Disponibles',records.filter(r=>r.status==='OPEN').length],['En conteo',records.filter(r=>r.status==='TAKEN').length],['Finalizadas',records.filter(r=>r.status==='DONE').length]].map(([name,n])=>'<div class="ciMetric"><strong>'+n+'</strong><span>'+name+'</span></div>').join('');}
+function ciRender(){ciSyncTabs();ciDrawAdmin();ciDrawOperator();}
+function ciDrawAdmin(){
+ const status=ciEl('ciAdminStatus'),rows=ciEl('ciAdminRows');if(!status||!rows)return;
+ status.textContent=!ci.ready?(ci.error||'Conectando a Firebase…'):ci.meta?.batchId?('Tanda '+ci.meta.batchId+' · '+(ci.meta.createdBy||'Administración')+' · '+new Date(ci.meta.createdAt).toLocaleString('es-EC')):'Todavía no existe un listado publicado.';
+ ciEl('ciAdminSummary').innerHTML=ciMetrics(ci.records);
+ rows.innerHTML=ci.records.map(r=>{
+  const result=r.status==='DONE'?(r.codes||[]).map(c=>{const entry=(r.results||[]).find(x=>x.code===c.code),q=entry?.qty??'—',dif=entry?Number(entry.qty)-Number(c.expected):'—';return ciEsc(c.code)+': '+ciEsc(q)+' / ref. '+ciEsc(c.expected)+' (Δ '+ciEsc(dif)+')';}).join('<hr style="margin:5px 0;border:0;border-top:1px solid #e5eee9">'):'Pendiente';
+  return '<tr><td><b>'+ciEsc(r.location)+'</b></td><td>'+((r.codes||[]).length)+'</td><td>'+ciStatus(r.status)+'</td><td>'+ciEsc(r.takenByName||r.submittedByName||'—')+'</td><td>'+result+'</td><td>'+(r.status==='TAKEN'?'<button type="button" class="secondary mini" onclick="ciRelease('+JSON.stringify(r.id).replace(/"/g,'&quot;')+',true)">Liberar</button>':'—')+'</td></tr>';
+ }).join('')||'<tr><td colspan="6">Sin ubicaciones registradas.</td></tr>';
+}
+function ciDrawOperator(){
+ const status=ciEl('ciOperatorStatus'),rows=ciEl('ciOperatorRows');if(!status||!rows)return;
+ status.textContent=!ci.ready?(ci.error||'Conectando a Firebase…'):ci.meta?.batchId?'Tanda activa · '+ci.records.length+' ubicaciones':'Administración todavía no ha publicado un conteo individual.';
+ ciEl('ciOperatorSummary').innerHTML=ciMetrics(ci.records);
+ const name=ci.operator;
+ rows.innerHTML=ci.records.map(r=>{
+  const taken=r.status==='TAKEN',mine=taken&&r.takenByUid===ci.api?.uid(),done=r.status==='DONE';
+  return '<div class="ciLocation"><strong>📍 '+ciEsc(r.location)+'</strong><small>'+((r.codes||[]).length)+' código(s) · '+ciEsc(r.zone||'Bulk')+'</small>'+ciStatus(r.status)+(taken?'<small>'+(mine?'Reservada en este dispositivo':'Tomada por '+ciEsc(r.takenByName||'otro operario'))+'</small>':'')+'<button class="'+(mine?'primary':'secondary')+'" type="button" '+((done||taken&&!mine||!name||ci.busy)?'disabled':'')+' onclick="'+(mine?'ciSelect':'ciTake')+'('+JSON.stringify(r.location).replace(/"/g,'&quot;')+')">'+(mine?'Continuar conteo':taken?'En uso':done?'Completada':'Tomar ubicación')+'</button></div>';
+ }).join('')||'<div class="ciHint">Sin ubicaciones asignadas.</div>';
+ ciDrawDetail();
+}
+function ciDrawDetail(){
+ const panel=ciEl('ciOperatorDetailPanel'),holder=ciEl('ciOperatorDetail');if(!panel||!holder)return;
+ const rec=ci.records.find(r=>r.location===ci.active);
+ const mine=rec&&rec.status==='TAKEN'&&rec.takenByUid===ci.api?.uid();
+ if(!mine){panel.hidden=true;ci.shownKey='';return;}
+ panel.hidden=false;
+ const key=String(ci.meta?.batchId)+'|'+rec.id+'|'+rec.status+'|'+rec.takenByUid+'|'+(rec.codes||[]).map(c=>c.code).join(',');
+ if(ci.shownKey===key)return; // Important: never rebuild focused mobile quantity inputs on snapshots.
+ ci.shownKey=key;
+ const draft=ciReadDraft(rec);
+ holder.innerHTML='<div class="ciDetailHead"><h3>📍 '+ciEsc(rec.location)+' · Capturar códigos</h3><span class="ciTag ciTaken">Solo conteo individual</span></div><p class="ciHint">Ingresa una cantidad física para cada código, incluso <b>0</b> si no se encontró. No se muestra la cantidad de referencia.</p>'+(rec.codes||[]).map(c=>'<div class="ciCodeRow"><div><strong>'+ciEsc(c.code)+'</strong><div class="ciHint">Código solicitado</div></div><label>Cantidad<input type="text" inputmode="numeric" autocomplete="off" placeholder="0" data-ci-code="'+ciEsc(c.code)+'" value="'+ciEsc(draft[c.code]??'')+'" oninput="ciSaveDraft()"></label></div>').join('')+'<div class="ciActions"><button class="primary" type="button" id="ciSubmitBtn" onclick="ciSubmit()">✅ Finalizar ubicación</button><button class="secondary" type="button" onclick="ciRelease('+JSON.stringify(rec.id).replace(/"/g,'&quot;')+',false)">Liberar ubicación</button></div>';
+}
+async function ciPublish(){if(ci.busy)return;if(!ci.api?.ready())return ciNote('ciPreviewMsg','Firebase no está conectado; no se publica nada.',true);if(!adminAccessV9||profileV8!=='admin')return ciNote('ciPreviewMsg','Inicia sesión como Administrador.',true);ciPreviewPaste();if(!ci.lastPreview)return;
+ const parsed=ci.lastPreview;if(!await perchadoConfirm('¿Publicar '+parsed.locations.length+' ubicaciones para Conteo individual?\nSe crea una tanda nueva e independiente. Los trabajos pendientes de la tanda anterior ya no aparecerán a los operarios.\nLas tandas anteriores NO se borran.'))return;
+ ci.busy=true;ciEl('ciPublish').disabled=true;try{const created=await ci.api.publish(parsed.locations,String(adminIdentityV9||'Administración'));ciNote('ciPreviewMsg','Tanda '+created.batchId+' publicada correctamente: '+parsed.locations.length+' ubicaciones.');ciEl('ciPaste').value='';ci.lastPreview=null;}catch(e){ciNote('ciPreviewMsg','No se publicó: '+(e?.message||e),true);}finally{ci.busy=false;ciEl('ciPublish').disabled=false;}
+}
+async function ciTake(location){if(ci.busy)return;if(!ci.operator||ci.operator.length<2)return perchadoAlert('Escribe tu nombre antes de tomar una ubicación.');ci.busy=true;try{const rec=ci.records.find(r=>r.location===location);if(!rec)throw Error('La ubicación ya no figura en la tanda.');await ci.api.take(rec,ci.operator);ci.active=location;ci.shownKey='';ciRender();}catch(e){perchadoAlert('No se pudo reservar: '+e.message);}finally{ci.busy=false;}}
+function ciSelect(location){ci.active=location;ci.shownKey='';ciDrawDetail();ciEl('ciOperatorDetailPanel')?.scrollIntoView({behavior:'smooth',block:'start'});}
+async function ciRelease(id,byAdmin){const rec=ci.records.find(x=>x.id===id);if(!rec)return;const admin=byAdmin&&!!adminAccessV9&&profileV8==='admin';if(!admin&&rec.takenByUid!==ci.api?.uid())return perchadoAlert('Solo el dispositivo que tomó la ubicación o Administración puede liberarla.');if(!await perchadoConfirm('¿Liberar '+rec.location+'? Se perderá la reserva. Los valores sin enviar solo quedan en el navegador donde se registraron.'))return;ci.busy=true;try{await ci.api.release(rec,admin);if(ci.active===rec.location){ci.active='';ci.shownKey='';}ciRender();}catch(e){perchadoAlert('Error al liberar: '+e.message);}finally{ci.busy=false;}}
+async function ciSubmit(){const rec=ci.records.find(r=>r.location===ci.active);if(!rec||ci.busy)return;const entries=[...ciEl('ciOperatorDetail').querySelectorAll('input[data-ci-code]')].map(e=>({code:e.dataset.ciCode,qty:ciQty(e.value)}));if(entries.length!==rec.codes.length||entries.some(e=>e.qty===null||!Number.isInteger(e.qty)))return perchadoAlert('Digita la cantidad de TODOS los códigos. Usa 0 si no se encuentra el producto.');
+ if(!await perchadoConfirm('¿Finalizar '+rec.location+' con '+entries.length+' códigos? Se enviará a Administración y ya no se podrá editar desde Operarios.'))return;
+ ci.busy=true;ciEl('ciSubmitBtn').disabled=true;try{await ci.api.submit(rec,entries,ci.operator);try{localStorage.removeItem(ciGetDraftKey(rec));}catch{}ci.active='';ci.shownKey='';ciRender();perchadoAlert('✅ Ubicación '+rec.location+' finalizada y enviada a Administración.');}catch(e){perchadoAlert('No se pudo finalizar: '+e.message);}finally{ci.busy=false;const b=ciEl('ciSubmitBtn');if(b)b.disabled=false;}
+}
+function ciDownload(kind){if(!ci.meta?.batchId)return perchadoAlert('Todavía no hay una tanda individual para exportar.');if(!adminAccessV9||profileV8!=='admin')return;
+ const stamp=new Date().toISOString().slice(0,10),base='PERCHADO_CONTEO_INDIVIDUAL_'+stamp;
+ let data,mime,file;
+ if(kind==='json'){data=JSON.stringify({exportedAt:new Date().toISOString(),meta:ci.meta,locations:ci.records},null,2);mime='application/json;charset=utf-8';file=base+'.json';}
+ else{
+  const escapeCsv=x=>{let v=String(x??'');if(/^[=+@-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+  const lines=[['Bodega','Variante','Zona','Ubicación','Caja','Physical Quantity referencia','Cantidad contada','Diferencia','Estado','Operario','Fecha finalización']];
+  for(const r of ci.records)for(const c of r.codes||[]){const v=(r.results||[]).find(x=>x.code===c.code),q=v?.qty??'',dif=v?Number(v.qty)-Number(c.expected):'';lines.push([r.warehouse,c.code,r.zone,r.location,'',c.expected,q,dif,ciState(r.status),r.submittedByName||r.takenByName||'',r.submittedAt||'']);}
+  data='\uFEFF'+lines.map(l=>l.map(escapeCsv).join(';')).join('\r\n');mime='text/csv;charset=utf-8';file=base+'.csv';
+ }
+ const blob=new Blob([data],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+window.ciFirebaseReady=api=>{ci.api=api;ci.ready=true;ci.error='';api.start(({meta,records})=>{const batch=meta?.batchId||'';if(batch!==ci.seenRun){ci.active='';ci.shownKey='';ci.seenRun=batch;}ci.meta=meta;ci.records=records;ciRender();},e=>{ci.error=e?.message||String(e);ci.ready=false;ciNote('ciAdminStatus',ci.error,true);ciNote('ciOperatorStatus',ci.error,true);});ciRender();};
+try{ci.operator=localStorage.getItem('perchado_individual_operator_name_v110')||'';ciEl('ciOperatorName').value=ci.operator;}catch{}
+// login goes through a cached profile function; follow role change without altering it.
+new MutationObserver(()=>ciSyncTabs()).observe(ciEl('viewAdmin'),{attributes:true,attributeFilter:['class']});
+// The regular profile button uses a wrapper, while the admin login uses a cached base.
+// Support both paths; do not change the original login or session lifecycle.
+const ciOriginalSetProfile=setProfileV8;
+setProfileV8=function(...args){const out=ciOriginalSetProfile.apply(this,args);queueMicrotask(ciSyncTabs);return out;};
+ciSyncTabs();ciRender();
 </script>
 
+<script type="module" id="perchado-v110-individual-firebase">
+/* Separate Firestore collections. Not connected to the audit state. */
+import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,collection,doc,getDoc,setDoc,onSnapshot,query,where,runTransaction,writeBatch} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+try{
+ const config=window.PERCHADO_FIREBASE_CONFIG;
+ if(!config?.apiKey||!config.projectId)throw Error('No existe configuración de Firebase.');
+ const app=getApps().find(a=>a.name==='[DEFAULT]')||initializeApp(config),auth=getAuth(app),db=getFirestore(app);
+ const root=['perchado_v9','app'];
+ const metaRef=doc(db,...root,'individualCountMeta','current');
+ const itemRef=id=>doc(db,...root,'individualCountLocations',id);
+ const itemsColl=collection(db,...root,'individualCountLocations');
+ let currentMeta=null,stopItems=null,stopMeta=null,items=[],nonce=0;
+ async function session(){if(typeof auth.authStateReady==='function')await auth.authStateReady();if(!auth.currentUser)await signInAnonymously(auth);if(!auth.currentUser)throw Error('No se pudo iniciar sesión anónima en Firebase.');return auth.currentUser;}
+ function ensureCurrent(rec){if(!currentMeta?.batchId||rec.batchId!==currentMeta.batchId)throw Error('La tanda cambió. Recarga la lista.');}
+ const api={ready:()=>!!auth.currentUser,uid:()=>auth.currentUser?.uid||'',
+  start(onData,onError){
+   const report=()=>onData({meta:currentMeta,records:items.slice().sort((a,b)=>String(a.location).localeCompare(String(b.location),undefined,{numeric:true}))});
+   session().then(()=>{stopMeta?.();stopMeta=onSnapshot(metaRef,snap=>{
+    const next=snap.exists()?snap.data():null;if((next?.batchId||'')===(currentMeta?.batchId||'')){currentMeta=next;report();return;}
+    currentMeta=next;items=[];report();if(stopItems){stopItems();stopItems=null;}
+    if(!next?.batchId)return;
+    const myNonce=++nonce;
+    stopItems=onSnapshot(query(itemsColl,where('batchId','==',next.batchId)),snapshot=>{
+     if(myNonce!==nonce)return;items=snapshot.docs.map(d=>({id:d.id,...d.data()}));report();
+    },onError);
+   },onError);}).catch(onError);
+  },
+  async publish(locations,admin){await session();if(!Array.isArray(locations)||!locations.length||locations.length>400)throw Error('Tanda sin ubicaciones o demasiado grande.');
+    const batchId='CI_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const createdAt=new Date().toISOString();
+    // Commit all locations in capped batches, then flip the pointer only after success.
+    for(let i=0;i<locations.length;i+=80){const batch=writeBatch(db);for(const loc of locations.slice(i,i+80)){
+      const id=batchId+'__'+loc.location.replace(/[^0-9A-Z-]/g,'');
+      batch.set(itemRef(id),{id,batchId,location:loc.location,warehouse:loc.warehouse||'',zone:loc.zone||'',codes:loc.codes,status:'OPEN',takenByUid:'',takenByName:'',takenAt:'',results:[],submittedByName:'',submittedAt:'',createdAt});
+     }await batch.commit();}
+    const meta={batchId,createdAt,createdBy:String(admin||'Administración').slice(0,100),locations:locations.length};
+    await setDoc(metaRef,meta);return meta;
+  },
+  async take(rec,name){const user=await session();ensureCurrent(rec);const ref=itemRef(rec.id);
+    await runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw Error('Ubicación no encontrada.');const state=snap.data();if(state.batchId!==currentMeta.batchId||state.status!=='OPEN')throw Error('Ya fue reservada por otro operario.');
+     tx.update(ref,{status:'TAKEN',takenByUid:user.uid,takenByName:name.slice(0,80),takenAt:new Date().toISOString()});});
+  },
+  async release(rec,admin){const user=await session();ensureCurrent(rec);await runTransaction(db,async tx=>{
+    const ref=itemRef(rec.id),snap=await tx.get(ref);if(!snap.exists())throw Error('Ubicación no encontrada.');const state=snap.data();if(state.status!=='TAKEN')throw Error('La ubicación ya no está en conteo.');if(!admin&&state.takenByUid!==user.uid)throw Error('Esta reserva pertenece a otro dispositivo.');
+    tx.update(ref,{status:'OPEN',takenByUid:'',takenByName:'',takenAt:''});});
+  },
+  async submit(rec,entries,name){const user=await session();ensureCurrent(rec);await runTransaction(db,async tx=>{
+    const ref=itemRef(rec.id),snap=await tx.get(ref);if(!snap.exists())throw Error('Ubicación no encontrada.');const state=snap.data();
+    if(state.status!=='TAKEN'||state.takenByUid!==user.uid)throw Error('La reserva cambió o ya se finalizó.');
+    if(state.codes.length!==entries.length||state.codes.some((c,i)=>c.code!==entries[i].code))throw Error('La lista de códigos cambió.');
+    tx.update(ref,{status:'DONE',results:entries,submittedByName:String(name).slice(0,80),submittedAt:new Date().toISOString()});});
+  }
+ };
+ window.ciFirebaseReady?.(api);
+}catch(e){window.ciFirebaseReady?.({ready:()=>false,uid:()=>'',start:(onData,onError)=>onError(e)});}
+</script>
 </body>
 </html>
 
@@ -11187,4 +11328,181 @@ window.perchadoDiagnosticoV108=()=>({version:'V108',...v108Stats,
  !v18Square(r.ubicacionNormalizada)&&Math.abs(Number(remaining(r)))>0.000001).length,
  avisosPendientesSinBorrar:typeof v103AuditUnlinked==='function'?v103AuditUnlinked().length:0,
  cloudApplying:v108CloudApplying,pendingPaint:v108NeedPaint});
+</script>
+
+
+<!-- PERCHADO V109 · Cierre MANUAL administrativo por ubicación completa.
+     Los cierres automáticos V18/V107, conteos, reconteos y tandas permanecen. -->
+<style id="perchado-v109-style">
+.v109ManualButton{white-space:nowrap;background:#e9f8f1!important;color:#075c49!important;border:1px solid #75c6a7!important;font-weight:800!important}
+.v109ManualButton:hover{background:#cff2e2!important}
+.v109ManualFlag{background:#e8f8ed;border:1px solid #a0d5b5;color:#145944;border-radius:9px;padding:9px 11px;font-size:12px;font-weight:650;margin-bottom:10px;line-height:1.45}
+.v109ManualFlag b{font-weight:850}
+.v109Backdrop{position:fixed;inset:0;z-index:99000;background:rgba(13,31,31,.55);display:grid;place-items:center;padding:15px}
+.v109Backdrop[hidden]{display:none!important}
+.v109Dialog{width:min(100%,510px);max-height:calc(100vh - 36px);overflow-y:auto;background:#fff;border:1px solid #92d9c4;box-shadow:0 15px 50px #052f2f38;border-radius:17px;padding:20px;color:#153f35}
+.v109Dialog h3{font-size:19px;line-height:1.25;margin:0 0 9px}
+.v109Dialog p{font-size:13px;line-height:1.5;margin:0 0 15px}
+.v109Dialog label{display:block;font-size:12px;font-weight:850;margin:0 0 7px}
+.v109Dialog input{display:block;width:100%;font-size:17px;border:1px solid #81c3b1;border-radius:9px;padding:12px 13px;margin-bottom:12px}
+.v109Dialog .v109Note{background:#fff5e5;border:1px solid #efcf9d;border-radius:9px;padding:10px 11px;color:#805016;font-size:12px;margin:9px 0 15px;line-height:1.5}
+.v109Dialog .v109Actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+#results .v109ManualButton,#squared .v109ManualButton{padding:8px 11px}
+#results .locTools .v109ManualButton{margin-left:auto}
+@media(max-width:560px){.v109Dialog{padding:15px}.v109Dialog .v109Actions button{flex:1}}
+</style>
+<div id="v109Backdrop" class="v109Backdrop" hidden role="presentation">
+ <div class="v109Dialog" role="dialog" aria-modal="true" aria-labelledby="v109Title">
+  <h3 id="v109Title">🔒 Marcar ubicación como cuadrada</h3>
+  <p>Bloquea <b>toda la ubicación</b> frente a nuevos conteos, reconteos y novedades, incluso después de actualizar WMS o mover mercancía.</p>
+  <label for="v109LocInput">Ubicación que deseas cerrar</label>
+  <input id="v109LocInput" type="text" list="v109Locations" autocomplete="off" placeholder="Ej. 01-30-022-03" onkeydown="if(event.key==='Enter')v109CloseManually()" />
+  <datalist id="v109Locations"></datalist>
+  <div class="v109Note"><b>Cierre manual administrativo:</b> no significa que el stock físico esté conciliado. Mantiene la evidencia y los movimientos WMS ya registrados, pero no crea nuevos ajustes. Esta ubicación dejará de generar trabajo nuevo hasta que se decida intervenir explícitamente en otra auditoría.</div>
+  <div class="v109Actions"><button type="button" class="secondary" onclick="v109Dismiss()">Cancelar</button><button id="v109Commit" type="button" class="v109ManualButton" onclick="v109CloseManually()">🔒 Marcar cuadrada y proteger</button></div>
+ </div>
+</div>
+<script id="perchado-v109-manual-closures">
+'use strict';
+/* Cierre manual como evidencia ADMINISTRATIVA; no modifica la foto WMS,
+   las cantidades físicas, los pases de tanda ni los reconteos originales.
+   Reutiliza el documento de cierre v18_square_closed, por lo que opera con
+   el listener y las reglas Firebase existentes, sin escrituras periódicas. */
+let v109Saving=false;
+function v109Manual(loc){return !!v18Squares.get(String(loc))?.manualClosed;}
+function v109NormLocation(raw){
+ const input=String(raw||'').trim();if(!input)return '';
+ let loc='';try{loc=wfNormalLocation(input)||'';}catch(e){}
+ if(!/^\d{2}-\d{2}-\d{3}-\d{2}$/.test(loc))return '';
+ return loc;
+}
+function v109Locations(){
+ const places=new Set();
+ for(const r of results||[])if(r.ubicacionNormalizada)places.add(String(r.ubicacionNormalizada));
+ for(const r of allSystemRows||[])if(r.locNorm)places.add(String(r.locNorm));
+ for(const s of wfV8.sessions||[])if(s.location)places.add(String(s.location));
+ for(const loc of v18Squares.keys())places.add(loc);
+ return [...places].filter(loc=>/^\d{2}-\d{2}-\d{3}-\d{2}$/.test(loc)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+function v109OpenManualLock(preselected=''){
+ if(!adminAccessV9)return showAdminGateV9();
+ const modal=document.getElementById('v109Backdrop'),field=document.getElementById('v109LocInput');
+ const options=document.getElementById('v109Locations');
+ if(!modal||!field)return;
+ if(options)options.innerHTML=v109Locations().map(x=>'<option value="'+escapeHtml(x)+'"></option>').join('');
+ field.value=String(preselected||'');modal.hidden=false;field.focus();field.select();
+}
+function v109Dismiss(){if(v109Saving)return;document.getElementById('v109Backdrop').hidden=true;}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('v109Backdrop')?.hidden)v109Dismiss();});
+function v109SourceRows(loc){
+ // Tomar exactamente la evidencia del momento de la decisión sin imputar 0.
+ return (results||[]).filter(r=>String(r.ubicacionNormalizada)===loc).map(r=>({
+  codigo:String(r.codigo),ubicacionNormalizada:loc,ubicacionOperador:r.ubicacionOperador||loc,
+  ubicacionSistema:r.ubicacionSistema||loc,
+  qtyOperador:r.qtyOperador==null?null:Number(r.qtyOperador),
+  qtySistema:r.qtySistema==null?null:Number(r.qtySistema),
+  diferencia:r.diferencia==null?null:Number(r.diferencia),
+  estado:String(r.estado||''),observacion:String(r.observacion||''),
+  lineaOperador:r.lineaOperador||'',lineaSistema:r.lineaSistema||'',
+  locValid:r.locValid!==false,duplicado:!!r.duplicado,hasOperator:!!r.hasOperator
+ }));
+}
+// V18 convierte todo lo congelado a diferencia 0. Para el cierre MANUAL se
+// conserva la diferencia histórica verdadera: 'cerrado' NO es 'físico cuadrado'.
+const v109PreviousApplyFrozen=v18ApplyFrozen;
+v18ApplyFrozen=function(){
+ const out=v109PreviousApplyFrozen.apply(this,arguments);
+ if(!hasCompared||!v18Squares.size)return out;
+ const originals=new Map();
+ for(const [loc,snap] of v18Squares){if(!snap?.manualClosed)continue;
+  originals.set(loc,new Map((snap.rows||[]).map(r=>[String(r.codigo),r])));
+ }
+ if(!originals.size)return out;
+ for(const r of results){
+  const old=originals.get(String(r.ubicacionNormalizada))?.get(String(r.codigo));if(!old)continue;
+  r.qtyOperador=old.qtyOperador==null?null:Number(old.qtyOperador);
+  r.qtySistema=old.qtySistema==null?null:Number(old.qtySistema);
+  r.diferencia=old.diferencia==null?null:Number(old.diferencia);
+  r.estado=old.estado||'SIN CONTEO';r.duplicado=!!old.duplicado;
+  r.hasOperator=!!old.hasOperator;r.locValid=old.locValid!==false;
+  r.observacion=old.observacion||'Cierre manual sin conciliación de stock';
+ }
+ return out;
+};
+// No proponer nuevos pases desde una posición cerrada manualmente.
+// Los pases que ya estaban registrados se conservan en su tanda.
+const v109OriginalEligible=baseEligible;
+baseEligible=function(row){
+ if(row&&v109Manual(row.ubicacionNormalizada))return false;
+ return v109OriginalEligible.apply(this,arguments);
+};
+// Etiqueta transparente y botón de acción rápida en el detalle de Novedades.
+const v109OriginalLocationMarkup=renderOneLocation;
+renderOneLocation=function(loc){
+ let html=v109OriginalLocationMarkup.apply(this,arguments);
+ if(v109Manual(loc)){
+  html=html.replace('CUADRADA · 🔒','CUADRADA MANUAL · 🔒');
+  return html.replace('<div class="locDetails">','<div class="locDetails"><div class="v109ManualFlag">🔒 <b>Cierre administrativo manual.</b> Ubicación protegida: las cantidades visibles son la evidencia de cierre, no una conciliación física. Ninguna carga WMS reabre esta ubicación.</div>');
+ }
+ if(!adminAccessV9||!html.includes('class="locTools"'))return html;
+ const button=`<button type="button" class="secondary mini v109ManualButton" onclick='v109OpenManualLock(${JSON.stringify(loc)})'>🔒 Marcar cuadrada</button>`;
+ return html.replace('<div class="locTools">','<div class="locTools">'+button);
+};
+// Un acceso cómodo en las cabeceras de Novedades y Cuadradas.
+(function v109AddButtons(){
+ for(const tab of ['results','squared']){
+  const head=document.querySelector('#'+tab+' > .mainSectionHead');
+  if(!head||head.querySelector('.v109ManualButton'))continue;
+  const b=document.createElement('button');b.type='button';b.className='secondary mini v109ManualButton';
+  b.textContent='🔒 Marcar ubicación cuadrada';b.onclick=()=>v109OpenManualLock();
+  head.appendChild(b);
+ }
+})();
+async function v109CloseManually(){
+ if(v109Saving)return;
+ if(!adminAccessV9)return perchadoAlert('Solo Administración puede cerrar una ubicación.');
+ const field=document.getElementById('v109LocInput');
+ const loc=v109NormLocation(field?.value);
+ if(!loc)return perchadoAlert('Escribe una ubicación completa válida, por ejemplo 01-30-022-03.');
+ if(v18Square(loc))return perchadoAlert('🔒 '+loc+' ya está cuadrada y protegida; no se modifica su cierre.');
+ if(!hasCompared||v37Audit.wmsLoading||v37Audit.applying||sourceDirty)return perchadoAlert('Primero finaliza la comparación con el WMS vigente, sin cambios pendientes de pegar.');
+ const rows=v109SourceRows(loc);
+ if(!rows.length)return perchadoAlert('La ubicación no tiene códigos en el cruce actual. Actualiza WMS y conteos antes de cerrarla.');
+ if(!cloudEnabledV9||!cloudV9?.ready||!cloudV9.connected||!cloudV9.admin)
+  return perchadoAlert('No hay conexión administrativa confirmada con Firebase. No se cerrará solo en este navegador.');
+ const movements=(approvedMatches||[]).filter(m=>m.from===loc||m.to===loc).length+
+  (resolutions||[]).filter(r=>r.location===loc||r.target===loc).length+
+  (manualTransfersV9||[]).filter(m=>m.from===loc||m.to===loc).length;
+ const different=rows.filter(r=>Math.abs(Number(r.diferencia||0))>0.000001||r.duplicado||!r.hasOperator).length;
+ const warning='¿Marcar '+loc+' como CUADRADA MANUAL y proteger toda la ubicación?\n\n'+
+  'Códigos en la foto: '+rows.length+'; con diferencias/sin conteo: '+different+'.\n'+
+  (movements?'ATENCIÓN: '+movements+' movimiento(s) ya registrados siguen pendientes de control WMS. No se eliminan.\n':'')+
+  'La acción NO valida cantidades físicas y NO ejecuta ni elimina movimientos. Bloquea nuevos conteos, reconteos y novedades sobre esta ubicación.';
+ if(!await perchadoConfirm(warning))return;
+ // Otra pestaña pudo sincronizar un cierre mientras se confirmaba.
+ if(v18Square(loc))return perchadoAlert('La ubicación ya recibió un cierre. Se conserva el primero.');
+ v109Saving=true;const submit=document.getElementById('v109Commit');if(submit){submit.disabled=true;submit.textContent='Guardando en Firebase…';}
+ try{
+  const now=new Date().toISOString();
+  const id='v18_square_'+encodeURIComponent(loc).replace(/%/g,'_');
+  const snap={id,kind:'v18_square_closed',location:loc,rows,
+   manualClosed:true,closureMode:'ADMINISTRATIVO_MANUAL',
+   closedAt:now,closedBy:String(adminIdentityV9||'Administración'),
+   systemSignature:checksum(document.getElementById('systemData')?.value||''),
+   manualAuditNote:'Ubicación declarada cerrada por Administración sin afirmar conciliación física.',
+   distinctCodes:rows.length,preCloseDifferences:different};
+  // Persistir PRIMERO en el servidor. Si Firebase rechaza la escritura,
+  // conservar todos los datos y la ubicación sin cerrar para el equipo.
+  await cloudV9.persist('corrections',snap);
+  wfV8.corrections[id]=snap;v18Squares.set(loc,snap);v18WriteLocks();
+  v18ApplyFrozen();
+  document.getElementById('v109Backdrop').hidden=true;
+  renderAll();
+  perchadoAlert('🔒 '+loc+' marcada como CUADRADA MANUAL y guardada en Firebase. No se reabre al actualizar WMS.');
+ }catch(error){
+  console.error('PERCHADO: fallo al registrar el cierre manual',loc,error);
+  perchadoAlert('No se guardó el cierre en Firebase. No se cambió la auditoría. Detalle: '+String(error?.message||error));
+ }finally{v109Saving=false;if(submit){submit.disabled=false;submit.textContent='🔒 Marcar cuadrada y proteger';}}
+}
+window.perchadoDiagnosticoV109=()=>({version:'V109',manuales:[...v18Squares.entries()].filter(([loc,s])=>s.manualClosed).map(([loc,s])=>({location:loc,closedAt:s.closedAt,by:s.closedBy,rows:s.rows?.length||0})),saving:v109Saving});
 </script>
