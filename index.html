@@ -2459,6 +2459,30 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
    }).catch(e=>{if(!stopped)onError?.('auth',e);});
    return ()=>{stopped=true;stops.forEach(fn=>fn());};
  };
+ // V112 · Recuperación en solo lectura de tandas archivadas.
+ // Firestore V61 permite get individual en sharedAdmin; no se usa list ni escrituras.
+ api.v112ReadRecoveryPointer=async function(){
+   await ensureAnonymous();if(!api.admin)throw Error('Ingresa a Administración para consultar tandas.');
+   const snap=await getDoc(ref('sharedAdmin','current'));
+   if(!snap.exists())throw Error('No hay estado administrativo compartido en Firebase.');
+   const d=snap.data()||{},p=d.payload||{};
+   return {revision:Number(d.revision)||0,lastBatchId:/^batch_[0-9]+$/.test(String(p.v68LastBatchId||''))?p.v68LastBatchId:'',fromCache:!!snap.metadata?.fromCache};
+ };
+ api.v112ReadRecoveryBatch=async function(batchId){
+   await ensureAnonymous();if(!api.admin)throw Error('Ingresa a Administración para consultar tandas.');
+   const id=String(batchId||'').trim();
+   if(!/^batch_[1-9][0-9]{0,11}$/.test(id))throw Error('Identificador de tanda inválido.');
+   const snap=await getDoc(ref('sharedAdmin',id));
+   if(!snap.exists())return null;
+   const d=snap.data()||{},p=d.payload||{};
+   // Nunca devolver un ajuste activo ni datos para restauración automática.
+   const rows=Array.isArray(p.v72CopiedRows)?p.v72CopiedRows.map(x=>({
+     code:String(x?.code??''),from:String(x?.from??''),to:String(x?.to??''),qty:Number(x?.qty??0)
+   })).filter(x=>x.code&&x.from&&x.to&&Number.isFinite(x.qty)&&x.qty>0):[];
+   return {id,revision:Number(d.revision)||0,closedAt:Number(p.v68ClosedAt)||0,
+     copiedAt:Number(p.v72CopiedAt)||0,closedBy:String(p.v68ClosedBy||''),
+     closeReason:String(p.v72CloseReason||''),rows,fromCache:!!snap.metadata?.fromCache};
+ };
  api.getCurrentWmsManifest=async function(){await ensureAnonymous();const doc=await getDoc(ref('sharedWms','current'));return doc.exists()?doc.data():null;};
  // V73: referencia de la base WMS inmediatamente anterior. Documentos de
  // fragmentos inmutables existentes; no se duplica el stock en Firestore.
@@ -11465,4 +11489,170 @@ function v111Schedule(){
  const prevRender=renderAll;renderAll=function(){const out=prevRender.apply(this,arguments);v111Schedule();return out;};
 })();
 window.perchadoDiagnosticoV111=()=>({version:'V111',hallazgos:hasCompared?v111Build().length:0,soloConsulta:true});
+</script>
+
+
+<!-- V112 · Recuperación de tandas copiadas desde Firebase (solo lectura) -->
+<style id="perchado-v112-recovery-style">
+#v112Recovery[hidden]{display:none!important}
+#v112Recovery{border:1px solid #a6d8ca;border-radius:12px;padding:13px;margin:12px 0 17px;background:#f7fffc;color:#144e47;font-size:13px}
+#v112Recovery .v112Note{border:1px solid #edcd8f;background:#fff9eb;color:#77480b;border-radius:9px;padding:10px 12px;line-height:1.5;margin:9px 0}
+#v112Recovery .v112Actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+#v112Recovery button,#v112Recovery input{min-height:35px;font-size:12px}
+#v112Recovery input{min-width:150px;max-width:220px;border:1px solid #b0dcd0;border-radius:8px;padding:7px 10px;background:white}
+#v112Recovery .v112Status{font-weight:650;font-size:12px;color:#34675d;padding:5px 2px;line-height:1.5}
+#v112Recovery .v112Batch{border:1px solid #c6e5dd;border-radius:10px;background:white;padding:11px;margin:9px 0}
+#v112Recovery .v112Batch.selected{border-color:#009d88;box-shadow:0 0 0 1px #009d88}
+#v112Recovery .v112Meta{color:#526c65;font-size:12px;line-height:1.6}
+#v112Recovery .v112Table{max-height:320px;overflow:auto;border:1px solid #d7e7e1;border-radius:9px}
+#v112Recovery table{width:100%;border-collapse:collapse;font-size:12px}
+#v112Recovery th{background:#eaf7f2;position:sticky;top:0}
+#v112Recovery td,#v112Recovery th{padding:8px;border-bottom:1px solid #e1eee9;text-align:left;white-space:nowrap}
+#v112Recovery .v112Pill{display:inline-block;background:#fff0d4;color:#844900;border-radius:12px;padding:3px 8px;font-weight:750;font-size:11px}
+#v112Recovery .v112Muted{font-size:12px;color:#657f78}
+#v112LauncherBar{display:flex;justify-content:flex-end;margin:9px 0 3px}#v112HeaderButton{background:#f4fff9;border:1px solid #71bea9;color:#075f51;font-weight:750;min-height:36px}
+@media(max-width:650px){#v112Recovery .v112Actions>*{flex:1 1 auto}#v112Recovery input{max-width:none;width:100%}}
+</style>
+<script id="perchado-v112-recover-copied-batches">
+'use strict';
+/* Solo lectura: no restaura, elimina ni ejecuta movimientos en WMS o Firebase.
+   Usa lecturas get por ID para respetar reglas V61 (list prohibido). */
+let v112Recovered=new Map(),v112Selected='',v112NextRevision=null,v112Busy=false,v112Pointer=null;
+function v112Escape(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function v112Status(message){const n=document.getElementById('v112RecoveryStatus');if(n)n.textContent=String(message||'');}
+function v112Api(){
+ if(!adminAccessV9)throw Error('Debes ingresar a Administración.');
+ if(!cloudEnabledV9||!cloudV9?.v112ReadRecoveryBatch)throw Error('Firebase no está disponible. Comprueba la conexión en Administración.');
+ return cloudV9;
+}
+function v112RowText(rows){return rows.map(x=>[x.code,x.from,x.to,x.qty].map(v=>String(v).replace(/[\t\r\n]+/g,' ')).join('\t')).join('\n');}
+function v112CsvCell(v){let x=String(v??'');if(/^[=+@\-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';}
+function v112Download(name,data,mime){
+ const blob=new Blob([data],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+function v112ReadableAt(x){const ms=Number(x)||0;return ms?new Date(ms).toLocaleString('es-EC'):'Fecha no disponible';}
+function v112SaveBatch(b){if(b&&b.rows.length>0&&b.closeReason==='COPIADA_PENDIENTE_EJECUCION_WMS')v112Recovered.set(b.id,b);}
+function v112Render(){
+ const list=document.getElementById('v112BatchList'),detail=document.getElementById('v112BatchDetail');if(!list||!detail)return;
+ const batches=[...v112Recovered.values()].sort((a,b)=>b.revision-a.revision);
+ list.innerHTML=batches.length?batches.map(b=>`<div class="v112Batch ${v112Selected===b.id?'selected':''}">
+  <b>${v112Escape(b.id)}</b> <span class="v112Pill">COPIADA · NO CONFIRMADA EN WMS</span>
+  <div class="v112Meta">${v112Escape(v112ReadableAt(b.copiedAt||b.closedAt))} · ${b.rows.length} movimientos · ${v112Escape(b.closedBy||'Administración')}${b.fromCache?' · Lectura desde caché':''}</div>
+  <button type="button" class="secondary mini" onclick="v112Select('${b.id}')">🔎 Ver y recuperar</button></div>`).join(''):'<p class="v112Muted">Todavía no se ha localizado una tanda copiada. Utiliza «Buscar tandas recientes».</p>';
+ const b=v112Recovered.get(v112Selected);
+ if(!b){detail.innerHTML='';return;}
+ const rows=b.rows.slice(0,100);
+ detail.innerHTML=`<div class="v112Batch selected"><h3>📋 Tanda ${v112Escape(b.id)} · ${b.rows.length} movimientos</h3>
+ <div class="v112Note">Estos pases fueron archivados como <b>copiados, pendientes de ejecutar en WMS</b>. Este histórico no demuestra que hayan sido ejecutados. La recuperación no los agrega a la tanda actual.</div>
+ <div class="v112Actions"><button type="button" class="primary mini" onclick="v112Copy()">📋 Copiar 4 columnas</button>
+ <button type="button" class="secondary mini" onclick="v112ExportTsv()">⬇ Descargar TXT para WMS</button>
+ <button type="button" class="secondary mini" onclick="v112ExportCsv()">⬇ Descargar CSV con encabezados</button></div>
+ <div class="v112Table"><table><thead><tr><th>Código</th><th>Posición Bulk</th><th>Pasar</th><th>Qty</th></tr></thead><tbody>`+
+ rows.map(r=>`<tr><td>${v112Escape(r.code)}</td><td>${v112Escape(r.from)}</td><td>${v112Escape(r.to)}</td><td>${v112Escape(r.qty)}</td></tr>`).join('')+
+ `</tbody></table></div>${b.rows.length>rows.length?`<p class="v112Muted">Mostrando las primeras ${rows.length} filas. El archivo contiene las ${b.rows.length}.</p>`:''}</div>`;
+}
+function v112Select(id){if(!v112Recovered.has(id))return;v112Selected=id;v112Render();document.getElementById('v112BatchDetail')?.scrollIntoView({block:'nearest',behavior:'smooth'});}
+async function v112ReadOne(id){const api=v112Api();return api.v112ReadRecoveryBatch(id);}
+async function v112Search(more=false){
+ if(v112Busy)return;v112Busy=true;
+ const btn=document.getElementById('v112SearchBtn'),older=document.getElementById('v112OlderBtn');
+ if(btn)btn.disabled=true;if(older)older.disabled=true;
+ try{
+  const api=v112Api();
+  if(!more||!v112Pointer){
+   v112Pointer=await api.v112ReadRecoveryPointer();v112NextRevision=v112Pointer.revision;
+   if(!more){v112Recovered.clear();v112Selected='';}
+   if(v112Pointer.lastBatchId){
+    v112Status('Consultando la última tanda archivada '+v112Pointer.lastBatchId+'…');
+    const direct=await v112ReadOne(v112Pointer.lastBatchId);
+    if(direct?.rows.length&&direct.closeReason==='COPIADA_PENDIENTE_EJECUCION_WMS'){
+     v112SaveBatch(direct);v112Selected=direct.id;
+     v112NextRevision=Math.min(v112NextRevision,direct.revision-1);
+     v112Status(`✓ Tanda ${direct.id} encontrada · ${direct.rows.length} movimientos recuperables. No se ha modificado Firebase.`);
+     v112Render();return;
+    }
+   }
+  }
+  let cursor=Number(v112NextRevision)||0,inspected=0,found=false;
+  if(!cursor){v112Status('No hay revisiones anteriores que consultar.');v112Render();return;}
+  // El histórico no permite LIST; consultar puntualmente los IDs batch_N.
+  // Máximo 24 lecturas por solicitud para controlar consumos de Firestore.
+  while(cursor>0&&inspected<24&&!found){
+   const ids=[];
+   for(let j=0;j<4&&cursor>0&&inspected<24;j++,cursor--,inspected++)ids.push('batch_'+cursor);
+   v112Status(`Buscando archivos históricos de Firebase… ${inspected} revisiones consultadas.`);
+   const hits=await Promise.all(ids.map(id=>v112ReadOne(id)));
+   for(const hit of hits){
+    if(hit?.rows.length&&hit.closeReason==='COPIADA_PENDIENTE_EJECUCION_WMS'){
+     v112SaveBatch(hit);v112Selected=hit.id;found=true;break;
+    }
+   }
+  }
+  v112NextRevision=cursor;
+  v112Render();
+  if(found){
+   const b=v112Recovered.get(v112Selected);
+   v112Status(`✓ ${b.rows.length} movimientos de ${b.id} disponibles. No se ha creado ningún ajuste nuevo.`);
+  }else v112Status(`No se encontró una tanda copiada en las ${inspected} revisiones examinadas. ${cursor>0?'Presiona «Buscar más antiguas» para continuar.':'No hay más revisiones.'}`);
+ }catch(e){v112Status('⚠ No se pudo consultar Firebase: '+String(e?.message||e)+'. No se modificó ningún registro.');console.warn('V112 recuperación',e);}
+ finally{v112Busy=false;if(btn)btn.disabled=false;if(older)older.disabled=false;}
+}
+async function v112OpenId(){
+ if(v112Busy)return;
+ const n=document.getElementById('v112BatchId'),raw=String(n?.value||'').trim();
+ const id=/^[1-9][0-9]{0,11}$/.test(raw)?'batch_'+raw:raw;
+ if(!/^batch_[1-9][0-9]{0,11}$/.test(id)){v112Status('Ingresa un identificador válido, por ejemplo batch_123 o 123.');return;}
+ try{
+  v112Status('Consultando '+id+' en Firebase…');const b=await v112ReadOne(id);
+  if(!b){v112Status('No existe '+id+' en Firebase. No se modificó ningún registro.');return;}
+  if(b.closeReason!=='COPIADA_PENDIENTE_EJECUCION_WMS'||!b.rows.length){v112Status(id+' existe, pero no contiene filas de una tanda COPIADA recuperable.');return;}
+  v112SaveBatch(b);v112Select(b.id);v112Status('✓ '+b.rows.length+' movimientos de '+id+' recuperados para consulta y descarga.');
+ }catch(e){v112Status('⚠ '+String(e?.message||e));}
+}
+function v112Chosen(){const b=v112Recovered.get(v112Selected);if(!b)throw Error('Primero selecciona una tanda con movimientos.');return b;}
+async function v112Copy(){
+ try{const b=v112Chosen();await v72WriteClipboard(v112RowText(b.rows));v112Status('✓ '+b.rows.length+' pases de '+b.id+' copiados otra vez. No se alteraron Ajustes WMS ni Firebase.');}
+ catch(e){v112Status('⚠ No se pudo copiar. Usa «Descargar TXT»: '+String(e?.message||e));}
+}
+function v112ExportTsv(){
+ try{const b=v112Chosen();v112Download('PERCHADO_RECUPERADO_'+b.id+'.txt',v112RowText(b.rows),'text/plain;charset=utf-8');
+ v112Status('✓ TXT descargado: '+b.rows.length+' movimientos exactos, sin títulos.');}catch(e){v112Status('⚠ '+String(e?.message||e));}
+}
+function v112ExportCsv(){
+ try{const b=v112Chosen(),data='\ufeff'+[['Código','Posición Bulk','Pasar','Qty'],...b.rows.map(r=>[r.code,r.from,r.to,r.qty])].map(row=>row.map(v112CsvCell).join(';')).join('\r\n');
+ v112Download('PERCHADO_HISTORICO_'+b.id+'.csv',data,'text/csv;charset=utf-8');
+ v112Status('✓ CSV de '+b.id+' descargado para auditoría.');}catch(e){v112Status('⚠ '+String(e?.message||e));}
+}
+function v112Toggle(){
+ if(!adminAccessV9)return showAdminGateV9();
+ const box=document.getElementById('v112Recovery');if(!box)return;
+ box.hidden=!box.hidden;if(!box.hidden){box.scrollIntoView({block:'start',behavior:'smooth'});}
+}
+(function v112Mount(){
+ const mount=()=>{
+  if(document.getElementById('v112Recovery'))return;
+  const section=document.getElementById('decisions'),target=document.getElementById('reconciliationPanel');
+  if(!section||!target)return;
+  // V49 oculta por CSS todos los botones del encabezado de Ajustes.
+  // El acceso propio queda visible sin depender de repintados de la tanda.
+  const launcher=document.createElement('div');launcher.id='v112LauncherBar';
+  const button=document.createElement('button');button.id='v112HeaderButton';button.type='button';button.className='secondary mini';
+  button.textContent='🗃️ Recuperar tandas copiadas';button.title='Consultar copia histórica de movimientos en Firebase, sin restaurarlos';button.addEventListener('click',v112Toggle);
+  launcher.appendChild(button);target.insertAdjacentElement('beforebegin',launcher);
+  const recovery=document.createElement('div');recovery.id='v112Recovery';recovery.hidden=true;
+  recovery.innerHTML=`<h3>🗃️ Recuperar tandas copiadas · solo lectura</h3>
+   <p class="v112Note">Si «Copiar pendientes» archivó la tanda y dejó 0 movimientos, aquí puedes rescatar la copia que Firebase guardó. <b>No vuelve a cargar movimientos en Ajustes ni confirma su ejecución.</b> Comprueba antes si ya fueron aplicados en WMS.</p>
+   <div class="v112Actions"><button type="button" class="primary mini" id="v112SearchBtn" onclick="v112Search(false)">🔎 Buscar última tanda copiada</button>
+    <button type="button" class="secondary mini" id="v112OlderBtn" onclick="v112Search(true)">◀ Buscar más antiguas</button>
+    <input type="text" id="v112BatchId" placeholder="ID: batch_123 o 123" aria-label="Identificador de tanda" autocomplete="off">
+    <button type="button" class="secondary mini" onclick="v112OpenId()">Consultar por ID</button>
+    <button type="button" class="secondary mini" onclick="v112Toggle()">Cerrar</button></div>
+   <div class="v112Status" id="v112RecoveryStatus" aria-live="polite">Esta consulta solamente lee archivos de tandas en Firebase. No modifica datos ni los permisos.</div>
+   <div id="v112BatchList"></div><div id="v112BatchDetail"></div>`;
+  target.insertAdjacentElement('beforebegin',recovery);
+  v112Render();
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+})();
 </script>
