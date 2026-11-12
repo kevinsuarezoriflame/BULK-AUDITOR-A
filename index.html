@@ -600,10 +600,10 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 
 
 <div class="wfPane v16ResetBox" style="margin-top:18px">
- <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Reinicia WMS, ajustes, movimientos y estados administrativos. <strong>Conserva conteos, reconteos, cantidades validadas, borradores y usuarios.</strong> Requiere confirmación en Administración.</p></div>
+ <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Elige el alcance de la limpieza. <strong>Eliminación de conteos</strong> conserva su función actual; <strong>Reiniciar auditoría desde cero</strong> abre un ciclo completamente vacío: sin WMS, conteos, reconteos, cuadradas, novedades, sobrantes, faltantes, seguimientos ni ajustes activos. Los históricos de Firebase, usuarios y chat se conservan para seguridad.</p></div>
  <div class="v60ResetActions">
- <button type="button" class="secondary v16ResetButton" onclick="v58BeginReset()">🧹 Reiniciar avances y ajustes</button>
- <button type="button" class="danger v16ResetButton" onclick="v60BeginDelete()">🗑️ Eliminar conteos y reconteos</button>
+ <button type="button" class="danger v16ResetButton" id="v113FullResetButton" onclick="v113BeginFullReset()" title="Reiniciar toda la auditoría; no afecta usuarios ni chat">🗑️ Reiniciar auditoría desde cero</button>
+ <button type="button" class="secondary v16ResetButton" onclick="v60BeginDelete()">🗑️ Eliminar conteos y reconteos</button>
  <button type="button" class="secondary mini" onclick="v60DownloadHistory()">⬇️ Descargar histórico de Firebase</button>
  </div></div>
  <div id="v24ResetStatus" class="v23DeleteStatus" role="status" aria-live="polite"></div>
@@ -2364,7 +2364,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
       lastLiveFingerprintV83=signature;
       const op=lastLivePromiseV83.catch(()=>{}).then(async()=>{
         if(!entries.length)await deleteDoc(ref('liveCounts',id));
-        else await setDoc(ref('liveCounts',id),{...data,id,deviceUid:id,entries});
+        else await setDoc(ref('liveCounts',id),{...data,id,deviceUid:id,entries,...(v60AuditCycle>0?{auditCycle:v60AuditCycle}:{})});
       });
       lastLivePromiseV83=op;
       try{await op;}catch(error){
@@ -2722,6 +2722,21 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         if(firstSnapshot||snapshot.docChanges({includeMetadataChanges:false}).length){
           api.onData?.(group,snapshot.docs.map(x=>({...x.data(),id:x.id})).filter(x=>{
             if(x.status==='archived'||x.archived===true)return false;
+            // V113: un cierre manual, sobrante o seguimiento viejo nunca vuelve a
+            // aparecer en el nuevo ciclo por un snapshot de corrections.
+            // Todas las escrituras actuales a corrections llevan auditCycle.
+            if(group==='corrections'&&v58ScopedAudit){
+              return Number(x.auditCycle||0)===v60AuditCycle;
+            }
+            // Después de un reinicio TOTAL (el marcador de conteos coincide con
+            // el del WMS/Administración), no admitir conteos de clientes viejos
+            // que se sincronizan tarde ni capturas en vivo de ciclos previos.
+            const totalReset=v66ClearCountsAt>0&&v66ClearCountsAt===v60AuditCycle;
+            if(totalReset&&['sessions','tasks','liveCounts'].includes(group)){
+              return Number(x.auditCycle||0)===v60AuditCycle;
+            }
+            // Mantener compatibilidad del botón independiente de conteos y de
+            // los reinicios administrativos selectivos posteriores.
             if(v66ClearCountsAt>0&&['sessions','tasks'].includes(group)){
               const captured=Date.parse(group==='sessions'?(x.submittedAt||x.createdAt||''):(x.createdAt||''));
               return Number.isFinite(captured)&&captured>=v66ClearCountsAt;
@@ -10116,6 +10131,123 @@ window.perchadoDiagnosticoV103=()=>({version:'V103',conteosSinPaseActivo:v103Aud
  cantidades:results?.length||0,tiempos:typeof perchadoDiagnosticoV102==='function'?perchadoDiagnosticoV102():null});
 // El DOM ya existía al cargar esta versión: presentar las excepciones de inmediato.
 try{if(adminAccessV9&&hasCompared)v103ShowAudit();}catch(e){console.warn('V103: aviso de auditoría no disponible',e);}
+</script>
+
+
+<!-- PERCHADO V113: Reiniciar auditoría desde cero (ciclo independiente, sin borrado físico masivo). -->
+<style id="perchado-v113-reset-style">
+#v113FullResetOverlay[hidden]{display:none!important}
+#v113FullResetOverlay{z-index:180000!important}
+#v113FullResetOverlay .v23Dialog{max-width:650px}
+#v113FullResetOverlay .v113Warning{margin:10px 0;padding:12px;border-radius:10px;background:#fff1ed;border:1px solid #efc9b9;color:#8e2c20;font-size:13px;line-height:1.5}
+#v113FullResetOverlay .v113Counts{background:#f3fbf9;border:1px solid #b7ddd4;padding:10px;border-radius:9px;line-height:1.6;font-size:12px}
+#v113FullResetOverlay .v113Check{display:flex;align-items:flex-start;gap:9px;margin:14px 0;font-size:13px}
+#v113FullResetOverlay .v113Check input{width:19px;height:19px;min-height:19px;margin:0;flex:none}
+#v113FullResetOverlay #v113FullStatus{white-space:pre-wrap;font-size:12px;font-weight:700;margin:8px 0;color:#80540b;line-height:1.5}
+#v113FullResetOverlay #v113FullConfirm:disabled{opacity:.48;cursor:not-allowed}
+</style>
+<script id="perchado-v113-full-reset">
+'use strict';
+/* V113: Nuevo ciclo SIN DATOS OPERATIVOS ACTIVOS. Se conservan evidencias
+ * históricas en Firebase, las cuentas y el chat. No se borran documentos de
+ * sessions/tasks/corrections porque las reglas actuales prohíben delete.
+ * El reset de current sharedAdmin + sharedWms es una transacción atómica.
+ * No modificar v60BeginDelete: es la otra opción independiente. */
+let v113FullBusy=false;
+function v113FullStatus(msg){const el=document.getElementById('v113FullStatus');if(el)el.textContent=String(msg||'');}
+function v113FullPlan(){
+ return {conteos:(wfV8.sessions||[]).length,reconteos:(wfV8.tasks||[]).length,
+  cuadrados:v18Squares?.size||0,
+  novedades:(results||[]).filter(x=>x?.diferencia!=null&&Number(x.diferencia)!==0).length,
+  correcciones:Object.keys(wfV8.corrections||{}).length,
+  ajustes:(manualTransfersV9||[]).length+(approvedMatches||[]).length+(resolutions||[]).length,
+  wms:!!document.getElementById('systemData')?.value?.trim()};
+}
+function v113BeginFullReset(){
+ if(!adminAccessV9)return showAdminGateV9();
+ if(v113FullBusy)return;
+ const error=v60CanOperate();
+ if(error)return perchadoAlert(error);
+ if(v52Draft||v52Conflict||v52Error||v70Writing||v70WriteTimer||v78Unsynced?.size){
+  return perchadoAlert('No se puede reiniciar mientras existan ajustes, novedades o sobrantes pendientes de sincronizar. Espera a que Firebase confirme los guardados.');
+ }
+ v60BackupDownloaded=false; // exige un nuevo respaldo antes de este reinicio
+ document.getElementById('v113FullResetOverlay')?.remove();
+ const p=v113FullPlan(),box=document.createElement('div');
+ box.id='v113FullResetOverlay';box.className='v23Overlay';
+ box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+ box.setAttribute('aria-label','Reiniciar auditoría completa desde cero');
+ box.innerHTML=`<div class="v23Dialog"><h3>🗑️ Reiniciar TODA la auditoría desde cero</h3>
+ <p>Se creará un <b>nuevo ciclo vacío para todos los equipos</b>. Desaparecerán de la operación activa: conteos, reconteos, ubicaciones cuadradas (manuales y automáticas), novedades, sobrantes, faltantes, seguimientos, movimientos, ajustes, WMS y borradores.</p>
+ <div class="v113Counts"><b>Estado detectado:</b> ${p.conteos} conteos · ${p.reconteos} reconteos · ${p.cuadrados} ubicaciones cuadradas · ${p.novedades} diferencias mostradas · ${p.correcciones} correcciones · ${p.ajustes} ajustes/decisiones${p.wms?' · WMS cargado':' · WMS sin datos'}</div>
+ <div class="v113Warning"><b>ATENCIÓN:</b> el reinicio afectará a todos los usuarios conectados. Los documentos anteriores <b>no se eliminan físicamente de Firebase</b>: permanecen como histórico, pero no deben reaparecer en el nuevo ciclo. Se conservan las cuentas y el chat. Este proceso <b>no borra ni cambia el WMS externo</b>; solamente limpia la base WMS almacenada en Perchado.</div>
+ <p>Antes de confirmar, pide al equipo que finalice sus registros y salga de la web. Luego descarga y verifica el histórico.</p>
+ <button type="button" class="secondary mini" onclick="v113DownloadFullBackup()">⬇️ Descargar respaldo histórico ahora</button>
+ <div class="v113Check"><input type="checkbox" id="v113FullChecked" onchange="v113ValidateFullReset()"><label for="v113FullChecked">Comprobé el archivo de respaldo descargado y deseo iniciar una auditoría nueva sin registros activos.</label></div>
+ <label>Escribe exactamente <b>REINICIAR TODO</b>:
+ <input id="v113FullPhrase" autocomplete="off" spellcheck="false" placeholder="REINICIAR TODO" oninput="v113ValidateFullReset()"></label>
+ <div id="v113FullStatus" role="status" aria-live="polite"></div>
+ <div class="v23DialogActions"><button type="button" class="secondary" onclick="v113CloseFullReset()">Cancelar</button>
+ <button type="button" id="v113FullConfirm" class="v23Confirm" onclick="v113ExecuteFullReset()" disabled>🗑️ Crear auditoría desde cero</button></div></div>`;
+ document.body.appendChild(box);
+ document.getElementById('v113FullPhrase')?.focus();
+}
+async function v113DownloadFullBackup(){
+ if(v113FullBusy)return;
+ await v60DownloadHistory();
+ v113FullStatus(v60BackupDownloaded?'Histórico preparado. Comprueba que el archivo JSON se descargó y no está vacío.':'No se pudo preparar el respaldo. Revisa el mensaje en Administración.');
+ v113ValidateFullReset();
+}
+function v113ValidateFullReset(){
+ const btn=document.getElementById('v113FullConfirm');
+ if(btn)btn.disabled=v113FullBusy||!v60BackupDownloaded||!document.getElementById('v113FullChecked')?.checked||
+  document.getElementById('v113FullPhrase')?.value.trim()!=='REINICIAR TODO';
+}
+function v113CloseFullReset(){if(!v113FullBusy)document.getElementById('v113FullResetOverlay')?.remove();}
+function v113ClearExtraOldCycleCaches(stamp){
+ // Evitar que una cola local de seguimiento o sobrantes del ciclo anterior
+ // vuelva a publicarse después de que la transacción haya terminado.
+ try{clearTimeout(v70WriteTimer);v70WriteTimer=null;v70WriteAgain=false;v70KnownDocs.clear();v70PendingUi.clear();}catch(e){console.warn('V113 seguimiento',e);}
+ try{v90Locks.clear();v90Recovering=false;v90Capturing=false;}catch(e){console.warn('V113 cierres por código',e);}
+ try{v78Unsynced.clear();}catch(e){console.warn('V113 sobrantes',e);}
+ try{v112Recovered.clear();v112Selected='';v112Pointer=null;v112NextRevision=null;v112Render();}catch(e){}
+ try{v18Squares.clear();v18WriteLocks();}catch(e){}
+ try{localStorage.removeItem('perchado_v38_partial_fields');localStorage.removeItem('perchado_v26_catalog_pending');}catch(e){}
+ try{if(typeof v56InvalidateSearch==='function')v56InvalidateSearch();}catch(e){}
+ try{if(typeof v57GroupMemo!=='undefined')v57GroupMemo=null;}catch(e){}
+ window.perchadoCountsResetV60=Number(stamp||0);
+}
+async function v113ExecuteFullReset(){
+ if(v113FullBusy||!adminAccessV9||!v60BackupDownloaded||!document.getElementById('v113FullChecked')?.checked||
+ document.getElementById('v113FullPhrase')?.value.trim()!=='REINICIAR TODO')return;
+ const error=v60CanOperate();
+ if(error)return v113FullStatus(error);
+ if(v52Draft||v52Conflict||v52Error||v70Writing||v70WriteTimer||v78Unsynced?.size){
+   return v113FullStatus('Hay datos locales pendientes de sincronización; no se modificó la auditoría.');
+ }
+ v113FullBusy=true;v113ValidateFullReset();
+ const button=document.getElementById('v113FullConfirm');if(button)button.textContent='Creando ciclo nuevo…';
+ let transactionCommitted=false;
+ try{
+  v113FullStatus('Verificando revisiones y guardando un histórico en Firebase. No cierres esta pantalla.');
+  const outcome=await cloudV9.resetAdministrativeWorkspace(
+    v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración',true);
+  transactionCommitted=true;
+  // Con esta marca se excluyen sesiones, tareas y correcciones anteriores
+  // del ciclo nuevo aunque Firebase reenvíe snapshots antiguos.
+  window.perchadoAuditCycleV60=Number(outcome.v58ResetAt);
+  await v58ClearAdminLocal(outcome.v58ResetAt,outcome.adminRevision);
+  v60ClearDrafts(outcome.v58ResetAt);
+  v113ClearExtraOldCycleCaches(outcome.v58ResetAt);
+  // Sólo reiniciar escuchas DESPUÉS de limpiar las cachés.
+  await cloudV9.enterAdminView();
+  v113FullStatus('Auditoría nueva iniciada. Comprueba que los indicadores operativos estén en cero.');
+  document.getElementById('v113FullResetOverlay')?.remove();
+  perchadoAlert('✓ Auditoría reiniciada desde cero. Se vaciaron WMS, conteos, reconteos, cuadradas, novedades, sobrantes, faltantes, ajustes y seguimientos ACTIVOS. Usuarios y chat conservados. Históricos anteriores conservados en Firebase. Recarga también los otros dispositivos antes de comenzar.');
+ }catch(e){
+  v113FullStatus((transactionCommitted?'⚠ El reinicio de Firebase SE CONFIRMÓ, pero falló la actualización de esta pantalla. Recarga la web; NO repitas el reinicio sin verificar. ':'⚠ No se confirmó el reinicio. No repitas sin comprobar Firebase. ')+String(e?.message||e));
+ }finally{v113FullBusy=false;if(button){button.textContent='🗑️ Crear auditoría desde cero';v113ValidateFullReset();}}
+}
 </script>
 
 </body>
