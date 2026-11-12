@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V118 · Reinicio sincronizado y ajustes sin retrocesos</title>
+<title>PERCHADO V119 · Reinicio seguro con revisiones actualizadas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V118</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V119</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -2726,6 +2726,24 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
      await batch.commit();done+=Math.min(150,distinct.length-i);
    }
    return done;
+ };
+ // V119: solicitar SIEMPRE las revisiones actuales al servidor justo antes
+ // de confirmar un reinicio total. La cache local puede ser anterior a Firebase.
+ // Sólo consulta los dos documentos actuales; nunca modifica datos.
+ api.getResetRevisionsV119=async function(){
+   await ensureAnonymous();
+   if(!api.admin)throw Error('Acceso administrativo requerido.');
+   const [a,w]=await Promise.all([
+     getDocFromServer(ref('sharedAdmin','current')),
+     getDocFromServer(ref('sharedWms','current'))
+   ]);
+   if(a.metadata.fromCache||w.metadata.fromCache)
+     throw Error('No se pudo confirmar la versión actual del servidor. No se reinició nada.');
+   return {
+     admin: Number(a.exists()?a.data()?.revision:0)||0,
+     wms: Number(w.exists()?w.data()?.revision:0)||0,
+     cycle: Number(a.exists()?a.data()?.v58ResetAt:0)||0
+   };
  };
  api.resetAdministrativeWorkspace=async function(expectedAdminRev,expectedWmsRev,actor,deleteCounts=false){
    await ensureAnonymous();if(!api.admin)throw Error('Acceso administrativo requerido.');
@@ -10297,9 +10315,22 @@ async function v113ExecuteFullReset(){
  const button=document.getElementById('v113FullConfirm');if(button)button.textContent='Creando ciclo nuevo…';
  let transactionCommitted=false;
  try{
-  v113FullStatus('Verificando revisiones y guardando un histórico en Firebase. No cierres esta pantalla.');
+  v113FullStatus('Consultando las revisiones actuales DIRECTAMENTE de Firebase. No cierres esta pantalla.');
+  // V119: no utilizar v37Audit.stateRevision/v37Audit.manifest guardadas en
+  // el navegador para un reinicio irreversible: pueden ser obsoletas.
+  const latest=await cloudV9.getResetRevisionsV119();
+  // Si otro equipo ya inició otro ciclo mientras esta ventana estaba abierta,
+  // no repetir un reinicio; evita descartar conteos recién iniciados.
+  const localCycle=Number(window.perchadoAuditCycleV60||0)||0;
+  if(latest.cycle!==localCycle){
+    throw Error('Firebase ya está en otro ciclo de auditoría. No se reinició nada. Actualiza la vista y comprueba el ciclo antes de volver a intentarlo.');
+  }
+  if(v52Draft||v52Conflict||v52Error||v70Writing||v70WriteTimer||v78Unsynced?.size){
+    throw Error('Hay cambios locales pendientes. Descarga respaldo y resuelve la sincronización antes del reinicio.');
+  }
+  v113FullStatus('Archivando la última revisión confirmada y creando el ciclo nuevo en una transacción segura…');
   const outcome=await cloudV9.resetAdministrativeWorkspace(
-    v37Audit.stateRevision,v37Audit.manifest?.revision||0,adminIdentityV9||'Administración',true);
+    latest.admin,latest.wms,adminIdentityV9||'Administración',true);
   transactionCommitted=true;
   // Con esta marca se excluyen sesiones, tareas y correcciones anteriores
   // del ciclo nuevo aunque Firebase reenvíe snapshots antiguos.
@@ -12019,3 +12050,5 @@ window.perchadoV117ApplyRemoteReset=function({stamp,countsAt,revision,live}={}){
  return v117LocalPromise;
 };
 </script>
+
+<!-- PERCHADO V119: reinicio total lee revisiones actuales del SERVIDOR antes de una transacción atómica. -->
