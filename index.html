@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V106 · Ajustes protegidos y Novedades coherentes</title>
+<title>PERCHADO V118 · Reinicio sincronizado y ajustes sin retrocesos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -485,7 +485,7 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 </style>
 </head>
 <body>
-<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V114</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
+<div class="v9Gate" hidden="" id="adminGateV9"><div class="v9GateCard"><div class="v9Logo">🛡 PERCHADO · Administración</div><h2 id="gateTitleV9">Ingreso de Administración</h2><div class="v9Fields" id="loginFieldsV10"><label>Usuario<input autocomplete="username" id="loginUserV9" placeholder="Nombre de usuario" value="Kevin"/></label><label>Contraseña<input autocomplete="current-password" id="loginPasswordV9" onkeydown="if(event.key==='Enter')loginAdministratorV9()" placeholder="Contraseña" type="password"/></label></div><p id="gateMessageV9" role="status"></p><div class="wfActions" id="loginActionsV10"><button class="primary" id="loginButtonV9" onclick="loginAdministratorV9()">Ingresar</button><button class="secondary" onclick="cancelAdminLoginV9()">Ir a Operarios</button></div></div></div><span hidden="" id="textLocs"></span><header class="topbar"><div class="brand"><span class="dot"></span> PERCHADO Audit Tool <small style="font-weight:600;color:#287868">V118</small></div><div aria-label="Vista activa" class="profileSwitcher"><button class="on" id="viewAdmin" onclick="setProfileV8('admin')">🛡 Administración</button><button id="viewOperator" onclick="setProfileV8('operator')">👷 Operarios</button></div><div class="pill" id="syncStatus">Listo</div></header>
 <main class="wrap">
 <div class="card">
 <div id="perchadoGlobalBarV15" class="perchadoGlobalBarV15" hidden>
@@ -2243,7 +2243,7 @@ renderOperatorDraftV8();renderWorkflowV8();renderAll();
 <script type="module">/* Firebase: autenticación anónima para sincronización; usuarios administrativos en la web. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,deleteDoc,updateDoc,onSnapshot,query,where,runTransaction,writeBatch,serverTimestamp,orderBy,limit,startAfter,documentId} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {getFirestore,collection,doc,getDoc,getDocFromServer,getDocs,setDoc,deleteDoc,updateDoc,onSnapshot,query,where,runTransaction,writeBatch,serverTimestamp,orderBy,limit,startAfter,documentId} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 const cfg=window.PERCHADO_FIREBASE_CONFIG;
 if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  const app=initializeApp(cfg),auth=getAuth(app),db=getFirestore(app);
@@ -2254,12 +2254,79 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  // V83: one serialized live-write queue per device; only changed captures go to Firebase.
  let lastLiveFingerprintV83='',lastLivePromiseV83=Promise.resolve();
  let v58ScopedAudit=false, v60AuditCycle=0, v66ClearCountsAt=0;
+ // V117: vigilancia del marcador central de reinicio para TODOS los dispositivos.
+ // Vive fuera de unsub para sobrevivir al refresco de colecciones por ciclo.
+ let v117CycleUnsub=null,v117ResetInProgress=false;
+ let v117CycleQueue=Promise.resolve();
+ async function v117ApplyCycleFromData(data,revision,live){
+   const stamp=Number(data?.v58ResetAt||0)||0;
+   const countStamp=Number(data?.v60ClearCountsAt||0)||0;
+   if(!stamp)return false;
+   // Ignorar marcadores antiguos: jamás retroceder a una auditoría previa.
+   if(stamp<v60AuditCycle)return false;
+   const different=stamp!==v60AuditCycle||countStamp!==v66ClearCountsAt;
+   // V118: nunca consumir un reinicio remoto si Administración conserva ajustes sin confirmar.
+   // Al arrojar error NO se actualiza el cursor v60AuditCycle ni las suscripciones.
+   if(different&&window.perchadoV118HasPendingAdmin?.()){
+     window.perchadoV118WarnPendingReset?.();
+     throw Error('Nuevo ciclo detectado, pero hay ajustes administrativos sin guardar. Descarga Respaldo antes de actualizar.');
+   }
+   v117ResetInProgress=true;
+   try{
+     const cleaned=await window.perchadoV117ApplyRemoteReset?.({stamp,countsAt:countStamp,revision:Number(revision||0),live:!!live});
+     v60AuditCycle=stamp;v66ClearCountsAt=countStamp;v58ScopedAudit=true;
+     window.perchadoAuditCycleV60=stamp;
+     if(countStamp>0)window.perchadoCountsResetV60=countStamp;
+     if(different||cleaned){
+       lastLiveFingerprintV83=''; // Un conteo nuevo no debe heredar la huella del anterior.
+       clearSubscriptions();
+       v117ResetInProgress=false; // Permitir primer snapshot de las nuevas consultas.
+       subscribe(api.admin);
+       return true;
+     }
+     return false;
+   }finally{v117ResetInProgress=false;}
+ }
+ function v117ListenForResets(){
+   if(v117CycleUnsub)return;
+   v117CycleUnsub=onSnapshot(ref('sharedAdmin','current'),{includeMetadataChanges:true},snap=>{
+     // Nunca ejecutar un borrado global por una respuesta cacheada del navegador.
+     if(!snap.exists()||snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
+     const data=snap.data(),revision=Number(data.revision||0);
+     v117CycleQueue=v117CycleQueue.catch(()=>{}).then(()=>v117ApplyCycleFromData(data,revision,true))
+       .catch(err=>{console.error('PERCHADO V117: sincronizar reinicio',err);api.lastError='No se confirmó actualización de ciclo: '+(err?.message||err);api.onStatus?.();});
+   },err=>{console.warn('PERCHADO V117: vigilancia de ciclos',err);});
+ }
+ async function v117AssertFreshForSubmission(){
+   if(v117ResetInProgress)throw Error('La auditoría se está actualizando. No se enviaron datos de un ciclo anterior.');
+   // Validación del SERVIDOR solo al finalizar un conteo o reconteo, no en cada tecla.
+   // Impide enviar un registro del ciclo anterior si el listener aún no respondió.
+   const snap=await getDocFromServer(ref('sharedAdmin','current'));
+   const server=snap.exists()?snap.data():{};
+   const stamp=Number(server?.v58ResetAt||0)||0;
+   const cleared=Number(server?.v60ClearCountsAt||0)||0;
+   if(stamp!==v60AuditCycle||cleared!==v66ClearCountsAt){
+     v117CycleQueue=v117CycleQueue.catch(()=>{}).then(()=>v117ApplyCycleFromData(server,server?.revision,true));
+     await v117CycleQueue;
+     throw Error('Administración inició una nueva auditoría. El conteo antiguo no se envió. Selecciona una ubicación del nuevo ciclo.');
+   }
+ }
  async function v58CheckScope(){
-   try{const snap=await getDoc(ref('sharedAdmin','current'));
-     v60AuditCycle=Number(snap.exists()?snap.data()?.v58ResetAt:0)||0;
+   try{
+     // Terminar la recuperación local antes de decidir si un ciclo nuevo debe limpiar datos.
+     if(api.admin)await window.perchadoV118WaitForDraftReady?.();
+     const snap=await getDocFromServer(ref('sharedAdmin','current'));
+     const incomingCycle=Number(snap.exists()?snap.data()?.v58ResetAt:0)||0;
+     if(window.perchadoV118HasPendingAdmin?.() && incomingCycle!==v60AuditCycle){
+       window.perchadoV118WarnPendingReset?.();
+       throw Error('Hay ajustes locales pendientes y un ciclo distinto en Firebase. Descarga Respaldo antes de continuar.');
+     }
+     v60AuditCycle=incomingCycle;
      v58ScopedAudit=v60AuditCycle>0;
      v66ClearCountsAt=Number(snap.exists()?snap.data()?.v60ClearCountsAt:0)||0;
      window.perchadoAuditCycleV60=v60AuditCycle;
+      // V117: al entrar, limpiar una copia local obsoleta ANTES de cargar tareas.
+      await window.perchadoV117ApplyRemoteReset?.({stamp:v60AuditCycle,countsAt:v66ClearCountsAt,revision:Number(snap.data()?.revision||0),live:false});
      if(snap.exists()&&Number(snap.data()?.v60ClearCountsAt)>0){
        window.perchadoCountsResetV60=Number(snap.data().v60ClearCountsAt);
        window.dispatchEvent(new CustomEvent('perchado-v60-counts-reset',{detail:{stamp:window.perchadoCountsResetV60}}));
@@ -2284,10 +2351,10 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
  }
  const api={ready:true,connected:false,admin:false,lastError:'',syncPhase:'auth',syncProgress:{ready:0,total:0},onData:null,onStatus:null,loadedGroups:new Set(),
     async enterOperator(){
-      clearSubscriptions();await ensureAnonymous();api.admin=false;await v58CheckScope();subscribe(false);return auth.currentUser;
+      clearSubscriptions();await ensureAnonymous();api.admin=false;await v58CheckScope();subscribe(false);v117ListenForResets();return auth.currentUser;
     },
     async enterAdminView(){
-      clearSubscriptions();await ensureAnonymous();api.admin=true;await v58CheckScope();subscribe(true);return auth.currentUser;
+      clearSubscriptions();await ensureAnonymous();api.admin=true;await v58CheckScope();subscribe(true);v117ListenForResets();return auth.currentUser;
     },
     async getWebAdmin(username){
       await ensureAnonymous();const normalized=validateUsername(username);
@@ -2309,7 +2376,10 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     },
     async persist(group,item){
       if(!['operators','sessions','tasks','corrections'].includes(group)||!item?.id)throw Error('Documento inválido.');
-      await ensureAnonymous();const clean=JSON.parse(JSON.stringify(item));
+      await ensureAnonymous();
+      if(group==='sessions'||(group==='tasks'&&!api.admin))await v117AssertFreshForSubmission();
+      if(v117ResetInProgress)throw Error('Actualización de auditoría en curso. Vuelve a intentar cuando termine.');
+      const clean=JSON.parse(JSON.stringify(item));
       if(['sessions','tasks','corrections'].includes(group)&&v60AuditCycle>0)clean.auditCycle=v60AuditCycle;
       if(group==='sessions'){
         if(api.admin){await updateDoc(ref(group,clean.id),{status:clean.status,reviewedAt:clean.reviewedAt||null});return;}
@@ -2360,6 +2430,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
     },
     async saveLive(data){
       await ensureAnonymous();const id=auth.currentUser.uid;
+      if(v117ResetInProgress)return; // Nunca retransmitir borradores durante un reinicio global.
       // V83: a status/quantity change is the only reason for a live write.
       // updatedAt alone does not justify new Firestore writes and downstream reads.
       const entries=(data.entries||[]).slice(-250);
@@ -2367,7 +2438,9 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
         entries.map(x=>[String(x.id||''),String(x.code||''),Number(x.qty)||0])]);
       if(signature===lastLiveFingerprintV83)return lastLivePromiseV83;
       lastLiveFingerprintV83=signature;
+      const pendingCycle=v60AuditCycle;
       const op=lastLivePromiseV83.catch(()=>{}).then(async()=>{
+        if(v117ResetInProgress||pendingCycle!==v60AuditCycle)return;
         if(!entries.length)await deleteDoc(ref('liveCounts',id));
         else await setDoc(ref('liveCounts',id),{...data,id,deviceUid:id,entries,...(v60AuditCycle>0?{auditCycle:v60AuditCycle}:{})});
       });
@@ -2378,7 +2451,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
       }
     },
     async claimRecount(ids,userId){
-      await ensureAnonymous();
+      await ensureAnonymous();await v117AssertFreshForSubmission();
       if(!Array.isArray(ids)||!ids.length||!userId)throw Error('Faltan códigos o identidad del operario.');
       const uid=auth.currentUser.uid;
       await runTransaction(db,async tx=>{
@@ -2418,7 +2491,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
       }return tasks.length;
     },
     async finishRecount(answers,userId){
-      await ensureAnonymous();
+      await ensureAnonymous();await v117AssertFreshForSubmission();
       if(!Array.isArray(answers)||!answers.length)throw Error('No hay cantidades para enviar.');
       const uid=auth.currentUser.uid;
       await runTransaction(db,async tx=>{
@@ -2458,7 +2531,9 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
      stops.push(onSnapshot(ref('sharedWms','current'),d=>{
        if(!stopped)onWms(d.exists()?d.data():null);
      },e=>{if(!stopped)onError?.('wms',e);}));
-     stops.push(onSnapshot(ref('sharedAdmin','current'),d=>{
+     stops.push(onSnapshot(ref('sharedAdmin','current'),{includeMetadataChanges:true},d=>{
+       // V118: jamás restaurar Ajustes desde una copia cacheada o aún sin confirmar.
+       if(d.metadata.fromCache||d.metadata.hasPendingWrites)return;
        if(!stopped)onState(d.exists()?d.data():null);
      },e=>{if(!stopped)onError?.('state',e);}));
    }).catch(e=>{if(!stopped)onError?.('auth',e);});
@@ -2725,7 +2800,7 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
                       (admin&&group==='tasks')?query(coll(group),where('status','in',['open','answered','closed','cancelled'])):
                       coll(group);
       unsub.push(onSnapshot(requested,{includeMetadataChanges:true},snapshot=>{
-        if(stamp!==generation)return;
+        if(stamp!==generation||v117ResetInProgress)return;
         const firstSnapshot=!seen.has(group);
         seen.add(group);
         if(snapshot.metadata.fromCache)errored.set(group,group+': esperando servidor');else {errored.delete(group);api.loadedGroups.add(group);}
@@ -6788,6 +6863,14 @@ const V52_DRAFT_KEY='perchado_v52_pending_admin_v1';
 const V52_LEGACY_KEY='perchado_v52_previo_v51';
 let v52Draft=null,v52Timer=null,v52Sending=false,v52Error='',v52Conflict=false;
 let v52RetryDelay=1500,v52RecentSaved=false,v52LastKnownRemote=null,v52Active=false,v52ColdPending=false;
+// V115: suspensión local SOLO del autosave administrativo tras rechazo de cuota.
+// No modifica las escuchas ni las escrituras de los operarios.
+let v115QuotaPaused=false;
+function v115IsQuotaError(error){
+ const code=String(error?.code||'').toLowerCase();
+ const message=String(error?.message||error||'').toLowerCase();
+ return /resource[-_ ]exhausted|quota[-_ ]exceeded|quota exceeded|exceeded.*quota|limit.*exceeded|cuota excedida/.test(code+' '+message);
+}
 // V54: los borradores grandes usan IndexedDB, no el cupo reducido de localStorage.
 // localStorage previo permanece intacto hasta que la nueva copia se confirma.
 const V54_DB_NAME='PERCHADO_SAFE_BACKUPS_V54',V54_STORE='snapshots';
@@ -6887,7 +6970,7 @@ function v52StagePayload(data,source){
  v52Draft={version:52,updatedAt:new Date().toISOString(),source:source||'Movimientos y ajustes',
   baseRevision:previous?previous.baseRevision:v37Audit.stateRevision,
   wmsHash:data.wmsHash,payload:data};
- v52Error='';v52RecentSaved=false;
+ if(!v115QuotaPaused)v52Error='';v52RecentSaved=false;
  const stored=v52Write(V52_DRAFT_KEY,v52Draft);
  v52Status();
  if(stored)v52Queue(300);
@@ -6899,7 +6982,8 @@ function v52Status(){
  const label=document.getElementById('v52SyncText'),recover=document.getElementById('v52RecoverButton');
  recover.hidden=!(v52Draft||v52Read(V52_LEGACY_KEY));
  let msg='✓ Sin cambios pendientes · sincronización lista',mode='ok';
- if(v52Error){msg='⚠ '+v52Error;mode='error';}
+ if(v115QuotaPaused){msg='⚠ Guardado en Firebase NO confirmado (cuota). Respaldo local conservado. Reintento automático detenido; revisa cuota y pulsa ☁ Sincronizar.';mode='error';}
+ else if(v52Error){msg='⚠ '+v52Error;mode='error';}
  else if(v52Conflict){msg='⚠ Conflicto entre computadoras: respaldo local protegido. No se sobrescribió.';mode='conflict';}
  else if(v52Draft){
   msg=v54PendingOps?'⏳ Guardando respaldo local seguro…':v52Sending?'☁ Guardando movimientos en Firebase…':'⚠ Respaldo local · pendiente de confirmación Firebase';mode='local';
@@ -6909,10 +6993,13 @@ function v52Status(){
  label.textContent=msg;bar.dataset.mode=mode;
 }
 function v52Queue(delay=700){
- clearTimeout(v52Timer);v52Timer=setTimeout(()=>{v52Timer=null;void v52Flush();},delay);
+ // V115: sin reintentos automáticos bajo RESOURCE_EXHAUSTED / Quota exceeded.
+ clearTimeout(v52Timer);v52Timer=null;
+ if(v115QuotaPaused)return;
+ v52Timer=setTimeout(()=>{v52Timer=null;void v52Flush();},delay);
 }
 async function v52Flush(){
- if(!v52Draft||v52Sending||v52Conflict)return;
+ if(!v52Draft||v52Sending||v52Conflict||v115QuotaPaused)return;
  if(v54Booting||v54PendingOps){v52Queue(350);return;}
  if(!adminAccessV9||!cloudEnabledV9||!cloudV9?.ready||!cloudV9?.connected||!v37Audit.manifest||v37Audit.wmsLoading||v37Audit.busy){
   v52Status();v52Queue(Math.min(v52RetryDelay,12000));return;
@@ -6932,20 +7019,28 @@ async function v52Flush(){
   v37Audit.stateRevision=Number(result.revision);
   v37Audit.lastStateText=serialized;
   v37Audit.remote=result;v52LastKnownRemote=result;
-  v52RetryDelay=1500;v52Error='';
+  v52RetryDelay=1500;v52Error='';v115QuotaPaused=false;
   // Un clic nuevo durante el commit debe preservarse y sincronizarse después.
   if(v52Draft===sent){v52Draft=null;try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v54RemoveConfirmedDraft();v52RecentSaved=true;}
   else if(v52Draft){v52Draft.baseRevision=v37Audit.stateRevision;delete v52Draft.basePayload;v52Write(V52_DRAFT_KEY,v52Draft);}
  }catch(e){
   const reason=String(e?.message||e);
-  if(/otro administrador|conflict|revision|version|updated/i.test(reason))v52Conflict=true;
-  v52Error='Firebase NO confirmó los cambios: '+reason;
-  v52RetryDelay=Math.min(v52RetryDelay*1.8,15000);
-  if(/permission-denied|unauthorized|missing or insufficient permissions|resource-exhausted|too large|demasiado grande/i.test(reason))v52Conflict=true;
-  console.error('PERCHADO V52, guardado pendiente',e);
+  const isQuota=v115IsQuotaError(e);
+  if(isQuota){
+   // Conservar el borrador en IndexedDB/localStorage y NO escribir en bucle.
+   v115QuotaPaused=true;
+   clearTimeout(v52Timer);v52Timer=null;
+   v52Error='Firebase NO confirmó los cambios: '+reason;
+  }else{
+   if(/otro administrador|conflict|revision|version|updated/i.test(reason))v52Conflict=true;
+   v52Error='Firebase NO confirmó los cambios: '+reason;
+   v52RetryDelay=Math.min(v52RetryDelay*1.8,15000);
+   if(/permission-denied|unauthorized|missing or insufficient permissions|too large|demasiado grande/i.test(reason))v52Conflict=true;
+  }
+  console.error('PERCHADO V115, guardado pendiente',e);
  }finally{
   v52Sending=false;v52Status();
-  if(v52Draft&&!v52Conflict&&!v52Error.match(/El WMS/))v52Queue(v52RetryDelay);
+  if(v52Draft&&!v52Conflict&&!v115QuotaPaused&&!v52Error.match(/El WMS/))v52Queue(v52RetryDelay);
  }
 }
 // Los errores de la escucha remota también deben verse desde Novedades.
@@ -6971,7 +7066,7 @@ v37ApplyRemoteState=function(){
   if(remote?.payload&&v52Fingerprint(remote.payload)===v52Fingerprint(v52Draft.payload)){
    // Una escritura que ya llegó al servidor también puede verse por onSnapshot.
    if(!v52Sending){v37Audit.lastStateText=v52Fingerprint(remote.payload);v52Draft=null;
-    try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v54RemoveConfirmedDraft();v52Conflict=false;v52Error='';v52RecentSaved=true;}
+    try{localStorage.removeItem(V52_DRAFT_KEY);}catch(e){}v54RemoveConfirmedDraft();v52Conflict=false;v52Error='';v115QuotaPaused=false;v52RecentSaved=true;}
   }else if(remote&&Number(remote.revision)>Number(v52Draft.baseRevision))v52Conflict=true;
   v52Status();return;
  }
@@ -7101,6 +7196,8 @@ async function v52ImportBackup(file){
 }
 function v52ManualRetry(){
  if(!v52Draft){v52Status();return perchadoAlert('No hay movimientos locales pendientes de sincronizar.');}
+ // El reintento tras una cuota es EXPLÍCITO. No descartar el borrador.
+ if(v115QuotaPaused){v115QuotaPaused=false;v52RetryDelay=1500;}
  if(v52Conflict){
   perchadoAlert('Hay cambios desde otra computadora. Descarga un respaldo y usa «Recuperar» para fusionar las propuestas. Revisa la lista antes de ejecutarlas.');return;
  }
@@ -7120,6 +7217,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&v52Draft)
 </script>
 
 
+<!-- PERCHADO V116: V115 guardado protegido + copia WMS sin archivado automático. Sin cambios de esquemas, Firebase Rules ni lógica de Operarios. -->
 <!-- PERCHADO V53 · Estado mínimo en cabecera, sincronización automática y respaldo discreto -->
 <style id="perchado-v53-sync-ui">
 .v53SyncCluster{display:flex;align-items:center;gap:7px;position:relative;min-width:0;margin-left:auto}
@@ -8615,76 +8713,29 @@ async function v72WriteClipboard(txt){
  }
 }
 async function v72CopyPendingAndNewBatch(){
- // V76: copiar es una acción inmediata e independiente del archivado.
- // Ninguna novedad no exportable, conexión o confirmación bloquea los pases válidos.
+ // V116: la copia NO debe cambiar el estado de la tanda. Se conserva el cierre
+ // manual existente para registrar la ejecución real en el WMS.
  if(v72CopyInFlight)return;
  if(!adminAccessV9)return showAdminGateV9();
  if(v49Scope!=='pending'){
-  toast('Para copiar pases al WMS utiliza la vista Pendientes WMS; el historial no es una orden nueva.');
+  toast('Para copiar pases al WMS utiliza Pendientes WMS; el historial no es una orden nueva.');
   return;
  }
  const rows=v49SelectedRows();
  if(!rows.length){toast('No hay pases de cuatro columnas disponibles para copiar.');return;}
- const revisionBefore=v37Audit.stateRevision;
- const rowSignature=rows.map(r=>v57Key(r[0],r[1],r[2],r[3])).join('\n');
  const text=rows.map(r=>r.map(v=>String(v??'').replace(/[\r\n\t]+/g,' ')).join('\t')).join('\n');
  v72CopyInFlight=true;
  const copyButtons=[...document.querySelectorAll('#reconciliationPanel .v49Controls button')]
-   .filter(b=>/Copiar/i.test(b.textContent));
+  .filter(b=>/Copiar/i.test(b.textContent));
  const oldButtons=copyButtons.map(b=>({button:b,disabled:b.disabled,text:b.textContent}));
  for(const b of copyButtons){b.disabled=true;b.classList.add('v72BatchBusy');}
  try{
-  // El portapapeles siempre va PRIMERO. Sin títulos ni preguntas de confirmación.
   await v72WriteClipboard(text);
   v72LastCopiedText=text;
-  // La copia funciona aun con un ajuste positivo, ambiguo o no exportable.
-  // Esos registros NO se borran: una tanda solo puede archivarse completa.
-  const uncovered=v72ValidateCoverage(rows);
-  if(uncovered){
-   toast('✓ '+rows.length+' pases copiados. Los otros ajustes siguen pendientes, sin bloquearte.');
-   return;
-  }
-  // Firebase puede estar ocupado o desconectado. Eso jamás anula la copia.
-  const cloudProblem=v62RoundBusy||sourceDirty||!hasCompared||v52Draft||v52Conflict
-   ?'Sincronización pendiente':v68CanCloseAdjustments();
-  if(cloudProblem){
-   toast('✓ '+rows.length+' pases copiados. La tanda queda abierta hasta confirmar Firebase.');
-   return;
-  }
-  // Si alguien cambió los pases al copiar, mantener la tanda para evitar pérdida.
-  const freshSignature=v49SelectedRows().map(r=>v57Key(r[0],r[1],r[2],r[3])).join('\n');
-  if(revisionBefore!==v37Audit.stateRevision||rowSignature!==freshSignature){
-   toast('✓ '+rows.length+' pases copiados. La lista cambió: no se cerró automáticamente.');
-   return;
-  }
-  const followups=v72CopiedFollowups(rows);
-  let cloudCommitted=false;
-  try{
-   const closed=await cloudV9.closeAdjustmentsBatch(
-    revisionBefore,adminIdentityV9||'Administración',followups,'copied',
-    {rows:rows.map(r=>[String(r[0]),String(r[1]),String(r[2]),Number(r[3])])}
-   );
-   cloudCommitted=true;
-   v37Audit.stateRevision=closed.revision;
-   v37Audit.remote={revision:closed.revision,payload:closed.payload};
-   for(const item of followups){
-    if(item.status!=='ENVIADO_WMS')continue;
-    const next={...item,updatedAt:new Date(closed.stamp).toISOString()};
-    v70KnownDocs.set(item.id,next);
-    v70PendingUi.set(item.id,next);
-   }
-   await v64ClearAdjustmentsOnly(closed.stamp);
-   v49Scope='pending';
-   toast('✓ '+rows.length+' pases copiados sin títulos. Nueva tanda disponible.');
-  }catch(e){
-   // No mostrar modal: la copia ya se completó. Nunca limpiar sin archivado.
-   if(cloudCommitted)toast('✓ Pases copiados y tanda archivada. Recarga si todavía ves registros anteriores.');
-   else toast('✓ Pases copiados. Firebase no cerró la tanda; sigue disponible para revisión.');
-   console.warn('PERCHADO V76: archivado posterior a copia',e);
-  }
+  // No archivar, no limpiar movimientos, no modificar Firebase al copiar.
+  toast('✓ '+rows.length+' pases copiados. La tanda sigue abierta. Ciérrala manualmente SOLO al ejecutar los pases en WMS.');
  }catch(e){
-  // Solamente un fallo real del portapapeles impide copiar.
-  perchadoAlert('El navegador no permitió copiar: '+String(e?.message||e));
+  perchadoAlert('No se copiaron movimientos; la tanda sigue intacta: '+String(e?.message||e));
  }finally{
   v72CopyInFlight=false;
   for(const x of oldButtons){
@@ -10260,13 +10311,95 @@ async function v113ExecuteFullReset(){
   await cloudV9.enterAdminView();
   v113FullStatus('Auditoría nueva iniciada. Comprueba que los indicadores operativos estén en cero.');
   document.getElementById('v113FullResetOverlay')?.remove();
-  perchadoAlert('✓ Auditoría reiniciada desde cero. Se vaciaron WMS, conteos, reconteos, cuadradas, novedades, sobrantes, faltantes, ajustes y seguimientos ACTIVOS. Usuarios y chat conservados. Históricos anteriores conservados en Firebase. Recarga también los otros dispositivos antes de comenzar.');
+  perchadoAlert('✓ Auditoría reiniciada desde cero. Se vaciaron WMS, conteos, reconteos, cuadradas, novedades, sobrantes, faltantes, ajustes y seguimientos ACTIVOS. Usuarios y chat conservados. Históricos anteriores conservados en Firebase. Los dispositivos con V117 recibirán automáticamente el nuevo ciclo. Los equipos con versiones anteriores deberán actualizar la página una vez.');
  }catch(e){
   v113FullStatus((transactionCommitted?'⚠ El reinicio de Firebase SE CONFIRMÓ, pero falló la actualización de esta pantalla. Recarga la web; NO repitas el reinicio sin verificar. ':'⚠ No se confirmó el reinicio. No repitas sin comprobar Firebase. ')+String(e?.message||e));
  }finally{v113FullBusy=false;if(button){button.textContent='🗑️ Crear auditoría desde cero';v113ValidateFullReset();}}
 }
 </script>
 
+
+<!-- PERCHADO V118 · Contrato de no regresión para Ajustes WMS.
+     No cambia los documentos, colecciones, reglas, ni conteos de operarios. -->
+<style id="perchado-v118-style">
+#v118StateWarning{position:fixed;z-index:160500;bottom:16px;left:50%;transform:translateX(-50%);width:min(94vw,650px);background:#fff7eb;color:#724007;border:2px solid #e9b64d;border-radius:14px;padding:12px 15px;box-shadow:0 8px 30px #4c32042a;font:700 13px/1.45 system-ui,Arial,sans-serif}
+#v118StateWarning button{margin-left:10px;padding:8px 10px;border:1px solid #a97816;border-radius:8px;background:white;color:#70450b;font-weight:700;cursor:pointer}
+</style>
+<script id="perchado-v118-no-rollback">
+'use strict';
+/* V118: si llegan revisiones de otra PC o cierres de tanda, no borrar un
+   borrador local antes de que Firebase confirme su escritura. Toda recuperación
+   sigue siendo EXPLÍCITA y debe revisarse para evitar duplicaciones WMS. */
+const v118Safety={localChangesProtected:0,remoteConflictsStopped:0,remoteResetsBlocked:0};
+function v118LocalChangedSinceConfirmed(){
+ if(!adminAccessV9||!v37Audit.stateReady||v37Audit.applying||v37Audit.wmsLoading||
+    !v37Audit.lastStateText||!hasCompared)return false;
+ if(!v37Audit.manifest?.hash||v37TextHash(document.getElementById('systemData')?.value)!==v37Audit.manifest.hash)return false;
+ try{return JSON.stringify(v37PackState())!==v37Audit.lastStateText;}catch{return true;}
+}
+function v118HasPendingAdmin(){
+ return !!(adminAccessV9&&(v52Draft||v52Sending||v52Conflict||v54PendingOps||v118LocalChangedSinceConfirmed()));
+}
+window.perchadoV118HasPendingAdmin=v118HasPendingAdmin;
+window.perchadoV118WaitForDraftReady=function(){
+ if(!v54Booting)return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+  const start=Date.now();
+  const check=()=>{
+   if(!v54Booting){resolve();return;}
+   if(Date.now()-start>7000){reject(Error('El respaldo local todavía está cargándose. No se abrió el ciclo para evitar sobrescrituras.'));return;}
+   setTimeout(check,60);
+  };check();
+ });
+};
+function v118WarnPendingReset(){
+ v118Safety.remoteResetsBlocked++;
+ v52Conflict=true;
+ v52Error='Otro equipo inició una auditoría nueva, pero aquí hay ajustes sin confirmar. DESCARGA RESPALDO. No se aplicó el reinicio en esta computadora.';
+ v52Status();
+ let node=document.getElementById('v118StateWarning');
+ if(!node){node=document.createElement('div');node.id='v118StateWarning';node.setAttribute('role','alert');
+ node.innerHTML='⚠ Hay un reinicio remoto y cambios locales pendientes. No recargues ni elimines los datos. <button type="button">⬇ Descargar respaldo</button>';
+ node.querySelector('button').addEventListener('click',()=>v52DownloadBackup());
+ document.body.appendChild(node);
+ }
+}
+window.perchadoV118WarnPendingReset=v118WarnPendingReset;
+const v118PrevSharedState=v37OnSharedState;
+v37OnSharedState=function(doc){
+ if(adminAccessV9&&doc&&!v37Audit.applying){
+   const priorRev=Number(v37Audit.stateRevision||0),incomingRev=Number(doc.revision||0);
+   const incomingPayload=doc.payload;
+   // En casos muy rápidos, una acción puede adelantarse unos ms al autosave:
+   // guardar PRIMERO el borrador con la revisión observada ANTES del snapshot.
+   if(!v52Draft&&!v52Sending&&incomingPayload&&v118LocalChangedSinceConfirmed()){
+     v52StagePayload(v37PackState(),'Edición administrativa pendiente antes de sincronizar');
+     if(v52Draft){v52Draft.baseRevision=priorRev;v52Write(V52_DRAFT_KEY,v52Draft);
+       v118Safety.localChangesProtected++;}
+   }
+   const newerBatch=Number(incomingPayload?.v64AdjustmentsAt||0)>Number(window.perchadoAdjustmentsBatchV64||0);
+   const sameDraft=!!(v52Draft?.payload&&incomingPayload&&v52Fingerprint(v52Draft.payload)===v52Fingerprint(incomingPayload));
+   // Las revisiones nuevas y los cierres de tanda son conflictivos SOLO cuando
+   // aún existen cambios locales no confirmados. Se protege copia y se detiene
+   // el reemplazo automático; jamás marcarlo como sincronizado.
+   if(v52Draft&&!v52Sending&&!sameDraft && (incomingRev>Number(v52Draft.baseRevision||0)||newerBatch)){
+     v52Conflict=true;v118Safety.remoteConflictsStopped++;
+     v37Audit.remote=doc;v37Audit.stateRevision=Math.max(priorRev,incomingRev);v37Audit.stateReady=true;
+     v52Error='Firebase recibió cambios de otra sesión o cerró la tanda. Tus ajustes locales están protegidos pero NO confirmados. Descarga Respaldo y revisa la recuperación antes de continuar.';
+     v52Status();return;
+   }
+ }
+ return v118PrevSharedState.apply(this,arguments);
+};
+window.perchadoDiagnosticoV118=()=>({version:'V118',seguridad:{...v118Safety},
+ ajustesLocalesPendientes:!!v52Draft,conflicto:!!v52Conflict,
+ guardadoConfirmado:!v52Draft&&!v52Conflict&&!v52Sending&&!v115QuotaPaused,
+ revisionFirebase:v37Audit.stateRevision});
+window.addEventListener('beforeunload',function(e){
+ if(!v118HasPendingAdmin())return;
+ e.preventDefault();e.returnValue='';
+});
+</script>
 </body>
 </html>
 
@@ -11804,4 +11937,85 @@ function v112Toggle(){
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
+</script>
+
+
+<!-- PERCHADO V117 · Reinicio global en tiempo real: Firebase es la fuente única del ciclo.
+     No borra perfiles, credenciales, chat, ni documentos históricos de Firestore. -->
+<style id="perchado-v117-style">
+#v117CycleAlert{position:fixed;z-index:160002;left:50%;bottom:16px;transform:translateX(-50%);width:min(94vw,610px);background:#f0fcf7;border:2px solid #67c9ac;border-radius:16px;box-shadow:0 10px 32px #073c3340;padding:14px 16px;color:#074d3e;font:600 14px/1.45 system-ui,Arial,sans-serif;display:flex;align-items:center;gap:12px}
+#v117CycleAlert div{flex:1}#v117CycleAlert small{display:block;color:#506c64;font-weight:500;margin-top:4px}
+#v117CycleAlert button{background:#057f69;color:white;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;font-weight:700}
+@media(max-width:520px){#v117CycleAlert{flex-wrap:wrap}#v117CycleAlert button{width:100%}}
+</style>
+<script id="perchado-v117-cycle-handler">
+'use strict';
+const V117_CYCLE_KEY='perchado_v117_applied_audit_cycle';
+function v117Num(key){try{return Number(localStorage.getItem(key)||0)||0;}catch{return 0;}}
+let v117LocalBusy=false;
+let v117LocalPromise=Promise.resolve();
+function v117ShowCycleMessage(){
+ let node=document.getElementById('v117CycleAlert');
+ if(!node){node=document.createElement('aside');node.id='v117CycleAlert';node.setAttribute('role','alert');
+  node.innerHTML='<div>✅ Nuevo ciclo de auditoría detectado<small>Se limpiaron los datos locales del ciclo anterior. Selecciona una nueva ubicación para continuar. Los usuarios y el chat se conservaron.</small></div><button type="button">Entendido</button>';
+  node.querySelector('button').addEventListener('click',()=>node.remove());document.body.appendChild(node);
+ }
+}
+// Se llama solamente tras leer el marcador de ciclo desde el documento compartido.
+window.perchadoV117ApplyRemoteReset=function({stamp,countsAt,revision,live}={}){
+ const cycle=Number(stamp||0)||0;
+ const counts=Number(countsAt||0)||0;
+ if(!cycle||counts!==cycle)return Promise.resolve(false); // Solo reinicio TOTAL; el selectivo conserva los conteos.
+ v117LocalPromise=v117LocalPromise.catch(()=>{}).then(async()=>{
+  const lastV117=v117Num(V117_CYCLE_KEY);
+  const olderApplied=Math.max(v117Num('perchado_v59_last_selective_reset'),v117Num('perchado_v24_last_seen_reset'));
+  const v60Recognized=v117Num('perchado_v60_drafts_cleared_at')>=cycle;
+  const cachedEvidence=[...(wfV8.sessions||[]),...(wfV8.tasks||[]),...Object.values(wfV8.corrections||{})];
+  const hasOldEvidence=cachedEvidence.some(item=>Number(item?.auditCycle||0)!==cycle);
+  const hasCurrentEvidence=cachedEvidence.some(item=>Number(item?.auditCycle||0)===cycle);
+  // Si se instala V117 después de que los chicos empezaron el ciclo nuevo,
+  // retirar ÚNICAMENTE restos antiguos y conservar TODO lo ya registrado hoy.
+  if(!lastV117&&v60Recognized&&hasCurrentEvidence&&hasOldEvidence){
+   wfV8.sessions=(wfV8.sessions||[]).filter(x=>Number(x.auditCycle||0)===cycle);
+   wfV8.tasks=(wfV8.tasks||[]).filter(x=>Number(x.auditCycle||0)===cycle);
+   wfV8.corrections=Object.fromEntries(Object.entries(wfV8.corrections||{}).filter(([,x])=>Number(x.auditCycle||0)===cycle));
+   try{localStorage.setItem(WF_V8_KEY,JSON.stringify(wfV8));localStorage.setItem(V117_CYCLE_KEY,String(cycle));}catch{}
+   try{renderWorkflowV8();renderAll();}catch{}
+   return true;
+  }
+  // V116 pudo limpiar borradores, pero dejar conteos/ubicaciones antiguos en caché.
+  // Si ya está trabajando en el ciclo NUEVO, no borrar esos conteos por instalar V117.
+  const alreadyApplied=(lastV117>=cycle)||(olderApplied>=cycle&&!hasOldEvidence)||(v60Recognized&&!hasOldEvidence);
+  if(alreadyApplied){
+   // Una V114 anterior pudo registrar el ciclo, pero el usuario sigue viendo
+   // un dato cacheado. No borrar nuevas capturas creadas después del reinicio.
+   try{localStorage.setItem(V117_CYCLE_KEY,String(cycle));}catch{}
+   return false;
+  }
+  if(v117LocalBusy)return false;
+  v117LocalBusy=true;
+  try{
+   // Una auditoría total solo pone a cero el CICLO ACTIVO, nunca borramos
+   // permanentemente los históricos de Firestore ni las cuentas de acceso.
+   // El borrador de un operario anterior al corte NO debe viajar al ciclo nuevo.
+   if(typeof v58ClearAdminLocal==='function'&&adminAccessV9){
+    await v58ClearAdminLocal(cycle,revision);
+   }
+   if(typeof v24ClearLocal==='function')v24ClearLocal(cycle);
+   if(typeof v60ClearDrafts==='function')v60ClearDrafts(counts||cycle);
+   if(typeof v113ClearExtraOldCycleCaches==='function')v113ClearExtraOldCycleCaches(cycle);
+   try{
+    // Garantizar que la caché anterior no reponga conteos en otro dispositivo.
+    localStorage.setItem('perchado_v59_last_selective_reset',String(cycle));
+    localStorage.setItem('perchado_v60_drafts_cleared_at',String(counts||cycle));
+    localStorage.setItem(V117_CYCLE_KEY,String(cycle));
+   }catch(err){console.warn('V117: marca de ciclo sin persistir',err);}
+   // Evita el reingreso de información vieja por renderizadores ya abiertos.
+   try{if(typeof v56InvalidateSearch==='function')v56InvalidateSearch();}catch{}
+   if(live)v117ShowCycleMessage();
+   return true;
+  }finally{v117LocalBusy=false;}
+ });
+ return v117LocalPromise;
+};
 </script>
