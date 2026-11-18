@@ -602,8 +602,8 @@ body.v43-admin #perchadoGlobalBarV15 .perchadoSearchResultsV15{left:14px;right:1
 <div class="wfPane v16ResetBox" style="margin-top:18px">
  <div class="v16ResetRow"><div><h3>🗑️ Eliminar data</h3><p class="v16Help">Elige el alcance de la limpieza. <strong>Eliminación de conteos</strong> conserva su función actual; <strong>Reiniciar auditoría desde cero</strong> abre un ciclo completamente vacío: sin WMS, conteos, reconteos, cuadradas, novedades, sobrantes, faltantes, seguimientos ni ajustes activos. Los históricos de Firebase, usuarios y chat se conservan para seguridad.</p></div>
  <div class="v60ResetActions">
- <button type="button" class="danger v16ResetButton" id="v113FullResetButton" onclick="v113BeginFullReset()" title="Reiniciar toda la auditoría; no afecta usuarios ni chat">🗑️ Reiniciar auditoría desde cero</button>
- <button type="button" class="secondary v16ResetButton" onclick="v60BeginDelete()">🗑️ Eliminar conteos y reconteos</button>
+ <button type="button" class="danger v16ResetButton" id="v113FullResetButton" onclick="v121DeleteAll()" title="Borrar físicamente datos operativos de Firebase y navegador">🗑️ Eliminar TODO</button>
+ <button type="button" class="secondary v16ResetButton" onclick="v121DeleteAll()">🗑️ Eliminar conteos y reconteos</button>
  <button type="button" class="secondary mini" onclick="v60DownloadHistory()">⬇️ Descargar histórico de Firebase</button>
  </div></div>
  <div id="v24ResetStatus" class="v23DeleteStatus" role="status" aria-live="polite"></div>
@@ -2898,6 +2898,71 @@ if(cfg?.apiKey&&cfg.projectId&&!String(cfg.apiKey).includes('REEMPLAZA')){
      if(snapshot.data().senderUid!==user.uid)throw Error('Solo puedes eliminar los mensajes enviados desde tu dispositivo.');
      if(snapshot.data().deleted)return;
      await updateDoc(mref,{deleted:true,text:'',deletedAt:serverTimestamp()});
+   }
+ };
+
+ // V121: borrado FÍSICO de los documentos operativos conocidos de PERCHADO.
+ // Se conserva sharedAdmin/current como barrera de ciclo; nunca se tocan otras aplicaciones.
+ api.hardDeleteAllV121=async function(progress){
+   await ensureAnonymous();
+   if(!api.admin)throw Error('Acceso de Administración requerido.');
+   const say=x=>{try{progress?.(x);}catch{}};
+   const existing=await api.getResetRevisionsV119();
+   const localCycle=Number(window.perchadoAuditCycleV60||0)||0;
+   if(existing.cycle!==localCycle)throw Error('El ciclo cambió desde otro equipo. Actualiza la página antes de eliminar.');
+   say('Bloqueando el ciclo anterior en Firebase…');
+   // Establece primero el ciclo central para que las versiones compatibles no republiquen lo viejo.
+   const changed=await api.resetAdministrativeWorkspace(existing.admin,existing.wms,'ELIMINAR TODO',true);
+   const current=ref('sharedAdmin','current');
+   const groups=['sessions','tasks','corrections','liveCounts','sharedWms','chatThreads','operators'];
+   const sizes={};let erased=0;
+   async function delDocs(refs){
+     for(let i=0;i<refs.length;i+=180){
+       const batch=writeBatch(db);
+       refs.slice(i,i+180).forEach(r=>batch.delete(r));
+       await batch.commit();
+       erased+=Math.min(180,refs.length-i);
+       say('Borrando documentos de Firebase: '+erased+' eliminados…');
+     }
+   }
+   try{
+     for(const group of groups){
+       // Consultar TODOS los documentos, no sólo los del ciclo actual ni los visibles.
+       const snap=await getDocs(coll(group));
+       const docs=snap.docs;
+       if(group==='chatThreads'){
+         for(const d of docs){
+           const children=await getDocs(collection(db,...space,'chatThreads',d.id,'messages'));
+           await delDocs(children.docs.map(x=>x.ref));
+         }
+       }
+       await delDocs(docs.map(x=>x.ref));
+       sizes[group]=docs.length;
+     }
+     // Los archivos históricos de WMS y los respaldos administrativos también se borran.
+     const adminSnap=await getDocs(coll('sharedAdmin'));
+     await delDocs(adminSnap.docs.filter(d=>d.id!=='current').map(d=>d.ref));
+     // Vaciar el documento marcador para que nunca contenga datos operativos antiguos.
+     const marker=await getDocFromServer(current);
+     if(!marker.exists()||Number(marker.data()?.v58ResetAt||0)!==changed.v58ResetAt)
+       throw Error('El marcador del nuevo ciclo cambió. No se pudo certificar el borrado.');
+     // Los usuarios administradores son la última categoría: después perderían sus permisos.
+     // Conservar las cuentas de acceso para que el administrador pueda iniciar el conteo nuevo.
+     // No son registros de inventario y no pueden provocar novedades antiguas.
+     const checks={};
+     for(const g of [...groups,'sharedAdmin']){
+       const docs=await getDocs(coll(g));
+       const expected=g==='sharedAdmin'?1:0;
+       checks[g]=docs.size;
+       if(docs.size!==expected)throw Error('Verificación incompleta: '+g+' conserva '+docs.size+' documentos.');
+     }
+     // Verificar también los mensajes asociados a chats (sus padres ya deben estar vacíos).
+     const wms=await getDocFromServer(ref('sharedWms','current'));
+     if(wms.exists())throw Error('Persistió el manifiesto WMS en Firebase.');
+     return {erased,checks,cycle:changed.v58ResetAt};
+   }catch(e){
+     const error=Error('Borrado NO COMPLETO: '+String(e?.message||e)+'. Se eliminaron '+erased+' documentos. No se ha certificado una base vacía.');
+     error.partial=true;throw error;
    }
  };
  window.perchadoChatReadyV20?.(chatApi);
@@ -12073,3 +12138,34 @@ window.perchadoV117ApplyRemoteReset=function({stamp,countsAt,revision,live}={}){
 </script>
 
 <!-- PERCHADO V119: reinicio total lee revisiones actuales del SERVIDOR antes de una transacción atómica. -->
+<script id="perchado-v121-hard-delete">
+'use strict';
+let v121Deleting=false;
+async function v121DeleteAll(){
+ if(v121Deleting)return;
+ if(!adminAccessV9)return showAdminGateV9();
+ if(!cloudV9?.hardDeleteAllV121){perchadoAlert('No se cargó el módulo de borrado Firebase. No se eliminó nada.');return;}
+ if(!navigator.onLine){perchadoAlert('Sin conexión con Firebase. No se eliminó nada.');return;}
+ v121Deleting=true;
+ const overlay=document.createElement('div');overlay.id='v121DeleteStatus';overlay.className='v23Overlay';
+ overlay.innerHTML='<div class="v23Dialog"><h3>🗑️ Eliminación total</h3><p id="v121Progress" role="status">Borrando todos los datos operativos de PERCHADO en Firebase…</p></div>';
+ document.body.appendChild(overlay);
+ const status=x=>{const el=document.getElementById('v121Progress');if(el)el.textContent=x;};
+ try{
+   const result=await cloudV9.hardDeleteAllV121(status);
+   // Limpiar únicamente cachés de PERCHADO; Github Pages comparte origen con otros repositorios.
+   try{for(const key of Object.keys(localStorage))if(/perchado|^wf_v8|^v18|^v20/i.test(key))localStorage.removeItem(key);}catch(e){console.warn('Local',e);}
+   try{const dbDelete=indexedDB.deleteDatabase('PERCHADO_SAFE_BACKUPS_V54');dbDelete.onerror=()=>console.warn('IndexedDB no eliminado');}catch(e){console.warn('IndexedDB',e);}
+   // Los dispositivos antiguos no pueden forzar una recuperación en ESTE navegador tras la recarga.
+   status('Verificado: '+result.erased+' documentos eliminados. La administración y su cuenta se conservan.');
+   document.getElementById('v121DeleteStatus')?.remove();
+   perchadoAlert('Eliminación confirmada y verificada en Firebase: '+result.erased+' documentos operativos borrados. Se conserva el identificador vacío del nuevo ciclo y los accesos administrativos. Cierra las versiones antiguas en los demás equipos. Recarga esta página para comenzar.');
+ }catch(e){
+   document.getElementById('v121DeleteStatus')?.remove();
+   perchadoAlert('⚠ '+String(e?.message||e)+'\nNo se ha certificado una limpieza completa de Firebase. Revisa reglas y equipos conectados.');
+ }finally{v121Deleting=false;}
+}
+// No pedir frases, ni descargar respaldos obligatorios.
+v113BeginFullReset=v121DeleteAll;
+v60BeginDelete=v121DeleteAll;
+</script>
