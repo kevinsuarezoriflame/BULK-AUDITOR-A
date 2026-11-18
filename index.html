@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>PERCHADO V119 · Reinicio seguro con revisiones actualizadas</title>
+<title>PERCHADO V120 · Aislamiento de cierres por ciclo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -3240,18 +3240,36 @@ function v18ArchivePendingBeforeWmsChange(){
   localStorage.setItem('perchado_v18_prior_decisions',JSON.stringify(archive.slice(-20)));
  }catch(e){console.warn('No se pudo archivar el estado anterior de ajustes',e);}
 }
+// V120: los cierres son exclusivos del ciclo. Nunca rehidratar cierres locales
+// sin auditCycle en un ciclo creado mediante reinicio global.
+function v120Cycle(){return Number(window.perchadoAuditCycleV60||0)||0;}
+function v120CyclePending(){return !v120Cycle()&&Number(localStorage.getItem('perchado_v117_applied_audit_cycle')||localStorage.getItem('perchado_v59_last_selective_reset')||0)>0;}
+function v120ValidClosure(s){
+ const cycle=v120Cycle();
+ if(!s||!Array.isArray(s.rows)||v120CyclePending())return false;
+ return !cycle || Number(s.auditCycle||0)===cycle;
+}
 function v18ReadLocks(){
- try{const obj=JSON.parse(localStorage.getItem(V18_LOCKS_KEY)||'{}');for(const [loc,snap] of Object.entries(obj)){if(snap&&Array.isArray(snap.rows))v18Squares.set(loc,snap);}}catch(e){console.warn('Cierres locales no disponibles',e);}
+ try{
+  const obj=JSON.parse(localStorage.getItem(V18_LOCKS_KEY)||'{}');
+  for(const [loc,snap] of Object.entries(obj))if(v120ValidClosure(snap))v18Squares.set(loc,snap);
+ }catch(e){console.warn('Cierres locales no disponibles',e);}
 }
 function v18WriteLocks(){
  try{localStorage.setItem(V18_LOCKS_KEY,JSON.stringify(Object.fromEntries(v18Squares)));}catch(e){console.warn('No pudo guardar los cierres locales',e);}
 }
 function v18CloudLocks(){
+ const cycle=v120Cycle(),next=new Map();
+ // Reconstruir desde el estado vigente: nunca acumular cierres de snapshots
+ // de generaciones anteriores ni mezclar la cache de otra auditoria.
+ for(const [loc,snap] of v18Squares)if(v120ValidClosure(snap))next.set(loc,snap);
  for(const c of Object.values(wfV8.corrections||{})){
-  if(c?.kind!=='v18_square_closed'||!c.location||!Array.isArray(c.rows))continue;
-  const prev=v18Squares.get(c.location);
-  if(!prev||String(prev.closedAt||'')<String(c.closedAt||''))v18Squares.set(c.location,c);
+  if(c?.kind!=='v18_square_closed'||!c.location||!v120ValidClosure(c))continue;
+  const prev=next.get(c.location);
+  if(!prev||String(prev.closedAt||'')<String(c.closedAt||''))next.set(c.location,c);
  }
+ v18Squares.clear();for(const [loc,snap] of next)v18Squares.set(loc,snap);
+ // No escribir la nube de nuevo: solo estado de visualizacion y cache local.
  v18WriteLocks();
 }
 function v18Square(loc){return v18Squares.has(String(loc));}
@@ -3262,12 +3280,12 @@ function v18SquareEligible(loc){
  return valid&&v18Rows(loc).every(r=>r.qtyOperador!==null&&r.locValid&&!r.duplicado&&Number(r.diferencia)===0);
 }
 function v18CaptureSquares(){
- if(!hasCompared||!adminAccessV9||v18Loading)return 0;
+ if(!hasCompared||!adminAccessV9||v18Loading||v120CyclePending()||!cloudV9?.connected)return 0;
  let captured=0;
  for(const loc of [...auditScope.mappedLocations]){
   if(!v18SquareEligible(loc))continue;
   const rows=v18Rows(loc).map(r=>({codigo:r.codigo,ubicacionNormalizada:loc,ubicacionOperador:r.ubicacionOperador||loc,ubicacionSistema:loc,qtyOperador:Number(r.qtyOperador),qtySistema:Number(r.qtySistema??0),diferencia:0,estado:'OK',observacion:'Auditoría cuadrada y cerrada. Referencia del WMS congelada.',lineaOperador:r.lineaOperador||'',lineaSistema:r.lineaSistema||'',locValid:true,duplicado:false,hasOperator:true}));
-  const snap={id:'v18_square_'+encodeURIComponent(loc).replace(/%/g,'_'),kind:'v18_square_closed',location:loc,rows,closedAt:new Date().toISOString(),systemSignature:checksum($('systemData').value),closedBy:adminIdentityV9||'Administración'};
+  const snap={id:'v18_square_'+encodeURIComponent(loc).replace(/%/g,'_'),kind:'v18_square_closed',auditCycle:v120Cycle(),location:loc,rows,closedAt:new Date().toISOString(),systemSignature:checksum($('systemData').value),closedBy:adminIdentityV9||'Administración'};
   v18Squares.set(loc,snap);captured++;
   wfV8.corrections[snap.id]=snap;
   if(cloudEnabledV9&&cloudV9?.ready){cloudV9.persist('corrections',snap).catch(e=>console.warn('Cierre pendiente de sincronizar',loc,e));}
@@ -3348,7 +3366,7 @@ function v18AvailableLocations(){
  for(const loc of saved?.locations||[])if(loc)set.add(String(loc));
  for(const r of allSystemRows)if(r.locNorm&&r.locValid)set.add(r.locNorm);
  for(const r of v35CachedSystemRows())if(r.locNorm&&r.locValid)set.add(r.locNorm);
- for(const loc of v18Squares.keys())set.add(loc);
+ for(const [loc,snap] of v18Squares)if(v120ValidClosure(snap))set.add(loc);
  return [...set].filter(loc=>!v18Square(loc)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 }
 function v18Alias(loc){return shortLoc(loc).toLowerCase();}
@@ -10484,6 +10502,9 @@ function v89CompletedLocation(loc, currentWmsPublishedAt) {
   return complete && !pendingRecount;
 }
 async function v89RestoreSquareFromPreviousWms() {
+  // V120: deshabilitar reconstruccion automatica. Un WMS anterior no demuestra
+  // que exista un cierre administrativo valido en el ciclo vigente.
+  return;
   if (v89Recovering || !adminAccessV9 || !hasCompared || v37Audit.wmsLoading ||
       !cloudV9?.ready || !cloudV9?.connected || !v66LiveDataReady()) return;
   if(Date.now()-v89LastAttemptAt<60000)return;
